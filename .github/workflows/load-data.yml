@@ -28,3 +28,4 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python scripts/load_data.py "${{ inputs.csv_path }}"
+# trigger reindex Fri Aug  7 14:40:28 PDT 2026
