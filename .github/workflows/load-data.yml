@@ -1,0 +1,30 @@
+name: Load housing data into Supabase
+
+# Manual trigger only — run this after pushing migrations with the Supabase
+# CLI (or applying them via the SQL editor) and after committing the CSV
+# under data/. Requires a repo secret named SUPABASE_DB_URL.
+on:
+  workflow_dispatch:
+    inputs:
+      csv_path:
+        description: "Path to the CSV in this repo"
+        required: false
+        default: "data/Southern_Oregon_Housing_Matrix_REVERIFIED.csv"
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Load CSV into Supabase
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python scripts/load_data.py "${{ inputs.csv_path }}"
