@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Housing Help Finder — Southern Oregon</title>
+    <meta
+      name="description"
+      content="Answer a few questions to find rent, utility, and homebuying assistance programs you may qualify for in Southern Oregon."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="wrap site-header__inner">
+        <div class="brand">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V21h14V9.5" />
+              <path d="M9.5 21v-6h5v6" />
+            </svg>
+          </span>
+          <span class="brand__text">
+            <strong>Housing Help Finder</strong>
+            <small>Southern Oregon</small>
+          </span>
+        </div>
+        <button type="button" class="btn btn--ghost btn--sm" id="restart-top" hidden>
+          Start over
+        </button>
+      </div>
+    </header>
+
+    <main id="main" class="wrap">
+      <!-- Progress ------------------------------------------------------- -->
+      <div class="progress" id="progress" hidden>
+        <div class="progress__meta">
+          <span id="progress-label">Question 1 of 5</span>
+          <span id="progress-pct">20%</span>
+        </div>
+        <div
+          class="progress__track"
+          role="progressbar"
+          aria-labelledby="progress-label"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="20"
+          id="progress-bar"
+        >
+          <div class="progress__fill" id="progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Intro ---------------------------------------------------------- -->
+      <section class="step step--intro is-active" data-step="intro" tabindex="-1">
+        <h1 class="intro__title">Find housing help you may qualify for</h1>
+        <p class="intro__lead">
+          Answer five short questions about your household. We'll show you rent
+          assistance, utility help, and homebuying programs in Southern Oregon
+          that look like a fit — along with who to contact.
+        </p>
+        <ul class="intro__points">
+          <li>
+            <span class="intro__icon" aria-hidden="true">⏱</span>
+            <span>Takes about two minutes</span>
+          </li>
+          <li>
+            <span class="intro__icon" aria-hidden="true">🔒</span>
+            <span>Nothing you enter is saved or sent anywhere</span>
+          </li>
+          <li>
+            <span class="intro__icon" aria-hidden="true">↩</span>
+            <span>You can skip any question you're unsure about</span>
+          </li>
+        </ul>
+        <div class="step__actions">
+          <button type="button" class="btn btn--primary btn--lg" data-action="next">
+            Get started
+          </button>
+        </div>
+        <p class="intro__note">
+          This tool gives general information, not a decision about your
+          eligibility. Only the programs themselves can tell you if you qualify.
+        </p>
+      </section>
+
+      <!-- 1. County ------------------------------------------------------ -->
+      <section class="step" data-step="county" tabindex="-1">
+        <h2 class="step__title">Which county do you live in?</h2>
+        <p class="step__hint">
+          If you're not currently housed, choose the county where you're staying
+          or where you'd like to find housing.
+        </p>
+        <div class="choices choices--grid" role="radiogroup" aria-labelledby="county-label" id="county-choices"></div>
+        <span id="county-label" class="visually-hidden">County</span>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
+        </div>
+      </section>
+
+      <!-- 2. Situation --------------------------------------------------- -->
+      <section class="step" data-step="situation" tabindex="-1">
+        <h2 class="step__title">What best describes your housing situation?</h2>
+        <p class="step__hint">Pick the one that's closest — you can change it later.</p>
+        <div class="choices" role="radiogroup" aria-labelledby="situation-label" id="situation-choices">
+          <label class="choice">
+            <input type="radio" name="situation" value="renting" />
+            <span class="choice__body">
+              <span class="choice__title">I rent, or I'm looking to rent</span>
+              <span class="choice__desc">Including if you're behind on rent or at risk of eviction</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="situation" value="unhoused" />
+            <span class="choice__body">
+              <span class="choice__title">I don't have stable housing right now</span>
+              <span class="choice__desc">Staying in a shelter, a vehicle, outside, or temporarily with others</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="situation" value="homeowner" />
+            <span class="choice__body">
+              <span class="choice__title">I own my home</span>
+              <span class="choice__desc">Including help with utilities, repairs, or falling behind on a mortgage</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="situation" value="buying" />
+            <span class="choice__body">
+              <span class="choice__title">I'm hoping to buy a home</span>
+              <span class="choice__desc">Down payment help, savings-match programs, and first-time buyer loans</span>
+            </span>
+          </label>
+        </div>
+        <span id="situation-label" class="visually-hidden">Housing situation</span>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
+        </div>
+      </section>
+
+      <!-- 3. Household size ---------------------------------------------- -->
+      <section class="step" data-step="household" tabindex="-1">
+        <h2 class="step__title">How many people live in your household?</h2>
+        <p class="step__hint">
+          Count everyone who lives with you and shares income or expenses,
+          including children.
+        </p>
+        <div class="stepper">
+          <button type="button" class="stepper__btn" id="hh-minus" aria-label="Decrease household size">−</button>
+          <div class="stepper__value">
+            <input
+              type="number"
+              id="household-size"
+              min="1"
+              max="12"
+              value="1"
+              inputmode="numeric"
+              aria-label="Number of people in household"
+            />
+            <span class="stepper__unit" id="hh-unit">person</span>
+          </div>
+          <button type="button" class="stepper__btn" id="hh-plus" aria-label="Increase household size">+</button>
+        </div>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next">Continue</button>
+        </div>
+      </section>
+
+      <!-- 4. Income ------------------------------------------------------ -->
+      <section class="step" data-step="income" tabindex="-1">
+        <h2 class="step__title">Roughly what does your household earn in a year?</h2>
+        <p class="step__hint">
+          Before taxes, adding up everyone's income. An estimate is fine — most
+          programs set limits based on this.
+        </p>
+        <div class="money">
+          <span class="money__symbol" aria-hidden="true">$</span>
+          <input
+            type="text"
+            id="income"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="35,000"
+            aria-describedby="income-feedback"
+          />
+          <span class="money__suffix">per year</span>
+        </div>
+        <p class="feedback" id="income-feedback" role="status" aria-live="polite"></p>
+        <label class="checkbox checkbox--standalone">
+          <input type="checkbox" id="income-skip" />
+          <span>I'm not sure — show me everything</span>
+        </label>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next">Continue</button>
+        </div>
+      </section>
+
+      <!-- 5. Circumstances ----------------------------------------------- -->
+      <section class="step" data-step="circumstances" tabindex="-1">
+        <h2 class="step__title">Does any of this apply to your household?</h2>
+        <p class="step__hint">
+          Check all that apply. Some programs are built for these situations —
+          leaving one unchecked never counts against you.
+        </p>
+        <div class="choices choices--compact" id="circumstance-choices">
+          <label class="choice choice--check">
+            <input type="checkbox" name="circumstance" value="crisis" />
+            <span class="choice__body">
+              <span class="choice__title">Facing eviction, a utility shutoff, or displacement</span>
+            </span>
+          </label>
+          <label class="choice choice--check">
+            <input type="checkbox" name="circumstance" value="children" />
+            <span class="choice__body">
+              <span class="choice__title">Children in the household, or someone is pregnant</span>
+            </span>
+          </label>
+          <label class="choice choice--check">
+            <input type="checkbox" name="circumstance" value="veteran" />
+            <span class="choice__body">
+              <span class="choice__title">A household member is a veteran</span>
+            </span>
+          </label>
+          <label class="choice choice--check">
+            <input type="checkbox" name="circumstance" value="disability" />
+            <span class="choice__body">
+              <span class="choice__title">A household member has a disability</span>
+            </span>
+          </label>
+          <label class="choice choice--check">
+            <input type="checkbox" name="circumstance" value="senior" />
+            <span class="choice__body">
+              <span class="choice__title">A household member is 60 or older</span>
+            </span>
+          </label>
+          <label class="choice choice--check">
+            <input type="checkbox" name="circumstance" value="utilityAccount" />
+            <span class="choice__body">
+              <span class="choice__title">A utility account is in your name</span>
+            </span>
+          </label>
+          <label class="choice choice--check" id="ftb-choice">
+            <input type="checkbox" name="circumstance" value="firstTimeBuyer" />
+            <span class="choice__body">
+              <span class="choice__title">Nobody in the household has owned a home in the last 3 years</span>
+            </span>
+          </label>
+        </div>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next">See my results</button>
+        </div>
+      </section>
+
+      <!-- Results -------------------------------------------------------- -->
+      <section class="step step--results" data-step="results" tabindex="-1">
+        <div id="results-state"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>
+          Program details come from public research and can change without
+          notice. Always confirm current requirements with the program directly.
+        </p>
+        <p class="site-footer__crisis">
+          Need help right now? Call <a href="tel:211">211</a> or visit
+          <a href="https://www.211info.org" target="_blank" rel="noopener noreferrer">211info.org</a>
+          for Oregon housing and utility referrals.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
