@@ -1,0 +1,40 @@
+name: Deploy screener to GitHub Pages
+
+# Publishes web/ on every push to master. Pages can only serve from the repo
+# root or /docs on its own, so this uploads the subfolder as an artifact
+# instead — which keeps the screener where it lives.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

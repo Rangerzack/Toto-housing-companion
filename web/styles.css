@@ -130,6 +130,43 @@ body {
   border-radius: 4px;
 }
 
+/* --- Testing banner -------------------------------------------------- */
+
+.testing-banner {
+  background: var(--possible-tint);
+  border-bottom: 1px solid color-mix(in srgb, var(--possible) 30%, transparent);
+  color: var(--ink);
+}
+
+.testing-banner__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+.testing-banner__tag {
+  flex-shrink: 0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 5px;
+  background: var(--possible);
+  color: var(--paper);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 0.15rem;
+}
+
+.testing-banner p {
+  margin: 0;
+  font-size: 0.8438rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
 /* --- Header --------------------------------------------------------- */
 
 .site-header {
@@ -915,6 +952,7 @@ main {
 @media print {
   .site-header,
   .site-footer,
+  .testing-banner,
   .progress,
   .result__actions,
   .results__chips {
