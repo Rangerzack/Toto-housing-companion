@@ -7,7 +7,7 @@
 //
 // Get it from: Supabase dashboard -> Project Settings -> API -> "anon public".
 export const SUPABASE_URL = 'https://vhhcicawkhokncnhzboe.supabase.co';
-export const SUPABASE_ANON_KEY = 'PASTE_YOUR_ANON_PUBLIC_KEY_HERE';
+export const SUPABASE_ANON_KEY = 'sb_publishable_uWoahvwMH3VYZ7n2egHi8Q_AJBUSZjQ';
 
 export const FORMS_BUCKET = 'intake-forms';
 
