@@ -20,6 +20,16 @@ alter table contacts         enable row level security;
 alter table eligibility      enable row level security;
 alter table verification     enable row level security;
 
+-- Dropped first so this file stays re-runnable. It used to rely on
+-- 0001_init.sql having just dropped the tables (which took their policies with
+-- them); now that 0001 preserves data, these have to clean up after themselves.
+drop policy if exists "Public read access" on programs;
+drop policy if exists "Public read access" on program_counties;
+drop policy if exists "Public read access" on forms;
+drop policy if exists "Public read access" on contacts;
+drop policy if exists "Public read access" on eligibility;
+drop policy if exists "Public read access" on verification;
+
 create policy "Public read access" on programs         for select using (true);
 create policy "Public read access" on program_counties for select using (true);
 create policy "Public read access" on forms             for select using (true);

@@ -3,19 +3,17 @@
 -- Normalized so the data can be queried by category, county, form
 -- availability, and verification status.
 
+-- Idempotent on purpose. This file used to drop every table with CASCADE
+-- before recreating them, which meant applying migrations silently emptied the
+-- program tables — and any workflow that applied migrations without also
+-- reloading the CSV (loading income limits, for one) took the whole program
+-- catalogue down with it. Refreshing program data is load_data.py's job; it
+-- truncates and reloads inside a transaction. Schema changes belong in a new
+-- numbered migration.
+
 begin;
 
-drop view if exists v_needs_attention;
-drop view if exists v_program_overview;
-
-drop table if exists program_counties cascade;
-drop table if exists forms cascade;
-drop table if exists contacts cascade;
-drop table if exists eligibility cascade;
-drop table if exists verification cascade;
-drop table if exists programs cascade;
-
-create table programs (
+create table if not exists programs (
     program_id           text primary key,
     program_name         text not null,
     category              text,
@@ -33,13 +31,13 @@ create table programs (
     source_url            text
 );
 
-create table program_counties (
+create table if not exists program_counties (
     program_id text not null references programs(program_id) on delete cascade,
     county     text not null,
     primary key (program_id, county)
 );
 
-create table forms (
+create table if not exists forms (
     form_id       bigint generated always as identity primary key,
     program_id    text not null references programs(program_id) on delete cascade,
     form_url      text,
@@ -47,7 +45,7 @@ create table forms (
     has_real_form boolean not null default false  -- true = downloadable/official form exists
 );
 
-create table contacts (
+create table if not exists contacts (
     program_id   text primary key references programs(program_id) on delete cascade,
     phone        text,
     email        text,
@@ -56,7 +54,7 @@ create table contacts (
     service_area text
 );
 
-create table eligibility (
+create table if not exists eligibility (
     program_id        text primary key references programs(program_id) on delete cascade,
     ami_min           numeric,
     ami_max           numeric,
@@ -72,7 +70,7 @@ create table eligibility (
     utility_required  text
 );
 
-create table verification (
+create table if not exists verification (
     program_id     text primary key references programs(program_id) on delete cascade,
     confidence     text,
     last_verified  text,
@@ -84,12 +82,12 @@ create table verification (
     waitlist_notes text
 );
 
-create index idx_pc_county  on program_counties(county);
-create index idx_prog_cat   on programs(category);
-create index idx_forms_real on forms(has_real_form);
-create index idx_ver_conf   on verification(confidence);
+create index if not exists idx_pc_county  on program_counties(county);
+create index if not exists idx_prog_cat   on programs(category);
+create index if not exists idx_forms_real on forms(has_real_form);
+create index if not exists idx_ver_conf   on verification(confidence);
 
-create view v_program_overview as
+create or replace view v_program_overview as
 select p.program_id, p.program_name, p.category, p.administrator,
        p.application_status,
        (select string_agg(pc.county, '; ') from program_counties pc
@@ -104,7 +102,7 @@ left join contacts     ct on ct.program_id = p.program_id
 left join forms        f  on f.program_id  = p.program_id
 left join verification v  on v.program_id  = p.program_id;
 
-create view v_needs_attention as
+create or replace view v_needs_attention as
 select p.program_id, p.program_name, v.confidence, v.data_gaps, v.last_verified
 from programs p
 join verification v on v.program_id = p.program_id

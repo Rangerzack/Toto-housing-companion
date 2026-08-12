@@ -3,9 +3,9 @@ import {
   SUPABASE_ANON_KEY,
   FORMS_BUCKET,
   COUNTIES,
-  areaMedianIncomeFor,
+  STATEWIDE_AREA_ID,
 } from './config.js';
-import { screenPrograms, estimateAmiPercent } from './matcher.js';
+import { screenPrograms } from './matcher.js';
 
 // ---------------------------------------------------------------------------
 // State
@@ -16,6 +16,7 @@ const QUESTION_STEPS = STEPS.filter((s) => s !== 'intro' && s !== 'results');
 
 const answers = {
   county: null,
+  areaId: null, // income_areas row backing the chosen county
   situation: null,
   householdSize: 1,
   income: null, // null means "not provided"
@@ -25,6 +26,11 @@ const answers = {
 let stepIndex = 0;
 let programs = null; // cached after first fetch
 let fetchError = null;
+
+// Published income limits for the selected county plus the statewide SMI set,
+// keyed `${standard}|${tier}|${size}`. Refetched when the county changes.
+let limits = new Map();
+let limitsAreaId = null;
 
 // ---------------------------------------------------------------------------
 // Tiny DOM helper
@@ -87,6 +93,47 @@ async function fetchPrograms() {
   }));
 }
 
+/**
+ * Loads published limits for one county plus the statewide SMI table.
+ *
+ * v_current_income_limits already drops expired rows and expands published
+ * brackets (USDA's "1-4 person") into one row per size. Several effective dates
+ * can still be current at once, so the newest wins.
+ */
+async function fetchLimits(areaId) {
+  if (limitsAreaId === areaId) return;
+
+  const query =
+    'v_current_income_limits?select=standard_id,tier_pct,household_size,amount,effective_date' +
+    `&or=(area_id.eq.${areaId},area_id.eq.${STATEWIDE_AREA_ID})`;
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  if (!response.ok) throw new Error(`Income limits: ${response.status}`);
+
+  const newest = new Map();
+  const chosen = new Map();
+  for (const row of await response.json()) {
+    const key = `${row.standard_id}|${Number(row.tier_pct)}|${row.household_size}`;
+    if (!newest.has(key) || row.effective_date > newest.get(key)) {
+      newest.set(key, row.effective_date);
+      chosen.set(key, Number(row.amount));
+    }
+  }
+
+  limits = chosen;
+  limitsAreaId = areaId;
+}
+
+/** Passed to the matcher; null means nothing is published for that combination. */
+function limitLookup(standardId, tierPct, householdSize) {
+  const value = limits.get(`${standardId}|${Number(tierPct)}|${householdSize}`);
+  return value == null ? null : value;
+}
+
 // ---------------------------------------------------------------------------
 // Wizard navigation
 // ---------------------------------------------------------------------------
@@ -137,6 +184,7 @@ function goBack() {
 
 function restart() {
   answers.county = null;
+  answers.areaId = null;
   answers.situation = null;
   answers.householdSize = 1;
   answers.income = null;
@@ -168,17 +216,21 @@ function refreshContinueButtons() {
 
 function buildCountyChoices() {
   const container = $('#county-choices');
-  for (const county of COUNTIES) {
-    const input = el('input', { type: 'radio', name: 'county', value: county });
+  for (const { name, areaId } of COUNTIES) {
+    const input = el('input', { type: 'radio', name: 'county', value: name });
     input.addEventListener('change', () => {
-      answers.county = county;
+      answers.county = name;
+      answers.areaId = areaId;
       refreshContinueButtons();
+      // Warm the limits while they answer the next three questions, so the
+      // income step can show real thresholds the moment it opens.
+      fetchLimits(areaId).then(updateIncomeFeedback).catch(() => {});
     });
     container.append(
       el('label', { class: 'choice' }, [
         input,
         el('span', { class: 'choice__body' }, [
-          el('span', { class: 'choice__title', text: county }),
+          el('span', { class: 'choice__title', text: name }),
         ]),
       ]),
     );
@@ -200,23 +252,35 @@ function setHouseholdSize(next) {
 }
 
 const currency = new Intl.NumberFormat('en-US');
+const money = (amount) => `$${currency.format(Math.round(amount))}`;
 
+// Real published thresholds beat a percentage nobody can act on: "under
+// $70,650" is checkable, "80% of AMI" is not.
 function updateIncomeFeedback() {
   const feedback = $('#income-feedback');
-  if (answers.income == null) {
-    feedback.textContent = '';
-    return;
-  }
-  const pct = estimateAmiPercent(answers.income, answers.householdSize, areaMedianIncomeFor);
-  if (pct == null) {
-    feedback.textContent = '';
-    return;
-  }
-  const rounded = Math.round(pct);
   const size = answers.householdSize;
-  feedback.textContent =
-    `That's roughly ${rounded}% of the median income for a household of ` +
-    `${size} in this area — many programs here serve households under 60–80%.`;
+  const at80 = limitLookup('HUD-MFI', 80, size);
+  const at50 = limitLookup('HUD-MFI', 50, size);
+
+  if (answers.income == null) {
+    feedback.textContent = at80
+      ? `Most housing programs in ${answers.county} County serve households of ${size} earning under ${money(at80)}.`
+      : '';
+    return;
+  }
+
+  if (!at80 || !at50) {
+    feedback.textContent = '';
+    return;
+  }
+
+  if (answers.income <= at50) {
+    feedback.textContent = `That's within reach of most programs here, including those limited to ${money(at50)} for a household of ${size}.`;
+  } else if (answers.income <= at80) {
+    feedback.textContent = `That's under the ${money(at80)} limit most housing programs use for a household of ${size}.`;
+  } else {
+    feedback.textContent = `That's above the usual ${money(at80)} limit for a household of ${size}, but programs count income after deductions — you'll still see what may fit.`;
+  }
 }
 
 function wireIncomeStep() {
@@ -452,6 +516,18 @@ async function renderResults() {
     host.replaceChildren();
   }
 
+  // The warm fetch on county selection usually has this ready; awaiting covers
+  // a slow connection or a failed warm-up. If it still fails, every lookup
+  // returns null and income limits become "worth checking" notes rather than
+  // exclusions — nobody is filtered out on data we don't have.
+  if (!fetchError && answers.areaId) {
+    try {
+      await fetchLimits(answers.areaId);
+    } catch {
+      /* fall through with whatever limits we have */
+    }
+  }
+
   if (fetchError) {
     const isMissingKey = fetchError.message === 'MISSING_KEY';
     host.append(
@@ -471,7 +547,7 @@ async function renderResults() {
     return;
   }
 
-  const matches = screenPrograms(programs, answers, areaMedianIncomeFor);
+  const matches = screenPrograms(programs, answers, limitLookup);
   const likely = matches.filter((m) => m.verdict === 'likely').length;
 
   const header = el('div', { class: 'results__header' }, [

@@ -19,6 +19,16 @@
 // "worth checking" note, because a false exclusion costs someone housing help
 // while a false inclusion costs them a phone call.
 
+// How far over a published limit someone's GROSS income can be before the
+// program is ruled out. Programs test ADJUSTED income — gross minus deductions
+// for dependents, childcare, and medical or disability expenses — so a gross
+// figure modestly over the line often still qualifies. Anything inside the
+// margin is surfaced as a prompt instead of an exclusion.
+const OVER_LIMIT_MARGIN = 1.2;
+
+const money = (amount) =>
+  `$${Math.round(amount).toLocaleString('en-US')}`;
+
 const NO_REQUIREMENT_PATTERNS = [
   /^\s*$/,
   /^\s*(no|none|n\/a)\b/i,
@@ -40,12 +50,36 @@ export function readRule(text) {
   return value ? 'unknown' : 'not-required';
 }
 
-/** Estimated AMI percentage, or null when income wasn't provided. */
-export function estimateAmiPercent(annualIncome, householdSize, areaMedianIncomeFor) {
-  if (annualIncome == null || !householdSize) return null;
-  const median = areaMedianIncomeFor(householdSize);
-  if (!median) return null;
-  return (annualIncome / median) * 100;
+// Utility programs test against 60% of Oregon's STATE median income, not the
+// county's area median. Mixing the two silently produces wrong answers: for a
+// household of three the SMI figure is $62,005 while Jackson County's 60% AMI
+// is $52,980. Category is the reliable signal here — every "Utility Reduction"
+// program in the matrix cites 60% SMI.
+export function standardForProgram(program) {
+  return program.category === 'Utility Reduction' ? 'OR-SMI' : 'HUD-MFI';
+}
+
+/**
+ * Resolves the dollar limit a program tests against.
+ *
+ * `lookup(standardId, tierPct, householdSize)` returns a published figure or
+ * null. Only 30/50/60/80 are published; a program written against a tier we
+ * don't hold (100%, 115%, 70%) is scaled from the nearest one and marked
+ * approximate, so callers know not to exclude anyone on it.
+ *
+ * @returns {{amount: number, approximate: boolean}|null}
+ */
+export function resolveLimit(lookup, standardId, tierPct, householdSize) {
+  const exact = lookup(standardId, tierPct, householdSize);
+  if (exact != null) return { amount: exact, approximate: false };
+
+  for (const anchor of [80, 60, 50, 30]) {
+    const value = lookup(standardId, anchor, householdSize);
+    if (value != null) {
+      return { amount: (value / anchor) * tierPct, approximate: true };
+    }
+  }
+  return null;
 }
 
 function matchesTenure(eligibleTenure, situation) {
@@ -94,7 +128,7 @@ const CIRCUMSTANCE_RULES = [
  * Scores one program against the wizard answers.
  * @returns {{verdict: 'likely'|'possible'|'excluded', checks: string[], reason: string|null}}
  */
-export function evaluateProgram(program, answers, areaMedianIncomeFor) {
+export function evaluateProgram(program, answers, lookup) {
   const checks = [];
   const eligibility = program.eligibility || {};
   const counties = (program.program_counties || []).map((c) => c.county);
@@ -119,35 +153,47 @@ export function evaluateProgram(program, answers, areaMedianIncomeFor) {
     checks.push('Confirm the program serves your housing situation.');
   }
 
-  // --- Income (hard, where there are real numbers) ----------------------
-  const amiPercent = estimateAmiPercent(
-    answers.income,
-    answers.householdSize,
-    areaMedianIncomeFor,
-  );
+  // --- Income (hard, against published dollar limits) --------------------
   const amiMax = eligibility.ami_max == null ? null : Number(eligibility.ami_max);
   const amiMin = eligibility.ami_min == null ? null : Number(eligibility.ami_min);
+  const standardId = standardForProgram(program);
 
-  if (amiPercent != null && amiMax) {
-    // A 10% relative grace band, because the AMI table is an estimate and HUD
-    // limits vary by county — someone just over the line should still see the
-    // program rather than being silently dropped.
-    if (amiPercent > amiMax * 1.1) {
+  const limit = amiMax
+    ? resolveLimit(lookup, standardId, amiMax, answers.householdSize)
+    : null;
+
+  if (amiMax && answers.income != null) {
+    if (!limit) {
+      checks.push(`Has an income limit (${amiMax}% of median) that isn't published for your area yet — ask the program directly.`);
+    } else if (limit.approximate) {
+      // Never exclude on a scaled figure; it isn't a published limit.
+      if (answers.income > limit.amount) {
+        checks.push(`Your income may be above this program's ${amiMax}% limit — the exact figure isn't published for your area, so it's worth asking.`);
+      }
+    } else if (answers.income > limit.amount * OVER_LIMIT_MARGIN) {
       return { verdict: 'excluded', checks, reason: 'Household income is above the program limit' };
-    }
-    if (amiPercent > amiMax) {
-      checks.push(
-        `Your income is right around this program's limit (${amiMax}% AMI) — worth applying anyway, since official limits vary by county.`,
-      );
-    }
-  }
-  if (amiPercent != null && amiMin) {
-    if (amiPercent < amiMin) {
-      checks.push(`This program also has a minimum income (${amiMin}% AMI) — confirm you qualify.`);
+    } else if (answers.income > limit.amount) {
+      // Programs count ADJUSTED income — gross minus deductions for
+      // dependents, childcare, and medical or disability expenses — which is
+      // always lower than the gross figure someone types in here. Being over
+      // on gross is genuinely not a decision, so it is a prompt, not a cut.
+      checks.push(`Your income is above the published limit of ${money(limit.amount)}, but programs count income after deductions for dependents and medical costs — still worth applying.`);
     }
   }
-  if (amiPercent == null && amiMax) {
-    checks.push(`Has an income limit (${amiMax}% AMI) — check where your household falls.`);
+
+  if (amiMin && answers.income != null) {
+    const floor = resolveLimit(lookup, standardId, amiMin, answers.householdSize);
+    if (floor && answers.income < floor.amount) {
+      checks.push(`This program also has a minimum income of about ${money(floor.amount)} — confirm you qualify.`);
+    }
+  }
+
+  if (amiMax && answers.income == null) {
+    checks.push(
+      limit && !limit.approximate
+        ? `Income must be under about ${money(limit.amount)} for a household of ${answers.householdSize}.`
+        : `Has an income limit (${amiMax}% of median) — check where your household falls.`,
+    );
   }
 
   // --- Prose circumstance rules (soft) ----------------------------------
@@ -188,11 +234,14 @@ function confidenceRank(program) {
   return 3;
 }
 
-/** Evaluates every program and returns the matches, best first. */
-export function screenPrograms(programs, answers, areaMedianIncomeFor) {
+/**
+ * Evaluates every program and returns the matches, best first.
+ * `lookup(standardId, tierPct, householdSize)` resolves published dollar limits.
+ */
+export function screenPrograms(programs, answers, lookup) {
   const results = [];
   for (const program of programs) {
-    const result = evaluateProgram(program, answers, areaMedianIncomeFor);
+    const result = evaluateProgram(program, answers, lookup);
     if (result.verdict !== 'excluded') {
       results.push({ program, ...result });
     }

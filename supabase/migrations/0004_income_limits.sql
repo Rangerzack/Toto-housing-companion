@@ -12,12 +12,12 @@
 --   * WHICH tier and family size  — 50% of median, 3 people  (income_limits)
 --   * WHICH standard a program uses                         (program_income_rules)
 --
--- Note on re-runs: 0001_init.sql drops the program tables with CASCADE every
--- time migrations are applied, so nothing here may hold a foreign key to
--- programs — it would be destroyed on each data reload. program_income_rules
--- therefore stores program_id as plain text, and v_orphan_income_rules below
--- reports any that no longer resolve. Everything in this file is written to be
--- safely re-runnable.
+-- Note on program_income_rules: program_id is plain text rather than a foreign
+-- key. This dates from when 0001_init.sql dropped the program tables with
+-- CASCADE on every run, which would have taken dependent tables with it. 0001
+-- is idempotent now, so a foreign key would be safe to add in a later
+-- migration; until then v_orphan_income_rules reports rules whose program no
+-- longer resolves. Everything in this file is safely re-runnable.
 
 -- ---------------------------------------------------------------------------
 -- Who publishes a set of limits, and what median it is a percentage OF.
