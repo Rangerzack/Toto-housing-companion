@@ -1,0 +1,68 @@
+name: Fetch HUD income limits
+
+# Pulls limits straight from HUD's API and loads them, so a new publication year
+# is one manual run rather than a re-parse of PDFs.
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Publication year"
+        required: false
+        default: "2026"
+      dataset:
+        description: "il (Section 8 / HOME) or mtsp (LIHTC and LIFT)"
+        required: false
+        default: "il"
+      probe:
+        description: "Print one raw API response instead of loading"
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Probe the HUD API
+        if: ${{ inputs.probe }}
+        env:
+          HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
+        run: python scripts/fetch_hud_limits.py --probe --year "${{ inputs.year }}" --dataset "${{ inputs.dataset }}"
+
+      - name: Fetch limits
+        if: ${{ !inputs.probe }}
+        env:
+          HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
+        run: |
+          python scripts/fetch_hud_limits.py \
+            --year "${{ inputs.year }}" \
+            --dataset "${{ inputs.dataset }}" \
+            --out "hud_${{ inputs.dataset }}_${{ inputs.year }}.csv"
+
+      - name: Apply Supabase migrations
+        if: ${{ !inputs.probe }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python scripts/apply_migrations.py
+
+      - name: Load into Supabase
+        if: ${{ !inputs.probe }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python scripts/load_income_limits.py "hud_${{ inputs.dataset }}_${{ inputs.year }}.csv"
+
+      - name: Upload CSV
+        if: ${{ !inputs.probe }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: hud-${{ inputs.dataset }}-${{ inputs.year }}
+          path: hud_${{ inputs.dataset }}_${{ inputs.year }}.csv
