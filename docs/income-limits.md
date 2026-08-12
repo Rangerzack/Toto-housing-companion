@@ -76,9 +76,35 @@ Column reference is in the docstring of `scripts/load_income_limits.py`.
 
 | Standard | Coverage | Source |
 | -------- | -------- | ------ |
-| `HUD-MFI` | 12 Oregon counties x 30/50/60/80% x sizes 1-8, effective 2026-06-01 | FY2026 HUD adjusted HOME income limits, Oregon |
+| `HUD-MFI` | 12 Oregon counties x 30/50/60/80% x sizes 1-8, effective 2026-06-01 | HUD API, `il` dataset, FY2026 |
 | `OR-SMI` | Statewide, 60% tier, sizes 1-8, FFY2026 (2025-10-01 to 2026-09-30) | HHS via the LIHEAP Clearinghouse |
 | `USDA-502-GUARANTEED` | Jackson County only, 115% tier, 1-4 and 5-8 brackets | **Unverified** — secondary sources only, confirm before relying on it |
+
+Refresh HUD figures with the **Fetch HUD income limits** workflow, which reads
+the API directly:
+
+```bash
+python scripts/fetch_hud_limits.py --year 2026 --out data/hud_2026.csv
+```
+
+Run it with `--probe` to dump a single raw county response. That is the fastest
+way to see HUD's actual field names when a year changes or a run misbehaves —
+the tier figures are nested under `very_low` / `extremely_low` / `low`, not flat
+on `data`, and the script scans for `il<tier>_p<size>` keys rather than assuming
+a shape.
+
+### The 30% tier is not 30% of median
+
+HUD's "extremely low income" limit is the **greater of** 30% of median income or
+the federal poverty guideline. For larger households the poverty floor wins, so
+the figures step above a straight 30%: Jackson County's 4-person ELI is $33,000,
+where 30% of median would be $29,450. The API returns the canonical
+poverty-adjusted value and that is what is loaded. HUD's HOME table publishes
+the unadjusted 30% row, which is why the two sources disagree from three persons
+up — they are answering different questions.
+
+The 50% and 80% figures are identical between the API and the HOME table, which
+is a useful cross-check that both were read correctly.
 
 Counties map to the HUD area that covers them: Jackson to Medford MSA,
 Josephine to Grants Pass MSA, Lane to Eugene-Springfield MSA, Linn to Albany
@@ -99,9 +125,14 @@ within $1, which is why it is trusted for 7-8.
 
 | Standard | Blocker |
 | -------- | ------- |
-| `HUD-MTSP` (LIHTC, LIFT) | HUD's MTSP tables are behind a query tool, and OHCS publishes them only through a Power BI dashboard. Neither is machine-readable. |
+| `HUD-MTSP` (LIHTC, LIFT) | **Not served by HUD's public API** — `/hudapi/public/mtsp/...` returns an HTML error page, confirmed by probe. The tables exist only behind HUD's web query tool and OHCS's Power BI dashboard, neither machine-readable. |
 | `USDA-502-DIRECT` / county-specific guaranteed | USDA's limit maps return 403 to automated fetches. |
 | `OHCS-BOND` | Published periodically by OHCS; no stable table URL found. |
+
+Getting MTSP in therefore means a person exporting it once a year from the
+[OHCS dashboard](https://www.oregon.gov/ohcs/compliance-monitoring/pages/rent-income-limits.aspx)
+or [HUD's MTSP page](https://www.huduser.gov/portal/datasets/mtsp.html) into the
+loader's CSV format. There is no automated path today.
 
 **LIHTC and LIFT do not have their own figures** — both test against MTSP:
 LIHTC across tiers from 20% to 80%, LIFT rental at 60% AMI, LIFT homeownership
