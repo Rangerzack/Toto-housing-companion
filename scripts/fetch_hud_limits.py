@@ -18,6 +18,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -61,29 +62,49 @@ def entity_id(fips):
     return f'{fips}99999'
 
 
-def tier_rows(payload, area_id, dataset, year):
-    """
-    Pulls the per-household-size figures out of one county response.
+TIER_KEY = re.compile(r'^il(\d+)_p(\d+)$')
 
-    HUD nests the numbers under 'data' and names them by tier and size, e.g.
-    il30_p1..il30_p8, il50_p1.., il80_p1.. — the exact prefixes differ between
-    datasets, so anything unrecognised is reported rather than silently dropped.
+
+def collect_tiers(node, found=None):
     """
+    Walks the response for il<tier>_p<size> keys wherever they live.
+
+    HUD groups them under 'very_low' / 'extremely_low' / 'low' rather than
+    flat on 'data', and the grouping differs between datasets, so this scans
+    rather than assuming a shape.
+    """
+    if found is None:
+        found = {}
+    if isinstance(node, dict):
+        for key, value in node.items():
+            match = TIER_KEY.match(key) if isinstance(key, str) else None
+            if match and value is not None:
+                tier, size = int(match.group(1)), int(match.group(2))
+                found.setdefault(tier, {})[size] = int(value)
+            else:
+                collect_tiers(value, found)
+    elif isinstance(node, list):
+        for item in node:
+            collect_tiers(item, found)
+    return found
+
+
+def tier_rows(payload, area_id, dataset, year):
+    """Turns one county response into loader rows."""
     data = payload.get('data', payload)
-    source = f'{API_ROOT}/{dataset}/data (year {year})'
     rows = []
 
-    prefixes = {'il30': 30, 'il50': 50, 'il80': 80}
+    tiers = collect_tiers(data)
     found_any = False
 
-    for prefix, tier in prefixes.items():
-        values = []
-        for size in range(1, 9):
-            value = data.get(f'{prefix}_p{size}')
-            if value is None:
-                break
-            values.append(int(value))
-        if len(values) != 8:
+    # Note on the 30% tier: HUD's "extremely low" figure is the GREATER of 30%
+    # of median or the federal poverty guideline, so for larger households it
+    # steps above a straight 30% and will not match the HOME table's 30% row.
+    # The API value is the canonical one.
+    for tier, by_size in sorted(tiers.items()):
+        values = [by_size.get(size) for size in range(1, 9)]
+        if any(v is None for v in values):
+            print(f'  {area_id}: tier {tier} has gaps, skipping')
             continue
         found_any = True
         for size, amount in enumerate(values, start=1):
@@ -98,14 +119,16 @@ def tier_rows(payload, area_id, dataset, year):
                 'expires_date': '',
                 'variant': '',
                 'source_url': 'https://www.huduser.gov/portal/datasets/il.html',
-                'notes': f'HUD API {dataset.upper()} FY{year}',
+                'notes': f'HUD API {dataset.upper()} FY{year}'
+                         + (' (extremely low = greater of 30% AMI or poverty guideline)'
+                            if tier == 30 else ''),
             })
 
         # HUD defines the 60% tier as 1.2x the very-low-income figure, and the
         # published tables match that exactly. Deriving it keeps LIHTC/LIFT-style
         # 60% tests answerable without a second request.
         if tier == 50:
-            for size, amount in enumerate(values, start=1):
+            for size, amount in enumerate(values, start=1):  # noqa: PLW2901
                 rows.append({
                     'standard_id': STANDARD_BY_DATASET[dataset],
                     'area_id': area_id,
