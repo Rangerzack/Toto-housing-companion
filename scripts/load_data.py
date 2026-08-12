@@ -80,8 +80,29 @@ def load_rows(src_path):
     return data, g
 
 
+# Whether a program measures income against STATE median income or the county's
+# AREA median. Getting this wrong is a silent, consequential error: 60% SMI for
+# a two-person household is $50,194 while Josephine County's 60% AMI is $40,140,
+# so testing a utility applicant against the county figure wrongly rejects them.
+#
+# Category alone is not enough — the RVAR/OAR homebuyer program sits under Down
+# Payment Assistance but tests against "the State of Oregon Median Income Limit"
+# — so the program's own income-standard text decides.
+SMI_PATTERN = re.compile(r'\bSMI\b|state median|state of oregon median|oregon median', re.I)
+
+
+def income_standard_for(income_standard_text, category):
+    """Returns (standard_id, area_id). A NULL area means the applicant's county."""
+    if SMI_PATTERN.search(income_standard_text or ''):
+        return 'OR-SMI', 'OR'
+    if (category or '').strip() == 'Utility Reduction':
+        return 'OR-SMI', 'OR'
+    return 'HUD-MFI', None
+
+
 def build_batches(data, g):
     programs, counties, forms, contacts, eligibility, verification = [], [], [], [], [], []
+    income_rules = []
     seen_counties = set()
 
     for r in data:
@@ -126,7 +147,14 @@ def build_batches(data, g):
             g(r, 'Availability / Waitlist Notes'),
         ))
 
-    return programs, counties, forms, contacts, eligibility, verification
+        standard_id, area_id = income_standard_for(g(r, 'Income Standard'), g(r, 'Category'))
+        income_rules.append((
+            pid, standard_id, area_id,
+            num(g(r, 'AMI Min %')), num(g(r, 'AMI Max %')),
+            g(r, 'Income Standard') or None,
+        ))
+
+    return programs, counties, forms, contacts, eligibility, verification, income_rules
 
 
 def main():
@@ -145,7 +173,8 @@ def main():
         sys.exit(1)
 
     data, g = load_rows(src_path)
-    programs, counties, forms, contacts, eligibility, verification = build_batches(data, g)
+    (programs, counties, forms, contacts, eligibility, verification,
+     income_rules) = build_batches(data, g)
 
     conn = psycopg2.connect(db_url)
     try:
@@ -153,7 +182,7 @@ def main():
             # Fresh load every run: clear rows but keep schema, indexes, and RLS policies intact.
             cur.execute(
                 'truncate forms, program_counties, contacts, eligibility, '
-                'verification, programs restart identity cascade;'
+                'verification, program_income_rules, programs restart identity cascade;'
             )
 
             execute_values(cur, """
@@ -199,6 +228,12 @@ def main():
                 ) values %s
             """, verification)
 
+            execute_values(cur, """
+                insert into program_income_rules (
+                    program_id, standard_id, area_id, tier_min_pct, tier_max_pct, notes
+                ) values %s
+            """, income_rules)
+
         conn.commit()
 
         with conn.cursor() as cur:
@@ -207,6 +242,10 @@ def main():
                 return cur.fetchone()[0]
 
             print('programs      :', one('select count(*) from programs'))
+            print('SMI-tested    :', one(
+                "select count(*) from program_income_rules where standard_id = 'OR-SMI'"))
+            print('AMI-tested    :', one(
+                "select count(*) from program_income_rules where standard_id = 'HUD-MFI'"))
             print('counties rows :', one('select count(*) from program_counties'))
             print('real forms    :', one('select count(*) from forms where has_real_form'))
             print('needs attn    :', one('select count(*) from v_needs_attention'))

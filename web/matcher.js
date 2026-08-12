@@ -50,12 +50,23 @@ export function readRule(text) {
   return value ? 'unknown' : 'not-required';
 }
 
-// Utility programs test against 60% of Oregon's STATE median income, not the
-// county's area median. Mixing the two silently produces wrong answers: for a
-// household of three the SMI figure is $62,005 while Jackson County's 60% AMI
-// is $52,980. Category is the reliable signal here — every "Utility Reduction"
-// program in the matrix cites 60% SMI.
+/**
+ * Which median a program measures income against.
+ *
+ * Mixing these up is a silent, consequential error: 60% of Oregon's STATE
+ * median for a two-person household is $50,194, while Josephine County's 60%
+ * AREA median is $40,140 — testing a utility applicant against the county
+ * figure wrongly rejects them.
+ *
+ * The answer comes from program_income_rules, which load_data.py derives from
+ * each program's own income-standard text. Category is only a fallback for
+ * programs with no rule row, and it is not reliable on its own: the RVAR/OAR
+ * homebuyer program is categorised Down Payment Assistance but tests against
+ * "the State of Oregon Median Income Limit".
+ */
 export function standardForProgram(program) {
+  const declared = program.income_rule?.standard_id;
+  if (declared) return declared;
   return program.category === 'Utility Reduction' ? 'OR-SMI' : 'HUD-MFI';
 }
 

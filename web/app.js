@@ -69,17 +69,31 @@ async function fetchPrograms() {
     throw new Error('MISSING_KEY');
   }
 
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  };
+
   const select =
     'select=*,program_counties(county),eligibility(*),contacts(*),forms(*),verification(*)';
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/programs?${select}`, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-  });
+
+  // program_income_rules is fetched separately rather than embedded: it has no
+  // foreign key to programs (see 0004_income_limits.sql), and PostgREST can
+  // only embed across a declared relationship.
+  const [response, rulesResponse] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/programs?${select}`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/program_income_rules?select=*`, { headers }),
+  ]);
 
   if (!response.ok) {
     throw new Error(`Supabase returned ${response.status} ${response.statusText}`);
+  }
+
+  const rulesByProgram = new Map();
+  if (rulesResponse.ok) {
+    for (const rule of await rulesResponse.json()) {
+      rulesByProgram.set(rule.program_id, rule);
+    }
   }
 
   const rows = await response.json();
@@ -90,6 +104,7 @@ async function fetchPrograms() {
     verification: one(row.verification),
     forms: row.forms || [],
     program_counties: row.program_counties || [],
+    income_rule: rulesByProgram.get(row.program_id) || null,
   }));
 }
 
