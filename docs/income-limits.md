@@ -72,17 +72,51 @@ Column reference is in the docstring of `scripts/load_income_limits.py`.
 
 ## What is loaded today
 
-Only Jackson County 50% AMI (the one figure set published anywhere in the
-program matrix) plus a USDA example row. **Everything else still needs to come
-from the official tables:**
+**402 rows.**
 
-- HUD income limits — <https://www.huduser.gov/portal/datasets/il.html>
-- Oregon SMI for LIHEAP/OEAP — published by OHCS, effective each October 1
-- USDA 502 limits — direct and guaranteed maps under rd.usda.gov
+| Standard | Coverage | Source |
+| -------- | -------- | ------ |
+| `HUD-MFI` | 12 Oregon counties x 30/50/60/80% x sizes 1-8, effective 2026-06-01 | FY2026 HUD adjusted HOME income limits, Oregon |
+| `OR-SMI` | Statewide, 60% tier, sizes 1-8, FFY2026 (2025-10-01 to 2026-09-30) | HHS via the LIHEAP Clearinghouse |
+| `USDA-502-GUARANTEED` | Jackson County only, 115% tier, 1-4 and 5-8 brackets | **Unverified** — secondary sources only, confirm before relying on it |
 
-Until those are loaded, the screener still uses the estimated AMI table in
-`web/config.js`. Wiring the frontend to this database before the real figures
-are in would make matching worse, not better — most lookups would return `NULL`.
+Counties map to the HUD area that covers them: Jackson to Medford MSA,
+Josephine to Grants Pass MSA, Lane to Eugene-Springfield MSA, Linn to Albany
+MSA, Marion to Salem MSA, Clackamas to Portland-Vancouver-Hillsboro MSA, and the
+rest are standalone county areas.
+
+The HUD figures were checked three ways before loading: tiers are strictly
+ordered at every household size, the 60% row is exactly 1.2x the 50% row
+throughout (HUD's own arithmetic), and Jackson County's 50% figures match the
+HAJC limits that arrived independently through the program matrix.
+
+The Oregon SMI table publishes sizes 1-6; sizes 7-8 are derived with the HHS
+family-size formula (132% at six persons, +3% per additional person, applied to
+the 4-person figure). That formula reproduces the published 1-6 figures to
+within $1, which is why it is trusted for 7-8.
+
+### Still missing
+
+| Standard | Blocker |
+| -------- | ------- |
+| `HUD-MTSP` (LIHTC, LIFT) | HUD's MTSP tables are behind a query tool, and OHCS publishes them only through a Power BI dashboard. Neither is machine-readable. |
+| `USDA-502-DIRECT` / county-specific guaranteed | USDA's limit maps return 403 to automated fetches. |
+| `OHCS-BOND` | Published periodically by OHCS; no stable table URL found. |
+
+**LIHTC and LIFT do not have their own figures** — both test against MTSP:
+LIHTC across tiers from 20% to 80%, LIFT rental at 60% AMI, LIFT homeownership
+at 80% AMI. Loading MTSP therefore covers all three at once. Do **not**
+substitute the `HUD-MFI` figures: HUD computes MTSP with hold-harmless and
+HERA-special provisions that keep some areas above their Section 8 equivalents,
+so the two diverge in exactly the places where it changes an answer.
+
+The reliable way to finish this is HUD's API, which serves both the IL and MTSP
+datasets for every county and year. It needs a free token from
+<https://www.huduser.gov/portal/dataset/fmr-api.html>; with one in a
+`HUD_API_TOKEN` secret, a fetcher can keep every standard current automatically.
+
+Until MTSP is loaded, `income_limit_for('HUD-MTSP', ...)` returns `NULL`, which
+callers must treat as "unknown, do not exclude anyone."
 
 ## No foreign key to programs
 
