@@ -128,10 +128,29 @@ async function fetchLimits(areaId) {
   limitsAreaId = areaId;
 }
 
-/** Passed to the matcher; null means nothing is published for that combination. */
+/**
+ * Passed to the matcher; null means nothing is published for that combination.
+ *
+ * HUD publishes sizes 1-8 but this screener accepts households up to 12, so
+ * larger ones fall back to HUD's own convention: add 8% of the 4-person limit
+ * per additional person. This mirrors the income_limit_for() function in
+ * 0004_income_limits.sql. Oregon's SMI table carries explicit rows through
+ * size 12 (it grows by a different rule), so those hit the exact path first.
+ */
 function limitLookup(standardId, tierPct, householdSize) {
-  const value = limits.get(`${standardId}|${Number(tierPct)}|${householdSize}`);
-  return value == null ? null : value;
+  const key = (size) => `${standardId}|${Number(tierPct)}|${size}`;
+
+  const exact = limits.get(key(householdSize));
+  if (exact != null) return exact;
+
+  if (householdSize > 8) {
+    const largest = limits.get(key(8));
+    const fourPerson = limits.get(key(4));
+    if (largest != null && fourPerson != null) {
+      return Math.round(largest + fourPerson * 0.08 * (householdSize - 8));
+    }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
