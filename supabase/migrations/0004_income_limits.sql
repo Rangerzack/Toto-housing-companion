@@ -123,7 +123,9 @@ select l.limit_id,
        l.variant,
        l.source_url
 from income_limits l
-cross join lateral generate_series(l.household_size_min, l.household_size_max)
+-- Casts are required: generate_series is overloaded for int/bigint/numeric and
+-- smallint arguments are ambiguous between them.
+cross join lateral generate_series(l.household_size_min::int, l.household_size_max::int)
      as size(household_size);
 
 create or replace view v_current_income_limits as
