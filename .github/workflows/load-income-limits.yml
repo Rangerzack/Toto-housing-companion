@@ -1,0 +1,35 @@
+name: Load income limits
+
+# Manual trigger. Income limits are reference data that changes a few times a
+# year, on a different cadence from the program matrix, so this is separate
+# from the load-data workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      csv_path:
+        description: "Path to the income limits CSV in this repo"
+        required: false
+        default: "data/income_limits_template.csv"
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Apply Supabase migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python scripts/apply_migrations.py
+
+      - name: Load income limits
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python scripts/load_income_limits.py "${{ inputs.csv_path }}"
