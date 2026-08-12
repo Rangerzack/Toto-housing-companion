@@ -4,8 +4,8 @@ import {
   FORMS_BUCKET,
   COUNTIES,
   STATEWIDE_AREA_ID,
-} from './config.js';
-import { screenPrograms } from './matcher.js';
+} from './config.js?v=__BUILD__';
+import { screenPrograms } from './matcher.js?v=__BUILD__';
 
 // ---------------------------------------------------------------------------
 // State

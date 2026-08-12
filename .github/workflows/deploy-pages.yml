@@ -32,6 +32,16 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
+      # Pages serves assets with max-age=600, so a returning visitor would keep
+      # running stale JavaScript against freshly deployed HTML for up to ten
+      # minutes. Stamping the commit SHA into the asset URLs makes each deploy
+      # a new URL, which sidesteps the cache entirely.
+      - name: Stamp asset versions
+        run: |
+          find web -type f \( -name '*.html' -o -name '*.js' \) \
+            -exec sed -i "s/__BUILD__/${GITHUB_SHA::12}/g" {} +
+          grep -r "__BUILD__" web && { echo "unstamped placeholders remain"; exit 1; } || true
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web
