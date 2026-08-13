@@ -10,6 +10,10 @@ on:
         description: "Path to the CSV in this repo"
         required: false
         default: "data/Southern_Oregon_Housing_Matrix_REVERIFIED.csv"
+      state:
+        description: "Two-letter state the matrix covers (OR, MN). Only this state's rows are replaced."
+        required: false
+        default: "OR"
 
 jobs:
   load:
@@ -42,4 +46,4 @@ jobs:
       - name: Load CSV into Supabase
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: python scripts/load_data.py "${{ inputs.csv_path }}"
+        run: python scripts/load_data.py "${{ inputs.csv_path }}" "${{ inputs.state }}"

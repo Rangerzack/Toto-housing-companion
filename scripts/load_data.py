@@ -23,27 +23,55 @@ import sys
 import psycopg2
 from psycopg2.extras import execute_values
 
-COUNTY_NAMES = [
-    'jackson', 'josephine', 'douglas', 'coos', 'curry', 'klamath', 'lane',
-    'lincoln', 'linn', 'marion', 'clackamas', 'union',
-]
+# County names are NOT unique across states — Oregon and Minnesota both have a
+# Douglas County, and both have Jackson and Lincoln. Every county therefore
+# carries its state, and "statewide" expands only within the state being
+# loaded. Without that scoping a statewide Minnesota program would attach
+# itself to Oregon counties.
+STATES = {
+    'OR': {
+        'counties': [
+            'jackson', 'josephine', 'douglas', 'coos', 'curry', 'klamath', 'lane',
+            'lincoln', 'linn', 'marion', 'clackamas', 'union',
+        ],
+        # Counties a "statewide" program is treated as covering — the ones this
+        # screener actually serves, not every county in the state.
+        'statewide': ['Jackson', 'Josephine'],
+        'smi_standard': 'OR-SMI',
+        'smi_area': 'OR',
+    },
+    'MN': {
+        'counties': [
+            'stearns', 'benton', 'sherburne', 'morrison', 'wright', 'todd',
+            'isanti', 'kanabec', 'mille lacs', 'kandiyohi', 'douglas',
+            'crow wing', 'pope', 'cass', 'chisago', 'ramsey',
+        ],
+        'statewide': ['Stearns', 'Benton', 'Sherburne'],
+        'smi_standard': 'MN-SMI',
+        'smi_area': 'MN',
+    },
+}
 
 
-def parse_counties(txt):
-    """Split the free-text county field into normalized county names."""
+def parse_counties(txt, state):
+    """Split the free-text county field into (county, state) pairs."""
+    config = STATES[state]
     if not txt:
-        return []
+        return [('Unspecified', state)]
+
     t = txt.lower()
     found = []
-    for c in COUNTY_NAMES:
-        if re.search(r'\b' + c + r'\b', t):
-            found.append(c.capitalize())
+    for c in config['counties']:
+        if re.search(r'\b' + re.escape(c) + r'\b', t):
+            found.append(c.title())
+
     if 'statewide' in t:
-        for c in ['Jackson', 'Josephine']:
+        for c in config['statewide']:
             if c not in found:
                 found.append(c)
         found.append('Statewide')
-    return found or ['Unspecified']
+
+    return [(c, state) for c in (found or ['Unspecified'])]
 
 
 def num(v):
@@ -88,19 +116,55 @@ def load_rows(src_path):
 # Category alone is not enough — the RVAR/OAR homebuyer program sits under Down
 # Payment Assistance but tests against "the State of Oregon Median Income Limit"
 # — so the program's own income-standard text decides.
-SMI_PATTERN = re.compile(r'\bSMI\b|state median|state of oregon median|oregon median', re.I)
+SMI_PATTERN = re.compile(r'\bSMI\b|state median|state of \w+ median|oregon median|minnesota median', re.I)
+
+# "50% State Median Income" — the tier is often only in the prose, because the
+# AMI Min/Max columns read "N/A (uses State Median Income, not AMI)" for the
+# Minnesota programs. Without this they would carry no income test at all.
+SMI_TIER_PATTERN = re.compile(r'(\d{2,3})\s*%\s*(?:of\s*)?(?:the\s*)?(?:state median|smi)', re.I)
 
 
-def income_standard_for(income_standard_text, category):
+def income_standard_for(income_standard_text, category, state):
     """Returns (standard_id, area_id). A NULL area means the applicant's county."""
-    if SMI_PATTERN.search(income_standard_text or ''):
-        return 'OR-SMI', 'OR'
+    config = STATES[state]
+    text = income_standard_text or ''
+    if SMI_PATTERN.search(text):
+        return config['smi_standard'], config['smi_area']
     if (category or '').strip() == 'Utility Reduction':
-        return 'OR-SMI', 'OR'
+        return config['smi_standard'], config['smi_area']
     return 'HUD-MFI', None
 
 
-def build_batches(data, g):
+def smi_tier_from_text(income_standard_text):
+    """The percentage an SMI-based program tests at, when only the prose says."""
+    match = SMI_TIER_PATTERN.search(income_standard_text or '')
+    return float(match.group(1)) if match else None
+
+
+# Entries that document something real but are not assistance a person can
+# apply for. Showing these in results wastes a call someone may not have the
+# minutes for, so they load with is_active = false and never reach the screener.
+INACTIVE_PATTERNS = [
+    (re.compile(r'\bdiscontinued\b', re.I), 'Discontinued'),
+    (re.compile(r'program ended|closed permanently|no longer', re.I), 'Program ended'),
+    (re.compile(r'not a (funding|payment) program', re.I), 'Not a funding program'),
+    (re.compile(r'does not cover utilities', re.I), 'Does not cover utilities'),
+    (re.compile(r'referral and navigation|navigation and counselling', re.I),
+     'Referral or navigation only'),
+    (re.compile(r'system access point', re.I), 'Access point, not a program'),
+]
+
+
+def inactive_reason_for(*fields):
+    """First reason this row is not an applyable program, or None."""
+    blob = ' '.join(f for f in fields if f)
+    for pattern, reason in INACTIVE_PATTERNS:
+        if pattern.search(blob):
+            return reason
+    return None
+
+
+def build_batches(data, g, state):
     programs, counties, forms, contacts, eligibility, verification = [], [], [], [], [], []
     income_rules = []
     seen_counties = set()
@@ -110,16 +174,20 @@ def build_batches(data, g):
         if not pid:
             continue
 
+        inactive = inactive_reason_for(
+            g(r, 'Category'), g(r, 'Application Status'), g(r, 'Program Name'))
+
         programs.append((
             pid, g(r, 'Program Name'), g(r, 'Category'), g(r, 'Administrator'),
             g(r, 'Application Status'), g(r, 'Application Window'), g(r, 'Benefit Type'),
             g(r, 'Maximum Benefit'), g(r, 'Benefit Frequency'), g(r, 'Application Method'),
             g(r, 'Required Documents'), g(r, 'Priority Factors'),
             g(r, 'Other Hard Disqualifiers'), g(r, 'Internal Notes'), g(r, 'Source URL'),
+            inactive is None, inactive,
         ))
 
-        for c in parse_counties(g(r, 'Eligible Counties')):
-            key = (pid, c)
+        for county, state_code in parse_counties(g(r, 'Eligible Counties'), state):
+            key = (pid, county, state_code)
             if key not in seen_counties:
                 seen_counties.add(key)
                 counties.append(key)
@@ -147,10 +215,16 @@ def build_batches(data, g):
             g(r, 'Availability / Waitlist Notes'),
         ))
 
-        standard_id, area_id = income_standard_for(g(r, 'Income Standard'), g(r, 'Category'))
+        standard_id, area_id = income_standard_for(
+            g(r, 'Income Standard'), g(r, 'Category'), state)
+        tier_max = num(g(r, 'AMI Max %'))
+        if tier_max is None and standard_id.endswith('-SMI'):
+            # The AMI columns read "N/A (uses State Median Income, not AMI)",
+            # so the only statement of the threshold is in the prose.
+            tier_max = smi_tier_from_text(g(r, 'Income Standard'))
         income_rules.append((
             pid, standard_id, area_id,
-            num(g(r, 'AMI Min %')), num(g(r, 'AMI Max %')),
+            num(g(r, 'AMI Min %')), tier_max,
             g(r, 'Income Standard') or None,
         ))
 
@@ -159,12 +233,19 @@ def build_batches(data, g):
 
 def main():
     if len(sys.argv) < 2:
-        print('Usage: python scripts/load_data.py <path-to-csv>')
+        print('Usage: python scripts/load_data.py <path-to-csv> [state]')
+        print(f'       state defaults to OR; known: {", ".join(sorted(STATES))}')
         sys.exit(1)
 
     src_path = sys.argv[1]
     if not os.path.exists(src_path):
         print(f'CSV not found: {src_path}')
+        sys.exit(1)
+
+    state = (sys.argv[2] if len(sys.argv) > 2 else 'OR').upper()
+    if state not in STATES:
+        print(f'Unknown state "{state}". Known: {", ".join(sorted(STATES))}')
+        print('Add it to STATES with its counties and SMI standard first.')
         sys.exit(1)
 
     db_url = os.environ.get('SUPABASE_DB_URL')
@@ -174,16 +255,22 @@ def main():
 
     data, g = load_rows(src_path)
     (programs, counties, forms, contacts, eligibility, verification,
-     income_rules) = build_batches(data, g)
+     income_rules) = build_batches(data, g, state)
+
+    unspecified = sum(1 for _, county, _ in counties if county == 'Unspecified')
+    if unspecified:
+        print(f'WARNING: {unspecified} county entries did not match any known {state} '
+              f'county and will show for every county in the state.')
 
     conn = psycopg2.connect(db_url)
     try:
         with conn.cursor() as cur:
-            # Fresh load every run: clear rows but keep schema, indexes, and RLS policies intact.
-            cur.execute(
-                'truncate forms, program_counties, contacts, eligibility, '
-                'verification, program_income_rules, programs restart identity cascade;'
-            )
+            # Clear only this state. A truncate here would delete every other
+            # state's programs, which is exactly what would happen the first
+            # time a second matrix was loaded.
+            cur.execute('delete from program_income_rules where program_id in '
+                        '(select program_id from programs where state_code = %s)', (state,))
+            cur.execute('delete from programs where state_code = %s', (state,))
 
             execute_values(cur, """
                 insert into programs (
@@ -191,13 +278,15 @@ def main():
                     application_status, application_window, benefit_type,
                     max_benefit, benefit_frequency, application_method,
                     required_documents, priority_factors, other_disqualifiers,
-                    internal_notes, source_url
+                    internal_notes, source_url, is_active, inactive_reason,
+                    state_code
                 ) values %s
-            """, programs)
+            """, [row + (state,) for row in programs])
 
             if counties:
                 execute_values(cur, """
-                    insert into program_counties (program_id, county) values %s
+                    insert into program_counties (program_id, county, state_code)
+                    values %s
                     on conflict do nothing
                 """, counties)
 
@@ -241,25 +330,40 @@ def main():
                 cur.execute(q)
                 return cur.fetchone()[0]
 
-            print('programs      :', one('select count(*) from programs'))
-            print('SMI-tested    :', one(
-                "select count(*) from program_income_rules where standard_id = 'OR-SMI'"))
-            print('AMI-tested    :', one(
-                "select count(*) from program_income_rules where standard_id = 'HUD-MFI'"))
+            print(f'loaded {state}   :', one(
+                f"select count(*) from programs where state_code = '{state}'"))
+            print('  active      :', one(
+                f"select count(*) from programs where state_code = '{state}' and is_active"))
+            print('  inactive    :', one(
+                f"select count(*) from programs where state_code = '{state}' and not is_active"))
+            print('all states    :', one('select count(*) from programs'))
             print('counties rows :', one('select count(*) from program_counties'))
             print('real forms    :', one('select count(*) from forms where has_real_form'))
-            print('needs attn    :', one('select count(*) from v_needs_attention'))
+            print('no state set  :', one('select count(*) from v_counties_missing_state'))
             print()
-            print('by category:')
+            print('programs by state:')
             cur.execute("""
-                select coalesce(nullif(category, ''), '(unset)'), count(*)
-                from programs group by 1 order by 2 desc
+                select coalesce(state_code, '(unset)'), count(*)
+                from programs group by 1 order by 1
             """)
-            for cat, n in cur.fetchall():
-                print(f'   {cat:<28} {n}')
+            for code, n in cur.fetchall():
+                print(f'   {code:<6} {n}')
             print()
-            print('by county:')
-            cur.execute('select county, count(*) from program_counties group by 1 order by 2 desc')
+            print('income standard used:')
+            cur.execute('select standard_id, count(*) from program_income_rules '
+                        'group by 1 order by 2 desc')
+            for standard, n in cur.fetchall():
+                print(f'   {standard:<12} {n}')
+            print()
+            print(f'{state} programs held back as inactive:')
+            cur.execute("select program_name, inactive_reason from programs "
+                        "where state_code = %s and not is_active order by 1", (state,))
+            for name, reason in cur.fetchall():
+                print(f'   [{reason}] {name[:58]}')
+            print()
+            print(f'{state} counties:')
+            cur.execute('select county, count(*) from program_counties '
+                        'where state_code = %s group by 1 order by 2 desc', (state,))
             for c, n in cur.fetchall():
                 print(f'   {c:<14} {n}')
     finally:
