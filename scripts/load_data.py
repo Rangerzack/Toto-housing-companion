@@ -47,6 +47,27 @@ STATES = {
             'crow wing', 'pope', 'cass', 'chisago', 'ramsey',
         ],
         'statewide': ['Stearns', 'Benton', 'Sherburne'],
+        # Several St. Cloud programs state their service area as a city rather
+        # than a county ("City of St. Cloud only"). Without these they land in
+        # Unspecified and show for the whole state. St. Cloud itself straddles
+        # three counties, so it maps to all three.
+        'cities': {
+            'st. cloud': ['Stearns', 'Benton', 'Sherburne'],
+            'st cloud': ['Stearns', 'Benton', 'Sherburne'],
+            'waite park': ['Stearns'],
+            'st. joseph': ['Stearns'],
+            'st. augusta': ['Stearns'],
+            'melrose': ['Stearns'],
+            'sartell': ['Stearns'],
+            'sauk rapids': ['Benton'],
+            'foley': ['Benton'],
+            'elk river': ['Sherburne'],
+            'zimmerman': ['Sherburne'],
+            'big lake': ['Sherburne'],
+            'otsego': ['Sherburne'],
+            'braham': ['Isanti'],
+            'st. paul': ['Ramsey'],
+        },
         'smi_standard': 'MN-SMI',
         'smi_area': 'MN',
     },
@@ -64,6 +85,12 @@ def parse_counties(txt, state):
     for c in config['counties']:
         if re.search(r'\b' + re.escape(c) + r'\b', t):
             found.append(c.title())
+
+    for city, city_counties in config.get('cities', {}).items():
+        if re.search(r'\b' + re.escape(city) + r'\b', t):
+            for c in city_counties:
+                if c not in found:
+                    found.append(c)
 
     if 'statewide' in t:
         for c in config['statewide']:
