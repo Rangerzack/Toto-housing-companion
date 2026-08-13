@@ -156,3 +156,53 @@ callers must treat as "unknown, do not exclude anyone."
 run, which would take any dependent table with it on each data reload. The
 `v_orphan_income_rules` view reports rules whose program no longer resolves,
 which is the check that replaces the missing constraint.
+
+## Multiple states
+
+County names are not unique. Oregon and Minnesota both have a Douglas County,
+and their published limits differ by 27% — $41,800 against $52,950 at 50% AMI
+for a household of four. Seven programs in this database list a county named
+"Douglas". A name-only match would show all seven to residents of both.
+
+So geography is always a **(county, state) pair**:
+
+- `program_counties.state_code` records which state a county belongs to
+- `programs.state_code` records which matrix a program came from
+- `income_areas` is keyed by FIPS, which is unique across states
+- the loader takes a state argument and replaces only that state's rows
+
+That last point matters: `load_data.py` used to truncate every program table on
+each run. With one dataset that was merely blunt; with two it would have deleted
+Oregon the first time Minnesota loaded.
+
+State also decides which median income applies. Oregon's utility programs test
+against 60% of Oregon's SMI; Minnesota's Energy Assistance Program tests against
+50% of Minnesota's. Those land within 0.2% of each other for a household of four
+— $73,816 against $73,969 — because Minnesota's median is higher but its
+threshold is lower. Two standards that nearly coincide are the easiest kind to
+mix up and the hardest to notice, which is why the standard travels with the
+program rather than being inferred.
+
+### Adding another state
+
+1. Add its counties and statewide area to `income_areas`, and its SMI standard
+   to `income_standards` (a migration).
+2. Add a `STATES` entry in `scripts/load_data.py` with its county list, what
+   "statewide" should expand to, any city aliases, and its SMI standard.
+3. Add its county FIPS codes to `COUNTY_FIPS_TO_AREA` in
+   `scripts/fetch_hud_limits.py`, then run the fetch workflow.
+4. Load its SMI table.
+5. Add a `STATES` entry in `web/config.js`.
+6. Run the load-data workflow with that state selected.
+
+The loader warns when a county in the CSV matches nothing it knows, because the
+failure is otherwise silent: unmatched counties become `Unspecified` and the
+program shows for the whole state rather than erroring.
+
+### Inactive records
+
+The St. Cloud matrix documents entries that are not assistance anyone can apply
+for — discontinued funds, referral desks, "shutoff protection (NOT a payment
+program)". These load with `is_active = false` and the screener filters them
+out. They stay in the database because the research is worth keeping; they never
+reach results because a phone call to a referral line is not help.

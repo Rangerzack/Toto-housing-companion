@@ -366,6 +366,20 @@ main {
   grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
 }
 
+/* Region heading above each county group. "Douglas" exists in both states, so
+   this heading is what tells someone which one they are picking. */
+.choices__group {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 1.5rem 0 0.75rem;
+}
+.choices__group:first-child {
+  margin-top: 0;
+}
+
 .choices--compact {
   gap: 0.5rem;
 }

@@ -142,12 +142,17 @@ const CIRCUMSTANCE_RULES = [
 export function evaluateProgram(program, answers, lookup) {
   const checks = [];
   const eligibility = program.eligibility || {};
-  const counties = (program.program_counties || []).map((c) => c.county);
 
   // --- County (hard) ---------------------------------------------------
+  // Matched on county AND state. Oregon and Minnesota both have a Douglas
+  // County, so a name alone would show Minnesota programs to Oregon residents.
+  const inState = (program.program_counties || [])
+    .filter((c) => !c.state_code || c.state_code === answers.state)
+    .map((c) => c.county);
+
   const servesCounty =
-    counties.includes(answers.county) || counties.includes('Statewide');
-  const countyUnspecified = counties.includes('Unspecified');
+    inState.includes(answers.county) || inState.includes('Statewide');
+  const countyUnspecified = inState.includes('Unspecified');
   if (!servesCounty && !countyUnspecified) {
     return { verdict: 'excluded', checks, reason: `Does not serve ${answers.county} County` };
   }

@@ -2,8 +2,7 @@ import {
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
   FORMS_BUCKET,
-  COUNTIES,
-  STATEWIDE_AREA_ID,
+  STATES,
 } from './config.js?v=__BUILD__';
 import { screenPrograms } from './matcher.js?v=__BUILD__';
 
@@ -16,7 +15,9 @@ const QUESTION_STEPS = STEPS.filter((s) => s !== 'intro' && s !== 'results');
 
 const answers = {
   county: null,
+  state: null, // county names repeat across states; both are needed
   areaId: null, // income_areas row backing the chosen county
+  statewideAreaId: null, // where that state's SMI limits live
   situation: null,
   householdSize: 1,
   income: null, // null means "not provided"
@@ -75,13 +76,16 @@ async function fetchPrograms() {
   };
 
   const select =
-    'select=*,program_counties(county),eligibility(*),contacts(*),forms(*),verification(*)';
+    'select=*,program_counties(county,state_code),eligibility(*),contacts(*),forms(*),verification(*)';
 
   // program_income_rules is fetched separately rather than embedded: it has no
   // foreign key to programs (see 0004_income_limits.sql), and PostgREST can
   // only embed across a declared relationship.
   const [response, rulesResponse] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/programs?${select}`, { headers }),
+    // is_active filters out records that document something real but are not
+    // assistance anyone can apply for — discontinued funds, referral desks,
+    // "shutoff protection (NOT a payment program)".
+    fetch(`${SUPABASE_URL}/rest/v1/programs?${select}&is_active=eq.true`, { headers }),
     fetch(`${SUPABASE_URL}/rest/v1/program_income_rules?select=*`, { headers }),
   ]);
 
@@ -115,12 +119,14 @@ async function fetchPrograms() {
  * brackets (USDA's "1-4 person") into one row per size. Several effective dates
  * can still be current at once, so the newest wins.
  */
-async function fetchLimits(areaId) {
+async function fetchLimits(areaId, statewideAreaId) {
   if (limitsAreaId === areaId) return;
 
+  // The county's own limits plus that state's statewide SMI table — Oregon
+  // programs test against Oregon's SMI, Minnesota's against Minnesota's.
   const query =
     'v_current_income_limits?select=standard_id,tier_pct,household_size,amount,effective_date' +
-    `&or=(area_id.eq.${areaId},area_id.eq.${STATEWIDE_AREA_ID})`;
+    `&or=(area_id.eq.${areaId},area_id.eq.${statewideAreaId})`;
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -218,7 +224,9 @@ function goBack() {
 
 function restart() {
   answers.county = null;
+  answers.state = null;
   answers.areaId = null;
+  answers.statewideAreaId = null;
   answers.situation = null;
   answers.householdSize = 1;
   answers.income = null;
@@ -250,24 +258,41 @@ function refreshContinueButtons() {
 
 function buildCountyChoices() {
   const container = $('#county-choices');
-  for (const { name, areaId } of COUNTIES) {
-    const input = el('input', { type: 'radio', name: 'county', value: name });
-    input.addEventListener('change', () => {
-      answers.county = name;
-      answers.areaId = areaId;
-      refreshContinueButtons();
-      // Warm the limits while they answer the next three questions, so the
-      // income step can show real thresholds the moment it opens.
-      fetchLimits(areaId).then(updateIncomeFeedback).catch(() => {});
-    });
-    container.append(
-      el('label', { class: 'choice' }, [
-        input,
-        el('span', { class: 'choice__body' }, [
-          el('span', { class: 'choice__title', text: name }),
+
+  for (const state of STATES) {
+    // Grouped by region, because "Douglas" appears under both and the heading
+    // is what tells someone which one they want.
+    if (STATES.length > 1) {
+      container.append(el('h3', { class: 'choices__group', text: state.name }));
+    }
+
+    const group = el('div', { class: 'choices choices--grid' });
+    for (const { name, areaId } of state.counties) {
+      const input = el('input', {
+        type: 'radio',
+        name: 'county',
+        value: `${state.code}:${name}`,
+      });
+      input.addEventListener('change', () => {
+        answers.county = name;
+        answers.state = state.code;
+        answers.areaId = areaId;
+        answers.statewideAreaId = state.statewideAreaId;
+        refreshContinueButtons();
+        // Warm the limits while they answer the next three questions, so the
+        // income step can show real thresholds the moment it opens.
+        fetchLimits(areaId, state.statewideAreaId).then(updateIncomeFeedback).catch(() => {});
+      });
+      group.append(
+        el('label', { class: 'choice' }, [
+          input,
+          el('span', { class: 'choice__body' }, [
+            el('span', { class: 'choice__title', text: name }),
+          ]),
         ]),
-      ]),
-    );
+      );
+    }
+    container.append(group);
   }
 }
 
@@ -556,7 +581,7 @@ async function renderResults() {
   // exclusions — nobody is filtered out on data we don't have.
   if (!fetchError && answers.areaId) {
     try {
-      await fetchLimits(answers.areaId);
+      await fetchLimits(answers.areaId, answers.statewideAreaId);
     } catch {
       /* fall through with whatever limits we have */
     }
