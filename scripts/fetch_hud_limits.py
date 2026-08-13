@@ -27,6 +27,7 @@ API_ROOT = 'https://www.huduser.gov/hudapi/public'
 
 # The counties this project serves, mapped to the area_id used in income_areas.
 COUNTY_FIPS_TO_AREA = {
+    # Oregon
     '41005': 'OR-CLACKAMAS',
     '41011': 'OR-COOS',
     '41015': 'OR-CURRY',
@@ -39,6 +40,25 @@ COUNTY_FIPS_TO_AREA = {
     '41043': 'OR-LINN',
     '41047': 'OR-MARION',
     '41061': 'OR-UNION',
+    # Minnesota — the St. Cloud region and the counties its programs reach.
+    # Note 27041 Douglas MN sits alongside 41019 Douglas OR: same county name,
+    # different state, which is why areas are keyed by FIPS rather than name.
+    '27009': 'MN-BENTON',
+    '27021': 'MN-CASS',
+    '27025': 'MN-CHISAGO',
+    '27035': 'MN-CROW-WING',
+    '27041': 'MN-DOUGLAS',
+    '27059': 'MN-ISANTI',
+    '27065': 'MN-KANABEC',
+    '27067': 'MN-KANDIYOHI',
+    '27095': 'MN-MILLE-LACS',
+    '27097': 'MN-MORRISON',
+    '27121': 'MN-POPE',
+    '27123': 'MN-RAMSEY',
+    '27141': 'MN-SHERBURNE',
+    '27145': 'MN-STEARNS',
+    '27153': 'MN-TODD',
+    '27171': 'MN-WRIGHT',
 }
 
 STANDARD_BY_DATASET = {'il': 'HUD-MFI', 'mtsp': 'HUD-MTSP'}
