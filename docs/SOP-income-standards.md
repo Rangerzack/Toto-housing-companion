@@ -1,0 +1,307 @@
+# SOP: choosing the income standard for a program
+
+For anyone adding a program to the matrix or reviewing what the screener does
+with one. It answers three questions: **which dataset applies**, **why that one
+and not another**, and **where the numbers come from**.
+
+The rule this whole document exists to protect:
+
+> A program is tested against the standard its own published materials name.
+> Never against whichever standard is convenient, and never against a default.
+> When the standard or the threshold is unknown, apply **no income test** —
+> a missing limit must never quietly become a wrong one.
+
+---
+
+## 1. The decision procedure
+
+Work down this list. Stop at the first match. It mirrors what
+`income_standard_for()` in `scripts/load_data.py` does, so a human and the
+loader reach the same answer.
+
+| # | If the program's own income language says… | Use | Area |
+| - | ------------------------------------------ | --- | ---- |
+| 1 | "state median income", "SMI", "% of the State of Oregon Median Income" | `OR-SMI` / `MN-SMI` — the state the program operates in | that state (`OR`, `MN`) |
+| 2 | "federal poverty guidelines", "FPG", "FPL", "% of poverty" | `HHS-FPG` | `US-48` (or `US-AK` / `US-HI`) |
+| 3 | It is a LIHTC, Tax-Exempt Bond, or LIFT project | `HUD-MTSP` | the applicant's county |
+| 4 | "area median income", "AMI", "HUD income limits", "median family income" | `HUD-MFI` | the applicant's county |
+| 5 | USDA Section 502 loan | `USDA-502-DIRECT` or `-GUARANTEED` | the applicant's county |
+| 6 | "not income-tested", "no published income table", "not a fixed AMI test" | **none** | — |
+| 7 | Eligibility flows from another program ("must be an approved EAP recipient") | that program's standard, noted as derivative | — |
+| 8 | Anything else | **none**, and flag it for research | — |
+
+### Why SMI is checked before FPG
+
+Minnesota's Energy Assistance Program tests at **50% SMI**, but its write-up
+also mentions "sizes 19–20 use 110% FPG" — an edge case for very large
+households. Reading that as the primary standard drops the four-person limit
+from **$71,998 to $33,000** and turns away families the program exists to serve.
+
+Programs that genuinely test on poverty level never mention SMI at all. So SMI
+wins when both appear. This ordering was wrong once and produced exactly that
+failure before it was caught.
+
+### Why category is not used
+
+Category looks like a shortcut and is not one. `ACCESS-RVAR-OAR-OR-001` sits
+under *Down Payment Assistance* but tests against "the State of Oregon Median
+Income Limit". Classifying by category put it on county AMI, resolving its limit
+to $88,313 instead of the correct $103,342 for a three-person household.
+
+The program's own text decides. Category is a fallback only for rows with no
+income language at all.
+
+---
+
+## 2. The standards
+
+### `HUD-MFI` — HUD Section 8 / HOME income limits
+
+**Used for:** rent assistance, vouchers, most down-payment assistance — anything
+citing "area median income" or "HUD income limits".
+
+**Why this one:** it is the limit HUD itself publishes per county or metro area
+and the one those programs administer against.
+
+**Source:** <https://www.huduser.gov/portal/datasets/il.html>
+Pulled through HUD's API (`/hudapi/public/il/data/{fips}99999`), which needs a
+free token in the `HUD_API_TOKEN` secret. Refresh with the **Fetch HUD income
+limits** workflow.
+
+**Published:** annually, effective around 1 June.
+**Loaded:** 904 rows — 28 counties across Oregon and Minnesota, tiers 30/50/60/80, sizes 1–8.
+
+**Watch for:** the 30% tier is *not* 30% of median. HUD's "extremely low income"
+figure is the **greater of** 30% AMI or the federal poverty guideline, so for
+larger households the poverty floor takes over — Jackson County's four-person
+ELI is $33,000 where a straight 30% would be $29,450. The API returns the
+canonical poverty-adjusted number.
+
+Tiers here are **not** proportional. HUD computes each separately with its own
+caps, so 100% AMI is not twice the 50% figure, and scaling between tiers is an
+estimate that must never exclude anyone.
+
+---
+
+### `HUD-MTSP` — Multifamily Tax Subsidy Project limits
+
+**Used for:** LIHTC (whichever tier the project elected, 20–80%), Tax-Exempt
+Bonds, **LIFT rental at 60%**, **LIFT homeownership at 80%**.
+
+**Why this one:** none of those three programs publishes its own figures. All of
+them test against MTSP, so one table answers all three.
+
+**Why not `HUD-MFI`:** they are genuinely different tables. For Jackson County
+they agree exactly at 50% and 60%, then diverge at 80%:
+
+| Household | HUD-MFI | MTSP |
+| --------- | ------- | ---- |
+| 4 people | $78,500 | $78,480 |
+| 6 people | $91,100 | $91,040 |
+| 8 people | $103,650 | $103,600 |
+
+HUD caps each Section 8 tier separately; every MTSP tier is a straight multiple
+of the 50% figure. The gap is small in Medford and much wider in HERA-special
+and hold-harmless areas. Substituting one for the other is not safe.
+
+**Source:** <https://www.huduser.gov/portal/datasets/mtsp.html>, and for Oregon
+the OHCS dashboard at
+<https://www.oregon.gov/ohcs/compliance-monitoring/pages/rent-income-limits.aspx>
+
+**Published:** annually around 1 May; owners must implement by mid-June.
+**Loaded:** 80 rows — Jackson County only, ten tiers, sizes 1–8.
+
+**How to get more counties — this one is manual.** The dashboard is a Power BI
+report: it renders to canvas, exposes no data endpoint, and its export is a
+report action rather than a file URL. Nothing can scrape it. Either:
+
+1. Open the dashboard, choose the county, and use **Open Data Download** for the
+   Excel export (best — covers every county at once), or
+2. Select the county on the MTSP tab and print the page to PDF, as was done for
+   Jackson.
+
+A printed PDF still works even though Power BI converts text to vector outlines
+and leaves nothing machine-readable — the page gets read as an image and
+transcribed. Budget for that; it is not automatable.
+
+---
+
+### `OR-SMI` — Oregon state median income
+
+**Used for:** LIHEAP, OEAP, Pacific Power LID, Avista discount — Oregon's
+utility and energy assistance programs, all at **60% SMI**.
+
+**Why this one:** these test against *state* median income, not the county's.
+The distinction is the single most consequential one in this system. For a
+two-person household, 60% of Oregon SMI is **$50,194** while Josephine County's
+60% AMI is **$40,140**. Testing a utility applicant against the county figure
+wrongly rejects them by more than $10,000.
+
+**Source:** HHS estimates via the LIHEAP Clearinghouse,
+<https://liheapch.acf.gov/profiles/povertytables/FY2026/orsmi.htm>
+Framing confirmed at
+<https://www.oregon.gov/ohcs/energy-weatherization/pages/utility-bill-payment-assistance.aspx>
+
+**Published:** each federal fiscal year, effective 1 October.
+**Loaded:** 24 rows — statewide, 60% and 100% tiers, sizes 1–12.
+
+**Watch for:** HHS publishes sizes 1–6 only. Sizes 7+ come from their stated
+family-size formula — 132% at six persons, +3% per additional person, applied to
+the 4-person figure. That formula reproduces the published 1–6 figures to within
+$1, which is why it is trusted beyond them. One published source rendered sizes
+7–8 by extending the linear pattern instead of applying the formula, giving
+$109,248 where the correct figure is $99,652. Use the formula, not a linear
+extension.
+
+---
+
+### `MN-SMI` — Minnesota state median income
+
+**Used for:** Minnesota Energy Assistance Program (Primary Heat, Crisis, Energy
+Related Repair), HeatShare, Stearns Electric, ERMU — all at **50% SMI**.
+
+**Why a separate standard from `OR-SMI`:** because "SMI" means a different
+number in each state, and here the two nearly coincide, which makes the error
+invisible:
+
+| 4-person household | |
+| ------------------ | - |
+| Oregon at 60% SMI | $73,816 |
+| Minnesota at 50% SMI | $73,969 |
+
+**0.2% apart.** Minnesota's median is higher but it tests at a lower percentage.
+A program pointed at the wrong state's table would look correct in every spot
+check and still be wrong. This is why the standard travels with the program
+rather than being inferred from anything.
+
+Note also the tier differs: Oregon utilities test at 60%, Minnesota's at 50%.
+Copying the tier across states is as wrong as copying the table.
+
+**Source:** <https://liheapch.acf.gov/profiles/povertytables/FY2026/mnsmi.htm>
+FFY2027 figures came from the program matrix's own EAP entry, which quotes the
+published table.
+
+**Published:** each federal fiscal year, effective 1 October.
+**Loaded:** 48 rows — statewide, 50% and 100% tiers, sizes 1–12, for FFY2026 and FFY2027.
+
+---
+
+### `HHS-FPG` — federal poverty guidelines
+
+**Used for:** Emergency General Assistance (Stearns, Benton, Sherburne) and the
+four FHPAP providers — all at **200% FPG**.
+
+**Why this one:** these programs test on poverty level, not on any median
+income. Before this standard existed they carried no income test at all and
+passed everyone.
+
+**Source:** <https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines>
+
+**Published:** each January, in the Federal Register.
+**Loaded:** 36 rows — 100% tier for the 48 contiguous states, Alaska, and
+Hawaii, sizes 1–12.
+
+**Only the 100% figures are stored.** Programs cite multiples — 130%, 150%,
+185%, 200% — and those multiples are exact, so any tier resolves by arithmetic.
+
+**A useful cross-check:** the 2026 guidelines for households of 3–8 match HUD's
+Jackson County ELI figures to the dollar. That is expected, since ELI is the
+greater of 30% AMI or the poverty guideline and poverty wins at those sizes. Two
+independent sources agreeing exactly is good evidence both were read correctly.
+
+---
+
+### `USDA-502-DIRECT` / `USDA-502-GUARANTEED`
+
+**Used for:** USDA Section 502 rural home loans. Guaranteed tests at 115% of
+area median; Direct uses low and very-low income tiers.
+
+**Source:** <https://www.rd.usda.gov/> — the Direct and Guaranteed limit maps.
+
+**Status: incomplete and partly unverified.** Two rows for Jackson County from
+secondary sources, flagged in `notes`. USDA's limit maps return 403 to
+automated fetches, so these need manual entry. Confirm before relying on them.
+
+**Watch for:** USDA publishes in **brackets** — one figure for 1–4 person
+households, another for 5–8 — not per size. The schema stores that as published
+via `household_size_min` / `household_size_max`, and
+`v_income_limits_by_size` expands it.
+
+---
+
+### `OHCS-BOND`
+
+**Used for:** OHCS Flex Lending (FirstHome / NextStep) and the Mortgage Credit
+Certificate program.
+
+**Status: declared but empty.** Both programs currently carry no income test.
+OHCS publishes these limits by county, household size, and whether the property
+is in a HUD-designated targeted area, but no stable machine-readable table has
+been found. This is a known gap, not an oversight.
+
+---
+
+## 3. Adding or updating a limit table
+
+1. Get the figures from the publisher above. Never from a summary, a search
+   result, or a secondary site — those have been wrong twice in this project.
+2. Put them in the loader's CSV format (columns documented in
+   `scripts/load_income_limits.py`).
+3. Run the **Load income limits** workflow, or:
+   ```bash
+   python scripts/load_income_limits.py data/your_file.csv
+   ```
+4. The loader upserts rather than truncating, so limits accumulate and past
+   determinations stay reproducible. An unknown `standard_id` or `area_id`
+   aborts the load rather than inserting figures nobody can look up.
+
+### Validate before trusting
+
+These checks have each caught a real error:
+
+- **Tier ordering.** 30% < 50% < 60% < 80% at every household size.
+- **Known relationships.** HUD's 60% row is exactly 1.2× its 50% row. MTSP tiers
+  are exact multiples of its 50% row. If a relationship that should hold does
+  not, the parse is wrong.
+- **Cross-source agreement.** If two independent sources cover the same figure,
+  compare them. Jackson County's 50% row appears in HUD's API, the HOME table,
+  the MTSP dashboard, and the HAJC program listing — all four agree.
+- **Sanity against a neighbour.** A county's limits should be in the same
+  neighbourhood as adjacent counties.
+
+A parsing bug in this project silently filled every 80% row with 50% figures,
+because the pattern `LOW INCOME` also matches inside `VERY LOW INCOME`. Spot
+checks passed; the tier-ordering check is what exposed it.
+
+---
+
+## 4. Refresh calendar
+
+| Standard | Published | Effective | Action |
+| -------- | --------- | --------- | ------ |
+| `HHS-FPG` | January | on publication | Reload the national table |
+| `HUD-MTSP` | ~1 May | ~1 May | Manual export per county |
+| `HUD-MFI` | ~April | ~1 June | Run the fetch workflow with the new year |
+| `OR-SMI`, `MN-SMI` | summer | 1 October | Reload both state tables |
+
+Only `HUD-MFI` is automated. The rest need a person.
+
+---
+
+## 5. What the screener does with all this
+
+- The standard and tier live in `program_income_rules`, derived from each
+  program's own text at load time. They are **data, not logic** — inspectable
+  and correctable without touching code.
+- A missing tier means **no income test**, not a default.
+- A missing limit returns `NULL`, and the program stays in results with a
+  "worth checking" note rather than being dropped.
+- Being over a limit on **gross** income flags rather than excludes, because
+  programs test income *after* deductions for dependents, childcare, and
+  medical costs. Only clearly-over incomes are filtered.
+- Scaling to an unstored tier is exact for proportional standards
+  (`HHS-FPG`, `HUD-MTSP`, `OR-SMI`, `MN-SMI`) and an estimate for the rest —
+  and an estimate never excludes anyone.
+
+Every active program and the dataset it uses is listed in
+[program_income_datasets.csv](program_income_datasets.csv).
