@@ -125,7 +125,6 @@ within $1, which is why it is trusted for 7-8.
 
 | Standard | Blocker |
 | -------- | ------- |
-| `HUD-MTSP` (LIHTC, LIFT) | **Not served by HUD's public API** — `/hudapi/public/mtsp/...` returns an HTML error page, confirmed by probe. The tables exist only behind HUD's web query tool and OHCS's Power BI dashboard, neither machine-readable. |
 | `USDA-502-DIRECT` / county-specific guaranteed | USDA's limit maps return 403 to automated fetches. |
 | `OHCS-BOND` | Published periodically by OHCS; no stable table URL found. |
 
@@ -206,3 +205,46 @@ for — discontinued funds, referral desks, "shutoff protection (NOT a payment
 program)". These load with `is_active = false` and the screener filters them
 out. They stay in the database because the research is worth keeping; they never
 reach results because a phone call to a referral line is not help.
+
+## MTSP, LIHTC and LIFT
+
+`HUD-MTSP` is loaded for Jackson County — ten tiers (20% through 80%) across
+household sizes 1-8, effective 2026-05-01, from the OHCS dashboard. That single
+table answers all three programs, because none of them publish their own
+figures:
+
+| Program | Tier |
+| ------- | ---- |
+| LIHTC | whichever tier the project elected, 20-80% |
+| LIFT rental | 60% |
+| LIFT homeownership | 80% |
+
+**MTSP is not interchangeable with HUD-MFI**, and Jackson County shows why. The
+two agree exactly at 50% and 60%, then diverge at 80%:
+
+| Household | HUD-MFI | MTSP |
+| --------- | ------- | ---- |
+| 4 people | $78,500 | $78,480 |
+| 6 people | $91,100 | $91,040 |
+| 8 people | $103,650 | $103,600 |
+
+HUD computes each Section 8 tier separately and caps it; every MTSP tier is a
+straight multiple of the 50% figure. Twenty dollars is immaterial to a person,
+but it is a real difference in the published tables, and in HERA-special and
+hold-harmless areas the gap is far wider.
+
+That multiple-of-the-base property is why `HUD-MTSP` is marked `proportional`:
+scaling to a tier that is not stored is arithmetic rather than an estimate.
+
+### Getting the rest of the counties
+
+The dashboard is a Power BI report, which cannot be scraped — it renders to
+canvas, exposes no data endpoint, and its export is a report action rather than
+a file URL. The reliable route is a person opening the dashboard, choosing a
+county, and using **Open Data Download** for the Excel export, or printing the
+MTSP page to PDF as was done for Jackson.
+
+A printed PDF works: Power BI converts text to vector outlines, so nothing can
+be extracted from the file, but `scripts/` has no dependency on that — the page
+was read as an image and transcribed. Rent limits are on the same page and are
+not loaded, since nothing in the screener uses them yet.
