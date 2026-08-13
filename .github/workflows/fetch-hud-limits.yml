@@ -23,6 +23,16 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
+      # This workflow writes to the production database, which the staging
+      # branch shares. workflow_dispatch lets you pick any branch, so refuse to
+      # run from one that is not master rather than quietly rewriting live data.
+      - name: Refuse to run outside master
+        if: github.ref_name != 'master'
+        run: |
+          echo "This workflow writes to the production database and must run from master."
+          echo "Selected branch: ${{ github.ref_name }}"
+          exit 1
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5

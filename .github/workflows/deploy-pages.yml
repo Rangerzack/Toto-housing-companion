@@ -1,11 +1,15 @@
 name: Deploy screener to GitHub Pages
 
-# Publishes web/ on every push to master. Pages can only serve from the repo
-# root or /docs on its own, so this uploads the subfolder as an artifact
-# instead — which keeps the screener where it lives.
+# Publishes two environments to the one site Pages allows per repo:
+#
+#   master  -> /                 (production)
+#   staging -> /staging/         (safe to break)
+#
+# Both branches trigger this same workflow, and it always rebuilds both, so a
+# push to either one never drops the other from the site.
 on:
   push:
-    branches: [master]
+    branches: [master, staging]
     paths:
       - 'web/**'
       - '.github/workflows/deploy-pages.yml'
@@ -16,7 +20,6 @@ permissions:
   pages: write
   id-token: write
 
-# Let a running deploy finish rather than cancelling it mid-publish.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -28,23 +31,55 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: prod
+
+      - name: Check out staging
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: staging
+          path: stage
 
       - uses: actions/configure-pages@v5
 
       # Pages serves assets with max-age=600, so a returning visitor would keep
       # running stale JavaScript against freshly deployed HTML for up to ten
-      # minutes. Stamping the commit SHA into the asset URLs makes each deploy
-      # a new URL, which sidesteps the cache entirely.
-      - name: Stamp asset versions
+      # minutes. Stamping a per-deploy version into the asset URLs makes each
+      # deploy a new URL, which sidesteps the cache entirely.
+      - name: Assemble site
         run: |
-          find web -type f \( -name '*.html' -o -name '*.js' \) \
-            -exec sed -i "s/__BUILD__/${GITHUB_SHA::12}/g" {} +
-          grep -r "__BUILD__" web && { echo "unstamped placeholders remain"; exit 1; } || true
+          set -euo pipefail
+          mkdir -p _site
+          cp -r prod/web/. _site/
+          sed -i "s/__BUILD__/${GITHUB_SHA::12}/g" $(find _site -maxdepth 1 -type f \( -name '*.html' -o -name '*.js' \))
+
+          if [ -d stage/web ]; then
+            mkdir -p _site/staging
+            cp -r stage/web/. _site/staging/
+            # A distinct suffix so staging assets can never be served from a
+            # cache entry populated by production, or the reverse.
+            sed -i "s/__BUILD__/staging-${GITHUB_SHA::12}/g" \
+              $(find _site/staging -maxdepth 1 -type f \( -name '*.html' -o -name '*.js' \))
+            # Make it obvious which environment you are looking at.
+            sed -i 's|<span class="testing-banner__tag">Draft</span>|<span class="testing-banner__tag">Staging</span>|' _site/staging/index.html
+            sed -i 's|<small>Southern Oregon</small>|<small>Southern Oregon — STAGING</small>|' _site/staging/index.html
+            echo "staging included"
+          else
+            echo "no staging branch; publishing production only"
+          fi
+
+          if grep -rl "__BUILD__" _site; then
+            echo "unstamped placeholders remain"
+            exit 1
+          fi
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web
+          path: _site
 
       - id: deployment
         uses: actions/deploy-pages@v4
