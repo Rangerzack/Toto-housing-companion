@@ -167,12 +167,16 @@ def income_standard_for(income_standard_text, category, state):
     config = STATES[state]
     text = income_standard_text or ''
 
-    # Checked before SMI: a program citing both is testing on poverty level,
-    # with the median usually mentioned only as contrast.
-    if FPG_PATTERN.search(text):
-        return 'HHS-FPG', FPG_AREA_BY_STATE.get(state, 'US-48')
+    # SMI is checked FIRST, and the order matters. Minnesota's Energy
+    # Assistance Program tests at 50% SMI but its write-up also says "sizes
+    # 19-20 use 110% FPG" — an edge case for very large households. Reading
+    # that mention as the primary standard drops a four-person limit from
+    # $71,998 to $33,000 and turns away families the program is built for.
+    # Programs that genuinely test on poverty level do not mention SMI at all.
     if SMI_PATTERN.search(text):
         return config['smi_standard'], config['smi_area']
+    if FPG_PATTERN.search(text):
+        return 'HHS-FPG', FPG_AREA_BY_STATE.get(state, 'US-48')
     if (category or '').strip() == 'Utility Reduction':
         return config['smi_standard'], config['smi_area']
     return 'HUD-MFI', None
