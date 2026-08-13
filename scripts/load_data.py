@@ -150,11 +150,27 @@ SMI_PATTERN = re.compile(r'\bSMI\b|state median|state of \w+ median|oregon media
 # Minnesota programs. Without this they would carry no income test at all.
 SMI_TIER_PATTERN = re.compile(r'(\d{2,3})\s*%\s*(?:of\s*)?(?:the\s*)?(?:state median|smi)', re.I)
 
+# A third basis. Several St. Cloud programs test at 200% of the federal poverty
+# guidelines rather than against any median income.
+FPG_PATTERN = re.compile(r'federal poverty|poverty guideline|\bFPG\b|\bFPL\b', re.I)
+FPG_TIER_PATTERN = re.compile(
+    r'(\d{2,3})\s*%\s*(?:of\s*)?(?:the\s*)?(?:federal\s*)?poverty|'
+    r'(?:federal\s*)?poverty\s*(?:guidelines?|level)[^.]{0,20}?(\d{2,3})\s*%', re.I)
+
+# FPG is national: one table for the 48 contiguous states, separate ones for
+# Alaska and Hawaii. Both states loaded here are in the contiguous 48.
+FPG_AREA_BY_STATE = {'AK': 'US-AK', 'HI': 'US-HI'}
+
 
 def income_standard_for(income_standard_text, category, state):
     """Returns (standard_id, area_id). A NULL area means the applicant's county."""
     config = STATES[state]
     text = income_standard_text or ''
+
+    # Checked before SMI: a program citing both is testing on poverty level,
+    # with the median usually mentioned only as contrast.
+    if FPG_PATTERN.search(text):
+        return 'HHS-FPG', FPG_AREA_BY_STATE.get(state, 'US-48')
     if SMI_PATTERN.search(text):
         return config['smi_standard'], config['smi_area']
     if (category or '').strip() == 'Utility Reduction':
@@ -162,9 +178,20 @@ def income_standard_for(income_standard_text, category, state):
     return 'HUD-MFI', None
 
 
-def smi_tier_from_text(income_standard_text):
-    """The percentage an SMI-based program tests at, when only the prose says."""
-    match = SMI_TIER_PATTERN.search(income_standard_text or '')
+def tier_from_text(income_standard_text, standard_id):
+    """
+    The percentage a program tests at, when only the prose states it.
+
+    The AMI columns read "N/A (uses State Median Income, not AMI)" for these
+    programs, so without this they would carry no income test at all.
+    """
+    text = income_standard_text or ''
+    if standard_id == 'HHS-FPG':
+        match = FPG_TIER_PATTERN.search(text)
+        if match:
+            return float(match.group(1) or match.group(2))
+        return 100.0  # a bare "poverty guidelines" reference means the guideline itself
+    match = SMI_TIER_PATTERN.search(text)
     return float(match.group(1)) if match else None
 
 
@@ -245,10 +272,8 @@ def build_batches(data, g, state):
         standard_id, area_id = income_standard_for(
             g(r, 'Income Standard'), g(r, 'Category'), state)
         tier_max = num(g(r, 'AMI Max %'))
-        if tier_max is None and standard_id.endswith('-SMI'):
-            # The AMI columns read "N/A (uses State Median Income, not AMI)",
-            # so the only statement of the threshold is in the prose.
-            tier_max = smi_tier_from_text(g(r, 'Income Standard'))
+        if tier_max is None and standard_id != 'HUD-MFI':
+            tier_max = tier_from_text(g(r, 'Income Standard'), standard_id)
         income_rules.append((
             pid, standard_id, area_id,
             num(g(r, 'AMI Min %')), tier_max,

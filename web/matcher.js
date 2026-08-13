@@ -80,14 +80,21 @@ export function standardForProgram(program) {
  *
  * @returns {{amount: number, approximate: boolean}|null}
  */
-export function resolveLimit(lookup, standardId, tierPct, householdSize) {
+export function resolveLimit(lookup, standardId, tierPct, householdSize, proportional) {
   const exact = lookup(standardId, tierPct, householdSize);
   if (exact != null) return { amount: exact, approximate: false };
 
-  for (const anchor of [80, 60, 50, 30]) {
+  for (const anchor of [100, 80, 60, 50, 30]) {
     const value = lookup(standardId, anchor, householdSize);
     if (value != null) {
-      return { amount: (value / anchor) * tierPct, approximate: true };
+      // Scaling is exact for standards defined as percentages of one base:
+      // 200% FPG is exactly twice the guideline, 60% SMI exactly 1.2x the 50%
+      // figure. HUD's AMI tiers are each computed separately with their own
+      // caps, so scaling between them is an estimate and must not exclude.
+      return {
+        amount: (value / anchor) * tierPct,
+        approximate: !proportional?.has(standardId),
+      };
     }
   }
   return null;
@@ -139,7 +146,7 @@ const CIRCUMSTANCE_RULES = [
  * Scores one program against the wizard answers.
  * @returns {{verdict: 'likely'|'possible'|'excluded', checks: string[], reason: string|null}}
  */
-export function evaluateProgram(program, answers, lookup) {
+export function evaluateProgram(program, answers, lookup, proportional) {
   const checks = [];
   const eligibility = program.eligibility || {};
 
@@ -175,7 +182,7 @@ export function evaluateProgram(program, answers, lookup) {
   const standardId = standardForProgram(program);
 
   const limit = amiMax
-    ? resolveLimit(lookup, standardId, amiMax, answers.householdSize)
+    ? resolveLimit(lookup, standardId, amiMax, answers.householdSize, proportional)
     : null;
 
   if (amiMax && answers.income != null) {
@@ -198,7 +205,7 @@ export function evaluateProgram(program, answers, lookup) {
   }
 
   if (amiMin && answers.income != null) {
-    const floor = resolveLimit(lookup, standardId, amiMin, answers.householdSize);
+    const floor = resolveLimit(lookup, standardId, amiMin, answers.householdSize, proportional);
     if (floor && answers.income < floor.amount) {
       checks.push(`This program also has a minimum income of about ${money(floor.amount)} — confirm you qualify.`);
     }
@@ -254,10 +261,10 @@ function confidenceRank(program) {
  * Evaluates every program and returns the matches, best first.
  * `lookup(standardId, tierPct, householdSize)` resolves published dollar limits.
  */
-export function screenPrograms(programs, answers, lookup) {
+export function screenPrograms(programs, answers, lookup, proportional) {
   const results = [];
   for (const program of programs) {
-    const result = evaluateProgram(program, answers, lookup);
+    const result = evaluateProgram(program, answers, lookup, proportional);
     if (result.verdict !== 'excluded') {
       results.push({ program, ...result });
     }

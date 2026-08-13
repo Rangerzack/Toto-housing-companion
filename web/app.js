@@ -33,6 +33,11 @@ let fetchError = null;
 let limits = new Map();
 let limitsAreaId = null;
 
+// Standards whose tiers are exact multiples of one base (SMI, poverty
+// guidelines). Scaling to an unpublished tier is arithmetic for these and an
+// estimate for HUD's AMI, which computes each tier separately.
+let proportionalStandards = new Set();
+
 // ---------------------------------------------------------------------------
 // Tiny DOM helper
 // ---------------------------------------------------------------------------
@@ -81,13 +86,22 @@ async function fetchPrograms() {
   // program_income_rules is fetched separately rather than embedded: it has no
   // foreign key to programs (see 0004_income_limits.sql), and PostgREST can
   // only embed across a declared relationship.
-  const [response, rulesResponse] = await Promise.all([
+  const [response, rulesResponse, standardsResponse] = await Promise.all([
     // is_active filters out records that document something real but are not
     // assistance anyone can apply for — discontinued funds, referral desks,
     // "shutoff protection (NOT a payment program)".
     fetch(`${SUPABASE_URL}/rest/v1/programs?${select}&is_active=eq.true`, { headers }),
     fetch(`${SUPABASE_URL}/rest/v1/program_income_rules?select=*`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/income_standards?select=standard_id,proportional`, { headers }),
   ]);
+
+  if (standardsResponse.ok) {
+    proportionalStandards = new Set(
+      (await standardsResponse.json())
+        .filter((s) => s.proportional)
+        .map((s) => s.standard_id),
+    );
+  }
 
   if (!response.ok) {
     throw new Error(`Supabase returned ${response.status} ${response.statusText}`);
@@ -126,7 +140,7 @@ async function fetchLimits(areaId, statewideAreaId) {
   // programs test against Oregon's SMI, Minnesota's against Minnesota's.
   const query =
     'v_current_income_limits?select=standard_id,tier_pct,household_size,amount,effective_date' +
-    `&or=(area_id.eq.${areaId},area_id.eq.${statewideAreaId})`;
+    `&or=(area_id.eq.${areaId},area_id.eq.${statewideAreaId},area_id.eq.US-48)`;
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -606,7 +620,7 @@ async function renderResults() {
     return;
   }
 
-  const matches = screenPrograms(programs, answers, limitLookup);
+  const matches = screenPrograms(programs, answers, limitLookup, proportionalStandards);
   const likely = matches.filter((m) => m.verdict === 'likely').length;
 
   const header = el('div', { class: 'results__header' }, [
