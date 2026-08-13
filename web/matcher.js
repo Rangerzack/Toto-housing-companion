@@ -177,8 +177,18 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   }
 
   // --- Income (hard, against published dollar limits) --------------------
-  const amiMax = eligibility.ami_max == null ? null : Number(eligibility.ami_max);
-  const amiMin = eligibility.ami_min == null ? null : Number(eligibility.ami_min);
+  // The tier comes from program_income_rules first. For the Minnesota programs
+  // the AMI columns read "N/A (uses State Median Income, not AMI)", so
+  // eligibility.ami_max is null and the only statement of the threshold is the
+  // one the loader parsed out of the prose. Reading eligibility alone left
+  // every SMI- and FPG-tested program with no income test at all.
+  const rule = program.income_rule || {};
+  const pick = (ruleValue, eligibilityValue) => {
+    const value = ruleValue != null ? ruleValue : eligibilityValue;
+    return value == null ? null : Number(value);
+  };
+  const amiMax = pick(rule.tier_max_pct, eligibility.ami_max);
+  const amiMin = pick(rule.tier_min_pct, eligibility.ami_min);
   const standardId = standardForProgram(program);
 
   const limit = amiMax
