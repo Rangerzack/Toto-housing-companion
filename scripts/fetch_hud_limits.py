@@ -67,7 +67,7 @@ STANDARD_BY_DATASET = {'il': 'HUD-MFI', 'mtsp': 'HUD-MTSP'}
 def call(path, token):
     request = urllib.request.Request(
         f'{API_ROOT}/{path}',
-        headers={'Authorization': f'Bearer {token}', 'User-Agent': 'southern-oregon-housing'},
+        headers={'Authorization': f'Bearer {token}', 'User-Agent': 'toto-housing-companion'},
     )
     try:
         with urllib.request.urlopen(request, timeout=60) as response:

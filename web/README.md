@@ -1,4 +1,4 @@
-# Housing Help Finder — screener frontend
+# Toto Housing Companion — screener frontend
 
 A guided five-question screener that matches someone to housing, utility, and
 homebuying programs from the Supabase database in this repo.
