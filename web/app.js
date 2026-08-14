@@ -10,14 +10,29 @@ import { screenPrograms } from './matcher.js?v=__BUILD__';
 // State
 // ---------------------------------------------------------------------------
 
-const STEPS = ['intro', 'county', 'situation', 'household', 'income', 'circumstances', 'results'];
-const QUESTION_STEPS = STEPS.filter((s) => s !== 'intro' && s !== 'results');
+const STEPS = [
+  'intro', 'state', 'county', 'help', 'situation',
+  'household', 'income', 'circumstances', 'results',
+];
+
+// Someone asking about a utility bill is not asked whether they rent or own —
+// utility programs serve both, so the question would be friction for a person
+// who may be holding a shutoff notice. That makes the question count vary,
+// so the visible set is computed rather than fixed.
+function questionSteps() {
+  return STEPS.filter((s) => {
+    if (s === 'intro' || s === 'results') return false;
+    if (s === 'situation') return answers.help !== 'utility';
+    return true;
+  });
+}
 
 const answers = {
-  county: null,
   state: null, // county names repeat across states; both are needed
+  county: null,
   areaId: null, // income_areas row backing the chosen county
   statewideAreaId: null, // where that state's SMI limits live
+  help: null, // finding | staying | utility
   situation: null,
   householdSize: 1,
   income: null, // null means "not provided"
@@ -203,14 +218,15 @@ function showStep(name) {
     section.classList.toggle('is-active', section.dataset.step === name);
   });
 
-  const isQuestion = QUESTION_STEPS.includes(name);
+  const steps = questionSteps();
+  const isQuestion = steps.includes(name);
   $('#progress').hidden = !isQuestion;
   $('#restart-top').hidden = name === 'intro';
 
   if (isQuestion) {
-    const position = QUESTION_STEPS.indexOf(name) + 1;
-    const pct = Math.round((position / QUESTION_STEPS.length) * 100);
-    $('#progress-label').textContent = `Question ${position} of ${QUESTION_STEPS.length}`;
+    const position = steps.indexOf(name) + 1;
+    const pct = Math.round((position / steps.length) * 100);
+    $('#progress-label').textContent = `Question ${position} of ${steps.length}`;
     $('#progress-pct').textContent = `${pct}%`;
     $('#progress-fill').style.width = `${pct}%`;
     $('#progress-bar').setAttribute('aria-valuenow', String(pct));
@@ -223,24 +239,23 @@ function showStep(name) {
   if (name === 'results') renderResults();
 }
 
-function goNext() {
-  const step = currentStep();
-  if (step === 'circumstances') {
-    showStep('results');
-    return;
-  }
-  showStep(STEPS[stepIndex + 1]);
+// Walks STEPS in the given direction, skipping any step not currently asked.
+function move(direction) {
+  const skipped = STEPS.filter((s) => !questionSteps().includes(s) && s !== 'intro' && s !== 'results');
+  let i = stepIndex + direction;
+  while (i > 0 && i < STEPS.length - 1 && skipped.includes(STEPS[i])) i += direction;
+  if (i >= 0 && i < STEPS.length) showStep(STEPS[i]);
 }
 
-function goBack() {
-  if (stepIndex > 0) showStep(STEPS[stepIndex - 1]);
-}
+function goNext() { move(1); }
+function goBack() { move(-1); }
 
 function restart() {
   answers.county = null;
   answers.state = null;
   answers.areaId = null;
   answers.statewideAreaId = null;
+  answers.help = null;
   answers.situation = null;
   answers.householdSize = 1;
   answers.income = null;
@@ -249,65 +264,158 @@ function restart() {
   $$('input[type="radio"], input[type="checkbox"]').forEach((input) => {
     input.checked = false;
   });
+  $('#county-choices').replaceChildren();
+  $('#situation-choices').replaceChildren();
   $('#household-size').value = '1';
   $('#income').value = '';
   $('#income-feedback').textContent = '';
   syncHouseholdUi();
+  syncCircumstanceVisibility();
   refreshContinueButtons();
   showStep('intro');
 }
 
 // A step's Continue button stays disabled until that step has an answer.
 function refreshContinueButtons() {
-  const countyBtn = $('.step[data-step="county"] [data-action="next"]');
-  countyBtn.disabled = !answers.county;
-
-  const situationBtn = $('.step[data-step="situation"] [data-action="next"]');
-  situationBtn.disabled = !answers.situation;
+  const gates = {
+    state: answers.state,
+    county: answers.county,
+    help: answers.help,
+    situation: answers.situation,
+  };
+  for (const [step, answered] of Object.entries(gates)) {
+    const btn = $(`.step[data-step="${step}"] [data-action="next"]`);
+    if (btn) btn.disabled = !answered;
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Step wiring
 // ---------------------------------------------------------------------------
 
+function buildStateChoices() {
+  const container = $('#state-choices');
+  for (const state of STATES) {
+    const input = el('input', { type: 'radio', name: 'state', value: state.code });
+    input.addEventListener('change', () => {
+      if (answers.state !== state.code) {
+        // Counties are state-specific, so a changed state invalidates the pick.
+        answers.county = null;
+        answers.areaId = null;
+      }
+      answers.state = state.code;
+      answers.statewideAreaId = state.statewideAreaId;
+      buildCountyChoices();
+      refreshContinueButtons();
+    });
+    container.append(
+      el('label', { class: 'choice' }, [
+        input,
+        el('span', { class: 'choice__body' }, [
+          el('span', { class: 'choice__title', text: state.label }),
+          el('span', { class: 'choice__desc', text: state.name }),
+        ]),
+      ]),
+    );
+  }
+}
+
+// Rebuilt whenever the state changes. Only that state's counties are offered,
+// which is what removes the old ambiguity — "Douglas" now means exactly one
+// county, because the state was already established.
 function buildCountyChoices() {
   const container = $('#county-choices');
+  container.replaceChildren();
 
-  for (const state of STATES) {
-    // Grouped by region, because "Douglas" appears under both and the heading
-    // is what tells someone which one they want.
-    if (STATES.length > 1) {
-      container.append(el('h3', { class: 'choices__group', text: state.name }));
-    }
+  const state = STATES.find((s) => s.code === answers.state);
+  if (!state) return;
 
-    const group = el('div', { class: 'choices choices--grid' });
-    for (const { name, areaId } of state.counties) {
-      const input = el('input', {
-        type: 'radio',
-        name: 'county',
-        value: `${state.code}:${name}`,
-      });
-      input.addEventListener('change', () => {
-        answers.county = name;
-        answers.state = state.code;
-        answers.areaId = areaId;
-        answers.statewideAreaId = state.statewideAreaId;
-        refreshContinueButtons();
-        // Warm the limits while they answer the next three questions, so the
-        // income step can show real thresholds the moment it opens.
-        fetchLimits(areaId, state.statewideAreaId).then(updateIncomeFeedback).catch(() => {});
-      });
-      group.append(
-        el('label', { class: 'choice' }, [
-          input,
-          el('span', { class: 'choice__body' }, [
-            el('span', { class: 'choice__title', text: name }),
-          ]),
+  for (const { name, areaId } of state.counties) {
+    const input = el('input', { type: 'radio', name: 'county', value: name });
+    input.checked = answers.county === name;
+    input.addEventListener('change', () => {
+      answers.county = name;
+      answers.areaId = areaId;
+      refreshContinueButtons();
+      // Warm the limits while they answer the next questions, so the income
+      // step can show real thresholds the moment it opens.
+      fetchLimits(areaId, state.statewideAreaId).then(updateIncomeFeedback).catch(() => {});
+    });
+    container.append(
+      el('label', { class: 'choice' }, [
+        input,
+        el('span', { class: 'choice__body' }, [
+          el('span', { class: 'choice__title', text: name }),
         ]),
-      );
-    }
-    container.append(group);
+      ]),
+    );
   }
+}
+
+// The tenure follow-up depends on what kind of help was asked for. Someone
+// looking for a place needs different options from someone trying to keep the
+// home they have, and asking one generic question served both badly.
+const SITUATION_SETS = {
+  finding: {
+    title: 'Which of these fits you best?',
+    hint: 'This decides whether we show rentals or homebuying help.',
+    options: [
+      ['renting', "I'm looking to rent", 'A place to rent, or help affording one'],
+      ['buying', "I'm hoping to buy a home", 'Down payment help, savings-match programs, first-time buyer loans'],
+      ['unhoused', "I don't have stable housing right now", 'Staying in a shelter, a vehicle, outside, or temporarily with others'],
+    ],
+  },
+  staying: {
+    title: 'Do you rent or own your home?',
+    hint: 'Programs differ depending on which, so this narrows things considerably.',
+    options: [
+      ['renting', 'I rent', 'Including if you are behind on rent or facing eviction'],
+      ['homeowner', 'I own my home', 'Including mortgage trouble and home repairs'],
+    ],
+  },
+};
+
+function buildSituationChoices() {
+  const set = SITUATION_SETS[answers.help];
+  const container = $('#situation-choices');
+  container.replaceChildren();
+  if (!set) return;
+
+  $('#situation-title').textContent = set.title;
+  $('#situation-hint').textContent = set.hint;
+
+  for (const [value, title, desc] of set.options) {
+    const input = el('input', { type: 'radio', name: 'situation', value });
+    input.checked = answers.situation === value;
+    input.addEventListener('change', () => {
+      answers.situation = value;
+      syncCircumstanceVisibility();
+      refreshContinueButtons();
+    });
+    container.append(
+      el('label', { class: 'choice' }, [
+        input,
+        el('span', { class: 'choice__body' }, [
+          el('span', { class: 'choice__title', text: title }),
+          el('span', { class: 'choice__desc', text: desc }),
+        ]),
+      ]),
+    );
+  }
+}
+
+function wireHelpChoices() {
+  $$('#help-choices input[type="radio"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      if (answers.help !== input.value) answers.situation = null;
+      answers.help = input.value;
+      // Utility programs serve renters and owners alike, so that path skips
+      // the tenure question and nothing needs to stay selected.
+      if (answers.help === 'utility') answers.situation = 'utility';
+      buildSituationChoices();
+      refreshContinueButtons();
+    });
+  });
 }
 
 function syncHouseholdUi() {
@@ -385,15 +493,10 @@ function wireCircumstances() {
   });
 }
 
-function wireSituation() {
-  $$('#situation-choices input[type="radio"]').forEach((input) => {
-    input.addEventListener('change', () => {
-      answers.situation = input.value;
-      // Only relevant to buyers; hide it elsewhere to keep the list short.
-      $('#ftb-choice').hidden = input.value !== 'buying';
-      refreshContinueButtons();
-    });
-  });
+// The first-time-buyer checkbox is only relevant to buyers; hiding it
+// elsewhere keeps the circumstances list short.
+function syncCircumstanceVisibility() {
+  $('#ftb-choice').hidden = answers.situation !== 'buying';
 }
 
 // ---------------------------------------------------------------------------
@@ -551,7 +654,14 @@ function renderNotice({ icon, title, body, actionLabel, onAction }) {
 }
 
 function answerChips() {
-  const chips = [`${answers.county} County`];
+  const chips = [`${answers.county} County, ${answers.state}`];
+
+  const helpLabels = {
+    finding: 'Finding a place',
+    staying: 'Staying housed',
+    utility: 'Utility bill',
+  };
+  chips.push(helpLabels[answers.help]);
 
   const situationLabels = {
     renting: 'Renting',
@@ -559,7 +669,7 @@ function answerChips() {
     homeowner: 'Homeowner',
     buying: 'Hoping to buy',
   };
-  chips.push(situationLabels[answers.situation]);
+  if (situationLabels[answers.situation]) chips.push(situationLabels[answers.situation]);
   chips.push(
     `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
   );
@@ -695,8 +805,8 @@ async function renderResults() {
 // ---------------------------------------------------------------------------
 
 function init() {
-  buildCountyChoices();
-  wireSituation();
+  buildStateChoices();
+  wireHelpChoices();
   wireIncomeStep();
   wireCircumstances();
 

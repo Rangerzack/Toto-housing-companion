@@ -107,14 +107,29 @@
         </p>
       </section>
 
-      <!-- 1. County ------------------------------------------------------ -->
+      <!-- 1. State ------------------------------------------------------- -->
+      <section class="step" data-step="state" tabindex="-1">
+        <h2 class="step__title">Which state are you in?</h2>
+        <p class="step__hint">
+          Programs and income limits are set state by state, so this decides
+          everything that follows.
+        </p>
+        <div class="choices" role="radiogroup" aria-labelledby="state-label" id="state-choices"></div>
+        <span id="state-label" class="visually-hidden">State</span>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
+        </div>
+      </section>
+
+      <!-- 2. County ------------------------------------------------------ -->
       <section class="step" data-step="county" tabindex="-1">
         <h2 class="step__title">Which county do you live in?</h2>
         <p class="step__hint">
           If you're not currently housed, choose the county where you're staying
           or where you'd like to find housing.
         </p>
-        <div role="radiogroup" aria-labelledby="county-label" id="county-choices"></div>
+        <div class="choices choices--grid" role="radiogroup" aria-labelledby="county-label" id="county-choices"></div>
         <span id="county-label" class="visually-hidden">County</span>
         <div class="step__actions">
           <button type="button" class="btn btn--ghost" data-action="back">Back</button>
@@ -122,40 +137,45 @@
         </div>
       </section>
 
-      <!-- 2. Situation --------------------------------------------------- -->
-      <section class="step" data-step="situation" tabindex="-1">
-        <h2 class="step__title">What best describes your housing situation?</h2>
-        <p class="step__hint">Pick the one that's closest — you can change it later.</p>
-        <div class="choices" role="radiogroup" aria-labelledby="situation-label" id="situation-choices">
+      <!-- 3. What kind of help --------------------------------------------- -->
+      <section class="step" data-step="help" tabindex="-1">
+        <h2 class="step__title">What do you need help with?</h2>
+        <p class="step__hint">Pick the one closest to why you're here today.</p>
+        <div class="choices" role="radiogroup" aria-labelledby="help-label" id="help-choices">
           <label class="choice">
-            <input type="radio" name="situation" value="renting" />
+            <input type="radio" name="help" value="finding" />
             <span class="choice__body">
-              <span class="choice__title">I rent, or I'm looking to rent</span>
-              <span class="choice__desc">Including if you're behind on rent or at risk of eviction</span>
+              <span class="choice__title">Finding a place to live</span>
+              <span class="choice__desc">Looking for a rental, hoping to buy, or without stable housing right now</span>
             </span>
           </label>
           <label class="choice">
-            <input type="radio" name="situation" value="unhoused" />
+            <input type="radio" name="help" value="staying" />
             <span class="choice__body">
-              <span class="choice__title">I don't have stable housing right now</span>
-              <span class="choice__desc">Staying in a shelter, a vehicle, outside, or temporarily with others</span>
+              <span class="choice__title">Staying in the home I have</span>
+              <span class="choice__desc">Behind on rent or mortgage, facing eviction, or needing repairs</span>
             </span>
           </label>
           <label class="choice">
-            <input type="radio" name="situation" value="homeowner" />
+            <input type="radio" name="help" value="utility" />
             <span class="choice__body">
-              <span class="choice__title">I own my home</span>
-              <span class="choice__desc">Including help with utilities, repairs, or falling behind on a mortgage</span>
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="situation" value="buying" />
-            <span class="choice__body">
-              <span class="choice__title">I'm hoping to buy a home</span>
-              <span class="choice__desc">Down payment help, savings-match programs, and first-time buyer loans</span>
+              <span class="choice__title">Paying a utility bill</span>
+              <span class="choice__desc">Heat, electricity, gas, or water — including a shutoff notice</span>
             </span>
           </label>
         </div>
+        <span id="help-label" class="visually-hidden">Kind of help needed</span>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
+        </div>
+      </section>
+
+      <!-- 4. Tenure follow-up (options depend on the answer above) --------- -->
+      <section class="step" data-step="situation" tabindex="-1">
+        <h2 class="step__title" id="situation-title">Which of these fits you?</h2>
+        <p class="step__hint" id="situation-hint">Pick the one that's closest.</p>
+        <div class="choices" role="radiogroup" aria-labelledby="situation-label" id="situation-choices"></div>
         <span id="situation-label" class="visually-hidden">Housing situation</span>
         <div class="step__actions">
           <button type="button" class="btn btn--ghost" data-action="back">Back</button>

@@ -26,6 +26,7 @@ export const FORMS_BUCKET = 'intake-forms';
 export const STATES = [
   {
     code: 'OR',
+    label: 'Oregon',
     name: 'Southern Oregon',
     statewideAreaId: 'OR',
     counties: [
@@ -45,6 +46,7 @@ export const STATES = [
   },
   {
     code: 'MN',
+    label: 'Minnesota',
     name: 'Central Minnesota',
     statewideAreaId: 'MN',
     counties: [

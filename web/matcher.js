@@ -100,7 +100,50 @@ export function resolveLimit(lookup, standardId, tierPct, householdSize, proport
   return null;
 }
 
+// What kind of help a program provides, read from its category. Oregon's
+// categories are a clean set of three; Minnesota's are free text ("Utility
+// crisis fund - county cash grant", "Home repair - deferred forgivable loan"),
+// so this tests for words rather than exact values.
+const HELP_PATTERNS = {
+  utility: /utility|energy|heat|water|sewer|electric|gas|weatheriz/i,
+  housing: /rent|housing|shelter|homeless|stabili|down payment|homebuyer|home ?ownership|home repair|mortgage|rehabilitation/i,
+};
+
+/**
+ * Whether a program belongs to the kind of help someone asked for.
+ *
+ * The three paths do not filter symmetrically, because they are not
+ * symmetric problems:
+ *
+ *   utility  — utility programs only. The person named the bill.
+ *   finding  — housing programs only. A gas discount does not find anyone a
+ *              home, so leaving those in is just noise.
+ *   staying  — BOTH. A shutoff notice is one of the things that costs people
+ *              their housing, so utility help belongs in this answer. St.
+ *              Cloud shows why: its matrix is overwhelmingly utility-
+ *              categorised, and filtering them out left someone asking how to
+ *              keep their home with a single result.
+ *
+ * Programs whose category matches neither pattern — generic emergency funds,
+ * referral desks — are never filtered out. An unclassifiable category is
+ * missing information, and missing information does not exclude anyone.
+ */
+function matchesHelpType(category, help) {
+  if (help === 'staying') return true;
+
+  const text = category || '';
+  const isUtility = HELP_PATTERNS.utility.test(text);
+  const isHousing = HELP_PATTERNS.housing.test(text);
+  if (!isUtility && !isHousing) return true;
+
+  return help === 'utility' ? isUtility : isHousing;
+}
+
 function matchesTenure(eligibleTenure, situation) {
+  // Utility programs serve renters and owners alike, so that path never asks
+  // about tenure and must never be filtered on it.
+  if (situation === 'utility') return 'match';
+
   const raw = (eligibleTenure || '').toLowerCase();
   if (!raw.trim()) return 'unknown';
 
@@ -165,6 +208,17 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   }
   if (!servesCounty && countyUnspecified) {
     checks.push(`Service area isn't clearly documented — confirm they cover ${answers.county} County.`);
+  }
+
+  // --- Kind of help (hard, where the category is classifiable) ----------
+  if (answers.help && !matchesHelpType(program.category, answers.help)) {
+    return {
+      verdict: 'excluded',
+      checks,
+      reason: answers.help === 'utility'
+        ? 'Not a utility assistance program'
+        : 'Helps with utility bills rather than finding housing',
+    };
   }
 
   // --- Housing situation (hard, where documented) -----------------------
