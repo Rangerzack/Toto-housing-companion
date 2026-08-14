@@ -291,16 +291,32 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   const circumstances = {
     ...(answers.circumstances || {}),
     crisis: Boolean(answers.circumstances?.crisis) || answers.situation === 'unhoused',
+    // Someone who came here to pay a utility bill has a utility bill. Making
+    // them tick the box as well produced a caveat on almost every Minnesota
+    // result, since 28 of its 34 programs gate on the account.
+    utilityAccount:
+      Boolean(answers.circumstances?.utilityAccount) || answers.help === 'utility',
   };
 
   for (const { key, field, label } of CIRCUMSTANCE_RULES) {
     const state = readRule(eligibility[field]);
     const personHasIt = Boolean(circumstances[key]);
-    if (state === 'required' && !personHasIt) {
-      return { verdict: 'excluded', checks, reason: `Requires ${label}` };
-    }
-    if (state === 'unknown' && !personHasIt) {
-      checks.push(`May have requirements around ${label}.`);
+
+    // An unticked box is NOT a "no". The person may not have read that far,
+    // may be unsure, or may not have thought it applied — and the question
+    // itself promises that skipping one never counts against them. So a
+    // requirement they haven't confirmed demotes the program to "possible"
+    // and explains itself, rather than hiding it.
+    //
+    // Minnesota is why this matters: 28 of 34 programs require a utility
+    // account and 17 require a crisis, so treating unticked as "no" left
+    // someone who skipped the checkboxes with a single result.
+    if (!personHasIt) {
+      if (state === 'required') {
+        checks.push(`Only for households with ${label} — confirm this applies to you.`);
+      } else if (state === 'unknown') {
+        checks.push(`May have requirements around ${label}.`);
+      }
     }
   }
 
