@@ -49,6 +49,8 @@
 
   --wrap: 42rem;
   --wrap-wide: 56rem;
+  /* Wide enough for four result cards plus gutters. */
+  --wrap-results: 88rem;
 
   --font: Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -281,6 +283,12 @@ body {
 main {
   flex: 1;
   padding-bottom: 4rem;
+}
+
+/* The questions belong in a narrow column — one thing to answer, easy to read.
+   Results are a different job, so the container widens for that step only. */
+main:has(.step--results.is-active) {
+  max-width: var(--wrap-results);
 }
 
 .step {
@@ -728,6 +736,11 @@ main {
 .results__summary {
   color: var(--ink-soft);
   margin: 0 0 1.25rem;
+  /* The container is wide for the grid; prose still wants a reading measure. */
+  max-width: 62ch;
+}
+.results__count {
+  max-width: 32ch;
 }
 
 .results__chips {
@@ -749,21 +762,39 @@ main {
   color: var(--ink-soft);
 }
 
+/* Results are scanned rather than read in order, so they lay out as a grid
+   that steps up to four across on a wide screen. The question steps stay in
+   the narrow reading column; only this step widens (see main:has below). */
 .results__list {
   display: grid;
   gap: 1rem;
+  grid-template-columns: 1fr;
+  align-items: start;
   list-style: none;
   padding: 0;
   margin: 0;
+}
+@media (min-width: 40rem) {
+  .results__list { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 64rem) {
+  .results__list { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 84rem) {
+  .results__list { grid-template-columns: repeat(4, 1fr); }
 }
 
 .result {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1.25rem;
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s, transform 0.2s;
+  /* Cards sit side by side, so a long program name or a bare URL must wrap
+     rather than force the column wider than its share of the grid. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .result:hover {
   box-shadow: var(--shadow);
@@ -1003,6 +1034,11 @@ main {
     break-inside: avoid;
     box-shadow: none;
     border: 1px solid #ccc;
+  }
+  /* Two across on paper. Four columns of a screen grid come out unreadably
+     narrow at print widths, and a caseworker is handing this to someone. */
+  .results__list {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
   .wrap {
     max-width: none;
