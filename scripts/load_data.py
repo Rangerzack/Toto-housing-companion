@@ -204,7 +204,12 @@ def tier_from_text(income_standard_text, standard_id):
 # minutes for, so they load with is_active = false and never reach the screener.
 INACTIVE_PATTERNS = [
     (re.compile(r'\bdiscontinued\b', re.I), 'Discontinued'),
-    (re.compile(r'program ended|closed permanently|no longer', re.I), 'Program ended'),
+    # "ended" on its own, because the phrasing varies and the earlier
+    # "program ended" pattern missed "Closed- Program seems to of ended".
+    # Note this must NOT catch a seasonal closure: the Energy Assistance
+    # programs read "CLOSED for FFY26; reopens 2026-10-01" and are very much
+    # alive, which is why the test is "ended" rather than "closed".
+    (re.compile(r'\bended\b|closed permanently|no longer', re.I), 'Program ended'),
     (re.compile(r'not a (funding|payment) program', re.I), 'Not a funding program'),
     (re.compile(r'does not cover utilities', re.I), 'Does not cover utilities'),
     (re.compile(r'referral and navigation|navigation and counselling', re.I),
