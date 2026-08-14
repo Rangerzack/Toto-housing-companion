@@ -1,33 +1,47 @@
 /* ==========================================================================
-   Toto Housing Companion — design system
+   Toto Housing Companion — design system, on the Annum Housing brand
    Calm, warm, high-contrast. Built for someone reading it on a phone during a
    stressful week, and for caseworkers who need to scan and print results.
    ========================================================================== */
 
 :root {
-  --paper: #fbf9f6;
+  /* Annum Housing palette, taken from annumhousing.com: white ground, black
+     text, #FF0055 accent, and their #FAFAFA / #F2F2F2 neutrals. */
+  --paper: #ffffff;
   --surface: #ffffff;
-  --surface-sunken: #f4f1ec;
-  --border: #e5ded4;
-  --border-strong: #d3c9ba;
+  --surface-sunken: #fafafa;
+  --border: #e9e9e9;
+  --border-strong: #d2d2d2;
 
-  --ink: #1f1c19;
-  --ink-soft: #55504a;
-  --ink-faint: #837b72;
+  --ink: #000000;
+  --ink-soft: #333333;
+  --ink-faint: #727272;
 
-  --primary: #106b5e;
-  --primary-hover: #0c574c;
-  --primary-tint: #e6f2f0;
-  --primary-ring: rgba(16, 107, 94, 0.32);
+  /* The brand accent is #FF0055. White text on it measures 3.9:1, which is
+     under the 4.5:1 needed for normal text, so anything carrying white text
+     uses the slightly deeper --primary (4.9:1). --brand stays exact for marks
+     and accents that are not doing the work of text. */
+  --brand: #ff0055;
+  --primary: #e0004d;
+  --primary-hover: #c00042;
+  --primary-tint: #fff0f4;
+  --primary-ring: rgba(255, 0, 85, 0.3);
+  /* Text sitting ON the accent. It flips by theme: the accent is deepened for
+     light mode so white works, and lifted for dark mode, where white would
+     only reach 3.2:1 and near-black reaches 6:1. */
+  --on-primary: #ffffff;
 
+  /* Kept deliberately off-brand: a match verdict has to read as good/caution
+     at a glance, which it cannot do in the accent hue. */
   --likely: #1a7a4c;
-  --likely-tint: #e6f4ec;
+  --likely-tint: #e9f5ee;
   --possible: #a3620a;
-  --possible-tint: #fbf0dd;
+  --possible-tint: #fdf3e3;
 
-  --radius-sm: 8px;
+  --radius-sm: 6px;
   --radius: 14px;
-  --radius-lg: 20px;
+  --radius-lg: 14px;
+  --radius-pill: 50px;
 
   --shadow-sm: 0 1px 2px rgba(31, 28, 25, 0.06);
   --shadow: 0 2px 4px rgba(31, 28, 25, 0.05), 0 8px 24px rgba(31, 28, 25, 0.06);
@@ -36,26 +50,36 @@
   --wrap: 42rem;
   --wrap-wide: 56rem;
 
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  --font: Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  /* Their secondary face. Used for dollar figures and counts, where a
+     monospace with real tabular digits is easier to compare down a column. */
+  --font-data: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #17161a;
-    --surface: #201e23;
-    --surface-sunken: #2a272d;
-    --border: #37333b;
-    --border-strong: #4a444f;
+    /* Neutral greys rather than the warm slate used before, so the accent
+       stays the only chromatic thing on the page in either theme. */
+    --paper: #101012;
+    --surface: #191919;
+    --surface-sunken: #232323;
+    --border: #333333;
+    --border-strong: #474747;
 
-    --ink: #f2eeea;
-    --ink-soft: #c1bab3;
-    --ink-faint: #948c85;
+    --ink: #f5f5f5;
+    --ink-soft: #c4c4c4;
+    --ink-faint: #949494;
 
-    --primary: #4cbfab;
-    --primary-hover: #63d0bc;
-    --primary-tint: #17332f;
-    --primary-ring: rgba(76, 191, 171, 0.36);
+    /* #FF0055 only reaches 4.5:1 on this ground; lifted so it stays legible
+       as link and label text, not just as a button fill. */
+    --brand: #ff4d80;
+    --primary: #ff4d80;
+    --primary-hover: #ff7099;
+    --primary-tint: #33101c;
+    --primary-ring: rgba(255, 77, 128, 0.36);
+    --on-primary: #101012;
 
     --likely: #5cc98a;
     --likely-tint: #16301f;
@@ -116,7 +140,7 @@ body {
   top: 0;
   padding: 0.75rem 1.25rem;
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   z-index: 50;
   border-radius: 0 0 var(--radius-sm) 0;
 }
@@ -197,9 +221,9 @@ body {
   place-items: center;
   width: 2.25rem;
   height: 2.25rem;
-  border-radius: 10px;
-  background: var(--primary-tint);
-  color: var(--primary);
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--on-primary);
   flex-shrink: 0;
 }
 .brand__mark svg {
@@ -230,7 +254,8 @@ body {
 .progress__meta {
   display: flex;
   justify-content: space-between;
-  font-size: 0.875rem;
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
   color: var(--ink-faint);
   margin-bottom: 0.5rem;
   font-variant-numeric: tabular-nums;
@@ -529,8 +554,9 @@ main {
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 1.75rem;
-  font-weight: 600;
+  font-family: var(--font-data);
+  font-size: 1.6rem;
+  font-weight: 500;
   text-align: center;
   font-variant-numeric: tabular-nums;
   padding: 0;
@@ -580,8 +606,9 @@ main {
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-family: var(--font-data);
+  font-size: 1.4rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   padding: 0;
 }
@@ -632,9 +659,10 @@ main {
   padding: 0.8rem 1.4rem;
   min-height: 3rem;
   border: 1.5px solid transparent;
-  border-radius: 10px;
+  /* Annum's CTAs are fully rounded at weight 500. */
+  border-radius: var(--radius-pill);
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1rem;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
@@ -651,12 +679,7 @@ main {
 
 .btn--primary {
   background: var(--primary);
-  color: #fff;
-}
-@media (prefers-color-scheme: dark) {
-  .btn--primary {
-    color: #10201d;
-  }
+  color: var(--on-primary);
 }
 .btn--primary:hover:not(:disabled) {
   background: var(--primary-hover);
