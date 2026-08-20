@@ -162,10 +162,21 @@ FPG_TIER_PATTERN = re.compile(
 FPG_AREA_BY_STATE = {'AK': 'US-AK', 'HI': 'US-HI'}
 
 
-def income_standard_for(income_standard_text, category, state):
+# USDA publishes its own limits, and they are not HUD's. For 22 of 24 Oregon
+# area/tier combinations the two agree exactly, but Grants Pass runs about 1.4%
+# higher at every tier and bracket — so a USDA program measured against the HUD
+# table would be wrong there and right everywhere else, which is the hardest
+# kind of error to notice.
+USDA_PATTERN = re.compile(r'\bUSDA\b|section 502|rural development|rural housing', re.I)
+
+
+def income_standard_for(income_standard_text, category, state, program_name=''):
     """Returns (standard_id, area_id). A NULL area means the applicant's county."""
     config = STATES[state]
     text = income_standard_text or ''
+
+    if USDA_PATTERN.search(f'{program_name} {text}'):
+        return 'USDA-502-GUARANTEED', None
 
     # SMI is checked FIRST, and the order matters. Minnesota's Energy
     # Assistance Program tests at 50% SMI but its write-up also says "sizes
@@ -279,7 +290,7 @@ def build_batches(data, g, state):
         ))
 
         standard_id, area_id = income_standard_for(
-            g(r, 'Income Standard'), g(r, 'Category'), state)
+            g(r, 'Income Standard'), g(r, 'Category'), state, g(r, 'Program Name'))
         tier_max = num(g(r, 'AMI Max %'))
         if tier_max is None and standard_id != 'HUD-MFI':
             tier_max = tier_from_text(g(r, 'Income Standard'), standard_id)
