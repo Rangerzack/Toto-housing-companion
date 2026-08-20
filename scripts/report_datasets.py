@@ -81,15 +81,21 @@ def main():
             if not rows:
                 print('  Nothing flagged — every active program matches its own wording.')
 
-            # Programs carrying no income test, grouped by what their text says.
+            # Programs carrying no income test. The label they hold is
+            # cosmetic in that case — no tier means no comparison is made —
+            # but it is worth seeing how much of the catalogue is unscreened.
             cols, rows = fetch(cur, f"""
-                select state_code, count(*) as programs
+                select state_code,
+                       coalesce(standard_id, '(none)') as labelled_as,
+                       count(*) as programs
                 from v_program_datasets
                 where is_active and income_test = 'no income test'
                 {'and' + where[6:] if where else ''}
-                group by 1 order by 1
+                group by 1, 2 order by 3 desc
             """)
-            print_table('Active programs with no income test', cols, rows)
+            print_table('Active programs with NO income test applied', cols, rows)
+            print('  These pass everyone on income. The standard shown is the')
+            print('  loader default, not a threshold anyone is measured against.')
 
             if args.csv:
                 cols, rows = fetch(cur, f"""

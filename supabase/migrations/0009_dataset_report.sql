@@ -81,12 +81,22 @@ select state_code, program_id, program_name, standard_id, tier_max_pct,
            -- Says one thing, classified as another.
            when source_text ~* 'SMI|state median' and standard_id !~ 'SMI'
                 then 'mentions state median income but is not on an SMI table'
+           -- Poverty guidelines, but only when the text does NOT also name a
+           -- median. Minnesota's Energy Assistance programs test at 50% SMI
+           -- and mention "sizes 19-20 use 110% FPG" as an edge case for very
+           -- large households; SMI deliberately wins there, so flagging them
+           -- would train people to ignore this list.
            when source_text ~* 'federal poverty|poverty guideline|\mFPG\M|\mFPL\M'
+                and source_text !~* 'SMI|state median'
                 and standard_id <> 'HHS-FPG'
                 then 'mentions poverty guidelines but is not on HHS-FPG'
-           -- Claims a threshold nobody captured.
+           -- Claims a threshold nobody captured. Excludes text that says
+           -- outright there is no test — those often cite another program's
+           -- percentage as an example ("e.g. ACCESS's 80% AMI"), which is
+           -- correctly not this program's threshold.
            when tier_max_pct is null
                 and source_text ~* '\m\d{2,3}\s*%'
+                and source_text !~* 'not published|no income test|not income-tested|not a fixed|none published'
                 then 'states a percentage but no tier was parsed'
            -- On a dataset that has no figures loaded for it yet.
            when tier_max_pct is not null and not exists (
