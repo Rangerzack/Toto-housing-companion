@@ -55,7 +55,9 @@ jobs:
           set -euo pipefail
           mkdir -p _site
           cp -r prod/web/. _site/
-          sed -i "s/__BUILD__/${GITHUB_SHA::12}/g" $(find _site -maxdepth 1 -type f \( -name '*.html' -o -name '*.js' \))
+          # Recursive, because /data/ lives in a subfolder; staging is stamped
+          # separately below with its own prefix.
+          sed -i "s/__BUILD__/${GITHUB_SHA::12}/g" $(find _site -not -path '_site/staging/*' -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' \))
 
           if [ -d stage/web ]; then
             mkdir -p _site/staging
@@ -63,7 +65,7 @@ jobs:
             # A distinct suffix so staging assets can never be served from a
             # cache entry populated by production, or the reverse.
             sed -i "s/__BUILD__/staging-${GITHUB_SHA::12}/g" \
-              $(find _site/staging -maxdepth 1 -type f \( -name '*.html' -o -name '*.js' \))
+              $(find _site/staging -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' \))
             # Make it obvious which environment you are looking at.
             sed -i 's|<span class="testing-banner__tag">Draft</span>|<span class="testing-banner__tag">Staging</span>|' _site/staging/index.html
             sed -i 's|<small>Southern Oregon</small>|<small>Southern Oregon — STAGING</small>|' _site/staging/index.html

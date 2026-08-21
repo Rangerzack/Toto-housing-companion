@@ -30,6 +30,8 @@ while ($listener.IsListening) {
         $rel = [System.Uri]::UnescapeDataString($ctx.Request.Url.AbsolutePath.TrimStart('/'))
         if ([string]::IsNullOrWhiteSpace($rel)) { $rel = "index.html" }
         $path = Join-Path $Root $rel
+        # A directory request serves its index.html, as GitHub Pages does.
+        if (Test-Path $path -PathType Container) { $path = Join-Path $path "index.html" }
 
         if (Test-Path $path -PathType Leaf) {
             $ext = [System.IO.Path]::GetExtension($path).ToLower()

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Income &amp; Rent Limits — Toto Housing Companion</title>
+    <meta
+      name="description"
+      content="Every income and rent limit the Toto Housing Companion screens against, read live from the database."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff0055' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10.5 12 3l9 7.5'/%3E%3Cpath d='M5 9.5V21h14V9.5'/%3E%3Cpath d='M9.5 21v-6h5v6'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="../styles.css?v=__BUILD__" />
+    <link rel="stylesheet" href="data.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="wrap wrap--data site-header__inner">
+        <a class="brand" href="../">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V21h14V9.5" />
+              <path d="M9.5 21v-6h5v6" />
+            </svg>
+          </span>
+          <span class="brand__text">
+            <strong>Toto Housing Companion</strong>
+            <small>Income &amp; rent limits</small>
+          </span>
+        </a>
+        <a class="btn btn--ghost btn--sm" href="../">Back to the screener</a>
+      </div>
+    </header>
+
+    <main id="main" class="wrap wrap--data">
+      <section class="data-intro">
+        <h1>Income &amp; rent limits</h1>
+        <p>
+          Every figure the screener tests against, read live from the database
+          each time this page opens. Nothing here is cached or copied — if a
+          limit changes, this page changes with it.
+        </p>
+        <p class="data-intro__meta" id="meta" aria-live="polite">Loading…</p>
+      </section>
+
+      <!-- Controls --------------------------------------------------------- -->
+      <section class="controls" aria-label="Filters">
+        <label class="control">
+          <span class="control__label">County</span>
+          <select id="area"></select>
+        </label>
+        <label class="control">
+          <span class="control__label">As of</span>
+          <input type="date" id="asof" />
+        </label>
+        <label class="control control--check">
+          <input type="checkbox" id="show-rent" />
+          <span>Show rent limits</span>
+        </label>
+        <span class="control control--grow"></span>
+        <button type="button" class="btn btn--ghost btn--sm" id="download">
+          Download CSV
+        </button>
+      </section>
+
+      <!-- Grids ------------------------------------------------------------ -->
+      <div id="grids" class="grids"></div>
+
+      <!-- Programs --------------------------------------------------------- -->
+      <section class="programs" id="programs-section">
+        <h2>Programs in this county and the dataset each one uses</h2>
+        <div class="scroll">
+          <table class="programs__table" id="programs">
+            <thead>
+              <tr>
+                <th>Program</th>
+                <th>Dataset</th>
+                <th class="num">Tier</th>
+                <th>Income test</th>
+                <th>Republished</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="notes">
+        <h2>Reading these tables</h2>
+        <ul>
+          <li>
+            <strong>Sizes 1–8 are published.</strong> Larger households follow
+            HUD's rule — add 8% of the 4-person limit per extra person — which the
+            screener applies automatically.
+          </li>
+          <li>
+            <strong>USDA publishes in brackets</strong> — one figure for 1–4
+            persons, another for 5–8 — so those rows repeat by design.
+          </li>
+          <li>
+            <strong>SMI and FPG are not county figures.</strong> State median
+            income is statewide; poverty guidelines are national. They appear
+            under every county because programs in every county use them.
+          </li>
+          <li>
+            <strong>HERA Special applies only to LIHTC buildings placed in
+            service before 2009.</strong> No program is routed to it by default.
+          </li>
+          <li>
+            Why each program uses the dataset it does, and where every figure
+            comes from, is in the
+            <a href="https://github.com/Rangerzack/Toto-housing-companion/blob/master/docs/SOP-income-standards.md">income standards SOP</a>.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap wrap--data">
+        <p>
+          Limits are published by HUD, HHS, USDA, OHCS, and local housing
+          authorities on their own schedules. Always confirm with the program
+          before relying on a figure for a determination.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="data.js?v=__BUILD__"></script>
+  </body>
+</html>
