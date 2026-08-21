@@ -1,0 +1,9 @@
+standard_id,area_id,tier_pct,household_size_min,household_size_max,amount,effective_date,expires_date,variant,source_url,notes
+HAJC-HCV,OR-JACKSON,50,1,1,34350,2026-05-01,,,https://hajc.net/housing-programs/housing-choice-voucher/,HAJC published Very-Low (50%) limits
+HAJC-HCV,OR-JACKSON,50,2,2,39250,2026-05-01,,,https://hajc.net/housing-programs/housing-choice-voucher/,HAJC published Very-Low (50%) limits
+HAJC-HCV,OR-JACKSON,50,3,3,44150,2026-05-01,,,https://hajc.net/housing-programs/housing-choice-voucher/,HAJC published Very-Low (50%) limits
+HAJC-HCV,OR-JACKSON,50,4,4,49050,2026-05-01,,,https://hajc.net/housing-programs/housing-choice-voucher/,HAJC published Very-Low (50%) limits
+HAJC-HCV,OR-JACKSON,50,5,5,53000,2026-05-01,,,https://hajc.net/housing-programs/housing-choice-voucher/,HAJC published Very-Low (50%) limits
+HAJC-HCV,OR-JACKSON,50,6,6,56900,2026-05-01,,,https://hajc.net/housing-programs/housing-choice-voucher/,HAJC published Very-Low (50%) limits
+HAJC-HCV,OR-JACKSON,50,7,7,60850,2026-05-01,,,https://hajc.net/housing-programs/housing-choice-voucher/,HAJC published Very-Low (50%) limits
+HAJC-HCV,OR-JACKSON,50,8,8,64750,2026-05-01,,,https://hajc.net/housing-programs/housing-choice-voucher/,HAJC published Very-Low (50%) limits

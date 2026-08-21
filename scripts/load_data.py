@@ -170,8 +170,26 @@ FPG_AREA_BY_STATE = {'AK': 'US-AK', 'HI': 'US-HI'}
 USDA_PATTERN = re.compile(r'\bUSDA\b|section 502|rural development|rural housing', re.I)
 
 
-def income_standard_for(income_standard_text, category, state, program_name=''):
+# Some programs are measured against a table their administering agency
+# publishes, not against the national dataset it derives from. Section 8
+# eligibility is determined by the housing authority, so the Jackson County
+# voucher programs follow HAJC's published limits.
+#
+# These cannot be inferred from the income-standard prose — it says "50% AMI",
+# which is true of both HUD's table and HAJC's — so the authority is recorded
+# explicitly. NED vouchers are drawn from the same waiting list and HAJC states
+# they use the same limits.
+PROGRAM_STANDARD_OVERRIDES = {
+    'HAJC-HCV-OR-001': ('HAJC-HCV', 'OR-JACKSON'),
+    'HAJC-NED-OR-001': ('HAJC-HCV', 'OR-JACKSON'),
+}
+
+
+def income_standard_for(income_standard_text, category, state, program_name='', program_id=''):
     """Returns (standard_id, area_id). A NULL area means the applicant's county."""
+    if program_id in PROGRAM_STANDARD_OVERRIDES:
+        return PROGRAM_STANDARD_OVERRIDES[program_id]
+
     config = STATES[state]
     text = income_standard_text or ''
 
@@ -290,7 +308,8 @@ def build_batches(data, g, state):
         ))
 
         standard_id, area_id = income_standard_for(
-            g(r, 'Income Standard'), g(r, 'Category'), state, g(r, 'Program Name'))
+            g(r, 'Income Standard'), g(r, 'Category'), state,
+            g(r, 'Program Name'), pid)
         tier_max = num(g(r, 'AMI Max %'))
         if tier_max is None and standard_id != 'HUD-MFI':
             tier_max = tier_from_text(g(r, 'Income Standard'), standard_id)
