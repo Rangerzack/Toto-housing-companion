@@ -49,6 +49,12 @@ update income_standards set
 where standard_id = 'OHCS-BOND';
 
 -- Surface the schedule wherever the dataset is reported.
+--
+-- Column ORDER must match 0009 exactly, with the two new columns appended at
+-- the end: "create or replace view" can add trailing columns but cannot rename
+-- or reorder existing ones. Reordering here fails with "cannot change name of
+-- view column", and dropping the view instead would take v_dataset_usage and
+-- v_dataset_review with it, since 0009 defines those against this one.
 create or replace view v_program_datasets as
 select
     p.state_code,
@@ -70,21 +76,22 @@ select
         else 'no income test'
     end as income_test,
 
-    s.source_url    as dataset_source_url,
-    s.published_when,
-    s.effective_when,
-
     e.income_standard as source_text,
     e.ami_min,
     e.ami_max,
 
     p.is_active,
     p.inactive_reason,
+    s.source_url    as dataset_source_url,
 
     (select string_agg(pc.county, '; ' order by pc.county)
        from program_counties pc
       where pc.program_id = p.program_id
-        and pc.state_code = p.state_code) as counties
+        and pc.state_code = p.state_code) as counties,
+
+    -- appended, per the note above
+    s.published_when,
+    s.effective_when
 from programs p
 left join program_income_rules r on r.program_id = p.program_id
 left join income_standards s     on s.standard_id = r.standard_id
