@@ -53,3 +53,11 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python scripts/load_rent_limits.py "${{ inputs.rent_csv_path }}"
+
+  # Mirror the result to the shared Google Sheet. Needs the loader job's name
+  # above; runs only after it succeeds, so a failed load never overwrites the
+  # sheet with partial data.
+  export:
+    needs: [load]
+    uses: ./.github/workflows/export-sheets.yml
+    secrets: inherit

@@ -76,3 +76,11 @@ jobs:
         with:
           name: hud-${{ inputs.dataset }}-${{ inputs.year }}
           path: hud_${{ inputs.dataset }}_${{ inputs.year }}.csv
+
+  # Mirror the result to the shared Google Sheet. Needs the loader job's name
+  # above; runs only after it succeeds, so a failed load never overwrites the
+  # sheet with partial data.
+  export:
+    needs: [fetch]
+    uses: ./.github/workflows/export-sheets.yml
+    secrets: inherit
