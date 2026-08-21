@@ -8,7 +8,12 @@
 #
 # Reads the live database through PostgREST with the public (read-only) key,
 # writes web/flows/index.html and docs/flows.json, and optionally a
-# self-contained copy of the page (-ArtifactOut). Run after any program load.
+# self-contained copy of the page (-ArtifactOut).
+#
+# CI runs this after every data load (generate-flows.yml) and commits the
+# result; that output is canonical. Running it locally is fine for preview,
+# but PowerShell 5.1 and 7 format JSON differently, so do not commit local
+# output — let the workflow do it.
 param(
     [string]$SupabaseUrl = "https://vhhcicawkhokncnhzboe.supabase.co",
     [string]$AnonKey     = "sb_publishable_uWoahvwMH3VYZ7n2egHi8Q_AJBUSZjQ",
@@ -198,7 +203,7 @@ $artHead = $sb.ToString(); [void]$sb.Clear()
 W '<h2>Sections</h2><ol><li><a href="#rule">The governing rule</a></li><li><a href="#trunk">The shared trunk</a></li><li><a href="#matrix">Gate matrix</a></li><li><a href="#flows">Program flows</a></li><li><a href="#reading">How to read a flow</a></li></ol>'
 foreach ($st in @('OR','MN')) {
   W "<h2>$(if($st -eq 'OR'){'Oregon'}else{'Minnesota'})</h2><ol>"
-  foreach ($f in ($flows | Where-Object { $_.state -eq $st } | Sort-Object category, name)) {
+  foreach ($f in ($flows | Where-Object { $_.state -eq $st } | Sort-Object category, name, program_id)) {
     $short = if ($f.name.Length -gt 40) { $f.name.Substring(0,40) + '…' } else { $f.name }
     W "<li><a href=`"#p-$(Esc $f.program_id)`">$(Esc $short)<small>$(Esc $f.program_id)</small></a></li>"
   }
@@ -269,7 +274,7 @@ W '<div class="legend"><span><b class="req">●</b> required — an unticked box
 W '<div class="scroll"><table class="matrix"><thead><tr><th>Program</th><th>Help path</th><th>Tenure</th><th>Income (4p)</th><th title="veteran">Vet</th><th title="age 60+">60+</th><th title="disability">Dis</th><th title="children / pregnancy">Kids</th><th title="crisis">Crisis</th><th title="first-time buyer">FTB</th><th title="utility account">Util</th></tr></thead><tbody>'
 foreach ($st in @('OR','MN')) {
   W "<tr><td colspan=`"11`" style=`"background:var(--sunk);font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)`">$(if($st -eq 'OR'){'Oregon'}else{'Minnesota'})</td></tr>"
-  foreach ($f in ($flows | Where-Object { $_.state -eq $st } | Sort-Object category, name)) {
+  foreach ($f in ($flows | Where-Object { $_.state -eq $st } | Sort-Object category, name, program_id)) {
     $hp = ($f.help_paths | ForEach-Object { $helpLabel[$_] }) -join ' · '
     $tn = if ($f.tenure.any) { 'any (not documented)' } else { ($f.tenure.matches | ForEach-Object { $tenLabel[$_] }) -join ' · ' }
     $inc = if (-not $f.income.tested) { '<span class="no">none</span>' } elseif ($null -ne $f.income.limit_4p) { "$(if($f.income.approx){'≈ '})$(Money $f.income.limit_4p) <span class=`"pid`">$($f.income.tier)% $(Esc $f.income.standard)</span>" } else { "<span class=`"unk`">$($f.income.tier)% $(Esc $f.income.standard) — not published</span>" }
@@ -283,7 +288,7 @@ W '</tbody></table></div></section>'
 W '<section id="flows"><h2 class="head">Program flows</h2><p>One card per program. The <b>gates</b> are the trunk questions this program actually tests, in the order the screener applies them, with the program''s own wording as evidence. The <b>intake</b> steps are what happens after a match.</p>'
 foreach ($st in @('OR','MN')) {
   W "<p class=`"state-head`">$(if($st -eq 'OR'){'Oregon'}else{'Minnesota'})</p>"
-  foreach ($f in ($flows | Where-Object { $_.state -eq $st } | Sort-Object category, name)) {
+  foreach ($f in ($flows | Where-Object { $_.state -eq $st } | Sort-Object category, name, program_id)) {
     $i = $f.income; $k = $f.intake
     W "<article class=`"prog`" id=`"p-$(Esc $f.program_id)`"><header><h3>$(Esc $f.name)</h3><p class=`"sub`"><span class=`"std-tag`">$(Esc $f.program_id)</span>$(Esc $f.administrator) · $(Esc $f.category)</p></header>"
     W '<div class="two"><div>'
