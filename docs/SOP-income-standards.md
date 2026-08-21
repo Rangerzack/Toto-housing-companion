@@ -21,14 +21,32 @@ loader reach the same answer.
 
 | # | If the program's own income language says… | Use | Area |
 | - | ------------------------------------------ | --- | ---- |
+| 0 | **A specific agency determines eligibility and publishes its own table** — a Section 8 voucher, NED or Homeownership Voucher | that agency's standard: `HAJC-HCV`, `JHCDC-HCV` | that agency's county |
 | 1 | "state median income", "SMI", "% of the State of Oregon Median Income" | `OR-SMI` / `MN-SMI` — the state the program operates in | that state (`OR`, `MN`) |
 | 2 | "federal poverty guidelines", "FPG", "FPL", "% of poverty" | `HHS-FPG` | `US-48` (or `US-AK` / `US-HI`) |
-| 3 | It is a LIHTC, Tax-Exempt Bond, or LIFT project | `HUD-MTSP` | the applicant's county |
-| 4 | "area median income", "AMI", "HUD income limits", "median family income" | `HUD-MFI` | the applicant's county |
-| 5 | USDA Section 502 loan | `USDA-502-DIRECT` or `-GUARANTEED` | the applicant's county |
-| 6 | "not income-tested", "no published income table", "not a fixed AMI test" | **none** | — |
-| 7 | Eligibility flows from another program ("must be an approved EAP recipient") | that program's standard, noted as derivative | — |
-| 8 | Anything else | **none**, and flag it for research | — |
+| 3 | It is a LIHTC, Tax-Exempt Bond, or LIFT project | `HUD-MTSP` (never HERA — see below) | the applicant's county |
+| 4 | HOME, CDBG, or Housing Trust Fund project | `HUD-HOME` or `HUD-HTF` | the applicant's county |
+| 5 | Oregon MIRL or Tribal Housing Grant Fund | `OHCS-MIRL` or `OHCS-THGF` | the applicant's county |
+| 6 | "area median income", "AMI", "HUD income limits", "median family income" | `HUD-MFI` | the applicant's county |
+| 7 | USDA Section 502 loan | `USDA-502-DIRECT` or `-GUARANTEED` | the applicant's county |
+| 8 | "not income-tested", "no published income table", "not a fixed AMI test" | **none** | — |
+| 9 | Eligibility flows from another program ("must be an approved EAP recipient") | that program's standard, noted as derivative | — |
+| 10 | Anything else | **none**, and flag it for research | — |
+
+### Why the agency's own table comes first
+
+Section 8 eligibility is determined by the public housing authority that
+administers the voucher, and each PHA publishes its own income limits for its
+own jurisdiction. Those tables derive from HUD's — HAJC's matches `HUD-MFI` at
+50% to the dollar today — which is exactly why leaving a voucher program on
+HUD's table is easy to miss: it gives the right number until the two diverge.
+They can: the effective dates already differ (HAJC 1 May 2026, HUD 1 June), and
+JHCDC's posted table is dated April 2025.
+
+This cannot be read from the income text, which says "50% AMI" and is equally
+true of both. So it is recorded per program, in `PROGRAM_STANDARD_OVERRIDES`
+in `scripts/load_data.py`. A voucher program with no entry falls through to
+`HUD-MFI` and will quietly stop being right the moment its authority diverges.
 
 ### Why SMI is checked before FPG
 
@@ -211,6 +229,31 @@ independent sources agreeing exactly is good evidence both were read correctly.
 
 ---
 
+### `HAJC-HCV` / `JHCDC-HCV` — housing authority voucher limits
+
+**Used for:** Section 8 Housing Choice Vouchers, NED vouchers, and the
+Homeownership Voucher — each under the authority that administers it.
+
+**Why this one:** the PHA makes the eligibility decision and publishes the
+table an applicant is actually measured against.
+
+| Authority | County | Source | Posted effective date |
+| --------- | ------ | ------ | --------------------- |
+| HAJC | Jackson | <https://hajc.net/housing-programs/housing-choice-voucher/> | 1 May 2026 |
+| JHCDC | Josephine | <https://jhcdc.net/applicants/> | 1 April 2025 |
+
+**Watch for:** JHCDC publishes **monthly** figures; they are stored annualised
+(monthly × 12). Its posted table predates HUD's FY2026 limits and runs about
+1.4% above them — most likely the page is stale rather than Josephine genuinely
+using higher thresholds. Confirm with JHCDC before relying on it for a
+determination. HAJC's page also carries a stale 2021 table under its FAQ; the
+current figures are the ones under "Income limits".
+
+**Published:** by each authority after HUD issues new limits, on its own
+timing. That independence is the whole reason these are tracked separately.
+
+---
+
 ### `HUD-MTSP-HERA` — MTSP HERA Special
 
 **Used for:** nothing, by default — and that is deliberate.
@@ -282,16 +325,32 @@ an exact multiple of it.
 **Used for:** USDA Section 502 rural home loans. Guaranteed tests at 115% of
 area median; Direct uses low and very-low income tiers.
 
-**Source:** <https://www.rd.usda.gov/> — the Direct and Guaranteed limit maps.
+**Source:** HB-1-3555 Appendix 5, issued as a procedure notice each federal
+fiscal year (FY2026: PN 657, 13 July 2026);
+<https://www.rd.usda.gov/resources/directives/handbooks>
 
-**Status: incomplete and partly unverified.** Two rows for Jackson County from
-secondary sources, flagged in `notes`. USDA's limit maps return 403 to
-automated fetches, so these need manual entry. Confirm before relying on them.
+**Loaded:** `USDA-502-GUARANTEED` for all 28 counties across Oregon and
+Minnesota — three tiers (very low 50%, low 80%, moderate 115%), FY2026.
+`USDA-502-DIRECT` is declared but empty; the Direct appendix (HB-1-3550) has
+not been supplied.
+
+**Why not borrow HUD's table:** for 22 of 24 Oregon area/tier combinations the
+two agree to the dollar. Grants Pass is the exception, running about 1.4%
+higher at every tier and bracket — a real difference in the published figures.
+A USDA program measured against HUD would be right in eleven counties and
+wrong in Josephine, which is the hardest kind of error to notice.
 
 **Watch for:** USDA publishes in **brackets** — one figure for 1–4 person
 households, another for 5–8 — not per size. The schema stores that as published
 via `household_size_min` / `household_size_max`, and
-`v_income_limits_by_size` expands it.
+`v_income_limits_by_size` expands it. Also: USDA labels moderate income "115%"
+but defines it as the greater of three formulas, so the figure is not a
+straight percentage of area median and the standard is not marked proportional.
+
+An earlier load carried two Jackson County rows from secondary sources that
+were wrong ($119,850 against the published $122,800). They were removed in
+migration 0010 rather than left as history, because they were never accurate
+for any period.
 
 ---
 
@@ -373,14 +432,48 @@ checks passed; the tier-ordering check is what exposed it.
 
 ## 4. Refresh calendar
 
-| Standard | Published | Effective | Action |
-| -------- | --------- | --------- | ------ |
-| `HHS-FPG` | January | on publication | Reload the national table |
-| `HUD-MTSP` | ~1 May | ~1 May | Manual export per county |
-| `HUD-MFI` | ~April | ~1 June | Run the fetch workflow with the new year |
-| `OR-SMI`, `MN-SMI` | summer | 1 October | Reload both state tables |
+| When | Standard | Effective | Action |
+| ---- | -------- | --------- | ------ |
+| January | `HHS-FPG` | on publication | Reload the national table |
+| ~1 May | `HUD-MTSP`, `HUD-MTSP-HERA` | mid-June | Export the OHCS workbook, rebuild the OHCS CSVs |
+| Spring | `HUD-MFI` | ~1 June | Run the fetch workflow with the new year |
+| Spring | `HUD-HOME`, `HUD-HTF`, `OHCS-MIRL` | ~1 June | Same OHCS workbook export |
+| Spring | `OHCS-THGF` | 30 June | Same OHCS workbook export |
+| After HUD | `HAJC-HCV`, `JHCDC-HCV` | each PHA's own date | Check both PHA pages, reload |
+| ~July | `USDA-502-GUARANTEED` | date of the notice | New HB-1-3555 Appendix 5, re-parse |
+| Summer | `OR-SMI`, `MN-SMI` | 1 October | Reload both state tables |
 
-Only `HUD-MFI` is automated. The rest need a person.
+Only `HUD-MFI` is automated. Everything else needs a person — though the five
+OHCS-workbook standards come from one export, so that is a single annual task
+rather than five.
+
+This schedule also lives in the database, on `income_standards.published_when`
+and `effective_when`, and surfaces in every dataset report.
+
+### What is loaded right now
+
+| Standard | Income rows | Areas | Rent rows | Years |
+| -------- | ----------: | ----: | --------: | ----- |
+| `HUD-MFI` | 904 | 28 | — | 2026 |
+| `HUD-MTSP` | 400 | 2 | 420 | 2024–2026 |
+| `HUD-MTSP-HERA` | 400 | 2 | 350 | 2024–2026 |
+| `HUD-HOME` | 192 | 2 | 126 | 2024–2026 |
+| `HUD-HTF` | 48 | 2 | 42 | 2024–2026 |
+| `OHCS-MIRL` | 192 | 2 | 144 | 2024–2026 |
+| `OHCS-THGF` | 64 | 2 | 48 | 2026 |
+| `USDA-502-GUARANTEED` | 168 | 28 | — | FY2026 |
+| `OR-SMI` | 24 | 1 | — | FFY2026 |
+| `MN-SMI` | 48 | 1 | — | FFY2026–27 |
+| `HHS-FPG` | 36 | 3 | — | 2026 |
+| `HAJC-HCV` | 8 | 1 | — | 2026 |
+| `JHCDC-HCV` | 8 | 1 | — | 2025 |
+| `USDA-502-DIRECT` | 0 | — | — | not supplied |
+| `OHCS-BOND` | 0 | — | — | no table located |
+
+**2,492 income rows, 1,130 rent rows.** The multi-area standards (HUD-MFI,
+USDA) cover both states; the OHCS-workbook standards cover Jackson and
+Josephine only, by request — the workbook holds every Oregon county and the
+rest are a one-line change to the builder.
 
 ---
 
