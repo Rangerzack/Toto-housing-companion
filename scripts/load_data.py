@@ -186,10 +186,21 @@ USDA_PATTERN = re.compile(r'\bUSDA\b|section 502|rural development|rural housing
 # which will usually give the right number and quietly stop doing so the moment
 # that authority diverges.
 PROGRAM_STANDARD_OVERRIDES = {
-    # HAJC states NED vouchers come off the same waiting list under the same limits.
+    # All three HAJC voucher programs are drawn from the same HCV pool under
+    # the same published limits: NED and the Homeownership Voucher are both
+    # uses of a Housing Choice Voucher, not separate programs with their own
+    # income tests.
     'HAJC-HCV-OR-001': ('HAJC-HCV', 'OR-JACKSON'),
     'HAJC-NED-OR-001': ('HAJC-HCV', 'OR-JACKSON'),
+    'HAJC-HOV-OR-001': ('HAJC-HCV', 'OR-JACKSON'),
     'JHCDC-HCV-OR-001': ('JHCDC-HCV', 'OR-JOSEPHINE'),
+}
+
+# Programs whose tier is known but absent from the source text. The matrix row
+# for the Homeownership Voucher has a blank Income Standard, so nothing can be
+# parsed from it; the tier comes from the parent HCV program instead.
+PROGRAM_TIER_OVERRIDES = {
+    'HAJC-HOV-OR-001': 50.0,
 }
 
 
@@ -321,6 +332,8 @@ def build_batches(data, g, state):
         tier_max = num(g(r, 'AMI Max %'))
         if tier_max is None and standard_id != 'HUD-MFI':
             tier_max = tier_from_text(g(r, 'Income Standard'), standard_id)
+        if tier_max is None:
+            tier_max = PROGRAM_TIER_OVERRIDES.get(pid)
         income_rules.append((
             pid, standard_id, area_id,
             num(g(r, 'AMI Min %')), tier_max,
