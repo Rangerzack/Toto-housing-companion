@@ -211,6 +211,72 @@ independent sources agreeing exactly is good evidence both were read correctly.
 
 ---
 
+### `HUD-MTSP-HERA` — MTSP HERA Special
+
+**Used for:** nothing, by default — and that is deliberate.
+
+**What it is:** the Housing and Economic Recovery Act limits, which apply only
+to LIHTC projects **placed in service before 2009**. Newer projects use
+`HUD-MTSP`. For Jackson County HERA runs $2,350–$3,760 above Actual at 50–80%.
+
+**Why no program points here:** which table applies is a property of the
+*building*, not the county, and the program matrix does not carry
+placed-in-service dates. Routing a program here would raise its limits for
+every building it does not apply to. It exists so a caseworker looking at a
+specific older property can resolve the right figure.
+
+**Source:** OHCS workbook, MTSP HERA tab;
+<https://www.huduser.gov/portal/datasets/mtsp.html#data_2026>
+**Published:** with MTSP, around 1 May.
+**Loaded:** Jackson and Josephine, ten tiers, 2024–2026.
+
+---
+
+### `HUD-HTF` — Housing Trust Fund
+
+**Used for:** National Housing Trust Fund projects.
+
+**What it is:** a single extremely-low-income figure per county — the greater
+of 30% AMI or the poverty guideline. Stored at tier 30. Jackson County 2026:
+$33,000 for a four-person household.
+
+**Source:** <https://www.huduser.gov/portal/datasets/HTF-Income-limits.html>
+**Published:** annually with the HOME limits, effective around 1 June.
+
+---
+
+### `HUD-HOME` — HOME and CDBG
+
+**Used for:** HOME Investment Partnerships and Community Development Block
+Grant programs, at 30/50/60/80%.
+
+**Why separate from `HUD-MFI`:** these are HUD's *adjusted HOME* limits. They
+match the Section 8 figures at 50% and 80% but differ at 30%, where HOME
+publishes the unadjusted figure and Section 8 applies the poverty floor.
+Different programs, different tables.
+
+**Source:** <https://www.huduser.gov/portal/datasets/home-income-limits.html>
+**Published:** annually, effective around 1 June.
+
+---
+
+### `OHCS-MIRL` / `OHCS-THGF` — Moderate Income Rural Limit, Tribal Housing Grant Fund
+
+**Used for:** Oregon's Moderate-Income Revolving Loan program and Tribal
+Housing Grant Fund, at 50/80/100/120%.
+
+**Why two standards for identical 2026 figures:** they are separately
+administered programs published on separate tabs with separate effective dates
+(MIRL 1 June, THGF 30 June). They happen to agree today; keeping them apart
+means a future divergence shows up as data rather than as a wrong answer.
+
+Both are proportional — the 100% row is OHCS's median figure and every tier is
+an exact multiple of it.
+
+**Source:** <https://www.huduser.gov/portal/datasets/cdbg-income-limits.html>
+
+---
+
 ### `USDA-502-DIRECT` / `USDA-502-GUARANTEED`
 
 **Used for:** USDA Section 502 rural home loans. Guaranteed tests at 115% of
@@ -238,6 +304,36 @@ Certificate program.
 OHCS publishes these limits by county, household size, and whether the property
 is in a HUD-designated targeted area, but no stable machine-readable table has
 been found. This is a known gap, not an oversight.
+
+---
+
+## 2b. Rent limits
+
+Rent limits live in their own table, `rent_limits`, because they are a
+different shape: they vary by **bedroom count** rather than household size, and
+HOME/CDBG publishes three *kinds* of rent for the same unit — Fair Market Rent,
+High Rent Limit, Low Rent Limit — which `income_limits` has no column for.
+
+```sql
+select rent_limit_for('HUD-MTSP', 'OR-JACKSON', 2, 60);
+-- 1324   (2-bedroom, 60% tier, monthly)
+
+select rent_limit_for('HUD-HOME', 'OR-JACKSON', 2, null, 'high_rent');
+-- 1413
+```
+
+Arguments: `(standard, area, bedrooms, tier, kind, as_of_date)`. Tier is NULL
+for kinds that are not tier-based. Newest effective date wins, as with income.
+
+Nothing in the screener reads rents yet. They are loaded so the data is in
+place for program-side work — maximum rent a voucher covers, whether a listed
+unit falls under a project's rent cap — rather than for applicant screening.
+
+Load with the income-limits workflow by filling in `rent_csv_path`, or:
+
+```bash
+python scripts/load_rent_limits.py data/rent_limits_ohcs_or.csv
+```
 
 ---
 
