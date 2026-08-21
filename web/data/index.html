@@ -21,11 +21,11 @@
     <link rel="stylesheet" href="../styles.css?v=__BUILD__" />
     <link rel="stylesheet" href="data.css?v=__BUILD__" />
   </head>
-  <body>
+  <body class="report">
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header">
-      <div class="wrap wrap--data site-header__inner">
+      <div class="wrap wrap--report site-header__inner">
         <a class="brand" href="../">
           <span class="brand__mark" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -43,95 +43,122 @@
       </div>
     </header>
 
-    <main id="main" class="wrap wrap--data">
-      <section class="data-intro">
-        <h1>Income &amp; rent limits</h1>
-        <p>
-          Every figure the screener tests against, read live from the database
-          each time this page opens. Nothing here is cached or copied — if a
-          limit changes, this page changes with it.
+    <div class="wrap wrap--report report__layout">
+
+      <!-- Rail: every dataset, a jump list ---------------------------------- -->
+      <nav class="rail" aria-label="Datasets">
+        <h2 class="rail__head">Datasets</h2>
+        <ol class="rail__list" id="rail"></ol>
+        <p class="rail__foot">
+          <a href="https://github.com/Rangerzack/Toto-housing-companion/blob/master/docs/SOP-income-standards.md">Why each program uses what it does →</a>
         </p>
-        <p class="data-intro__meta" id="meta" aria-live="polite">Loading…</p>
-      </section>
+      </nav>
 
-      <!-- Controls --------------------------------------------------------- -->
-      <section class="controls" aria-label="Filters">
-        <label class="control">
-          <span class="control__label">County</span>
-          <select id="area"></select>
-        </label>
-        <label class="control">
-          <span class="control__label">As of</span>
-          <input type="date" id="asof" />
-        </label>
-        <label class="control control--check">
-          <input type="checkbox" id="show-rent" />
-          <span>Show rent limits</span>
-        </label>
-        <span class="control control--grow"></span>
-        <button type="button" class="btn btn--ghost btn--sm" id="download">
-          Download CSV
-        </button>
-      </section>
+      <main id="main" class="report__main">
 
-      <!-- Grids ------------------------------------------------------------ -->
-      <div id="grids" class="grids"></div>
+        <!-- Controls ------------------------------------------------------ -->
+        <section class="controls" aria-label="Filters">
+          <label class="control">
+            <span class="control__label">County</span>
+            <select id="area"></select>
+          </label>
+          <label class="control">
+            <span class="control__label">As of</span>
+            <input type="date" id="asof" />
+          </label>
+          <span class="control control--grow"></span>
+          <button type="button" class="btn btn--ghost btn--sm" id="download">Download CSV</button>
+        </section>
 
-      <!-- Programs --------------------------------------------------------- -->
-      <section class="programs" id="programs-section">
-        <h2>Programs in this county and the dataset each one uses</h2>
-        <div class="scroll">
-          <table class="programs__table" id="programs">
-            <thead>
-              <tr>
-                <th>Program</th>
-                <th>Dataset</th>
-                <th class="num">Tier</th>
-                <th>Income test</th>
-                <th>Republished</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
+        <p class="status" id="meta" aria-live="polite">Loading…</p>
 
-      <section class="notes">
-        <h2>Reading these tables</h2>
-        <ul>
-          <li>
-            <strong>Sizes 1–8 are published.</strong> Larger households follow
-            HUD's rule — add 8% of the 4-person limit per extra person — which the
-            screener applies automatically.
-          </li>
-          <li>
-            <strong>USDA publishes in brackets</strong> — one figure for 1–4
-            persons, another for 5–8 — so those rows repeat by design.
-          </li>
-          <li>
-            <strong>SMI and FPG are not county figures.</strong> State median
-            income is statewide; poverty guidelines are national. They appear
-            under every county because programs in every county use them.
-          </li>
-          <li>
-            <strong>HERA Special applies only to LIHTC buildings placed in
-            service before 2009.</strong> No program is routed to it by default.
-          </li>
-          <li>
-            Why each program uses the dataset it does, and where every figure
-            comes from, is in the
-            <a href="https://github.com/Rangerzack/Toto-housing-companion/blob/master/docs/SOP-income-standards.md">income standards SOP</a>.
-          </li>
-        </ul>
-      </section>
-    </main>
+        <!-- Stat tiles ---------------------------------------------------- -->
+        <section class="tiles" id="tiles" aria-label="Summary"></section>
+
+        <!-- Comparison: the default view ---------------------------------- -->
+        <section class="panel" id="compare">
+          <header class="panel__head">
+            <div>
+              <h2 class="panel__title">Every dataset at one tier</h2>
+              <p class="panel__sub">
+                Household income limit by size, for the tier selected. A dash means the
+                dataset does not publish that tier — nothing here is scaled or estimated.
+              </p>
+            </div>
+            <label class="control control--inline">
+              <span class="control__label">Tier</span>
+              <select id="tier"></select>
+            </label>
+          </header>
+          <div class="scroll">
+            <table class="compare" id="compare-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Programs ------------------------------------------------------ -->
+        <section class="panel" id="programs-panel">
+          <header class="panel__head">
+            <div>
+              <h2 class="panel__title">Programs in this county</h2>
+              <p class="panel__sub" id="programs-sub"></p>
+            </div>
+          </header>
+          <div class="scroll">
+            <table class="programs" id="programs">
+              <thead>
+                <tr>
+                  <th>Program</th>
+                  <th>Dataset</th>
+                  <th class="num">Tier</th>
+                  <th class="num" id="programs-limit-head">Limit</th>
+                  <th>Republished</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Detail: one collapsed grid per dataset ------------------------- -->
+        <section class="detail" id="detail-section">
+          <header class="panel__head panel__head--bare">
+            <div>
+              <h2 class="panel__title">Full tables by dataset</h2>
+              <p class="panel__sub">Every published tier and household size. Rent limits are included where a dataset publishes them.</p>
+            </div>
+            <div class="detail__actions">
+              <label class="control control--check">
+                <input type="checkbox" id="show-rent" />
+                <span>Include rent</span>
+              </label>
+              <button type="button" class="btn btn--ghost btn--sm" id="expand-all">Expand all</button>
+            </div>
+          </header>
+          <div id="grids" class="grids"></div>
+        </section>
+
+        <section class="notes">
+          <h2 class="panel__title">Reading these tables</h2>
+          <ul>
+            <li><strong>Sizes 1–8 are published.</strong> Larger households follow HUD's rule — add 8% of the 4-person limit per extra person — which the screener applies automatically.</li>
+            <li><strong>USDA publishes in brackets</strong> — one figure for 1–4 persons, another for 5–8 — so those cells repeat by design.</li>
+            <li><strong>SMI and FPG are not county figures.</strong> State median income is statewide; poverty guidelines are national. They appear under every county because programs in every county use them.</li>
+            <li><strong>HERA Special applies only to LIHTC buildings placed in service before 2009.</strong> No program is routed to it by default.</li>
+          </ul>
+        </section>
+
+      </main>
+    </div>
 
     <footer class="site-footer">
-      <div class="wrap wrap--data">
+      <div class="wrap wrap--report">
         <p>
-          Limits are published by HUD, HHS, USDA, OHCS, and local housing
-          authorities on their own schedules. Always confirm with the program
-          before relying on a figure for a determination.
+          Limits are published by HUD, HHS, USDA, OHCS, and local housing authorities on
+          their own schedules. Always confirm with the program before relying on a figure
+          for a determination.
         </p>
       </div>
     </footer>
