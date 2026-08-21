@@ -388,6 +388,26 @@ main:has(.step--results.is-active) {
   color: var(--ink-faint);
 }
 
+/* A quiet pointer for caseworkers and partners. Sits under the note so it
+   never competes with "Get started", which is the only thing an applicant
+   should be looking at on this screen. */
+.intro__data {
+  margin-top: 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--ink-faint);
+}
+.intro__data a,
+.site-footer p a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.intro__data a:hover,
+.site-footer p a:hover {
+  text-decoration: underline;
+}
+
 /* --- Choices -------------------------------------------------------- */
 
 .choices {
