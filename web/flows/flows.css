@@ -1,0 +1,105 @@
+/* The screening-flows SOP. Shares sop.css for the page frame (shell, rail,
+   masthead, headings, tables, notes) and adds only what this document has
+   and the other SOP does not: the trunk figure, the gate matrix, and the
+   per-program cards with their gate chain and intake steps. */
+
+/* --- Rail: program list needs ids under names ----------------------------- */
+
+.rail small { display: block; color: var(--ink-faint); font-family: var(--font-data); font-size: 0.68rem; line-height: 1.3; }
+.rail ol + h2 { margin-top: 1.2rem; }
+
+/* --- Figure ---------------------------------------------------------------- */
+
+figure {
+  margin: 0 0 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem 1.25rem 0.9rem;
+  overflow-x: auto;
+}
+figure svg { display: block; max-width: 100%; height: auto; color: var(--ink); }
+figcaption { font-size: 0.86rem; color: var(--ink-soft); margin-top: 0.75rem; max-width: 70ch; }
+
+/* --- Gate matrix ------------------------------------------------------------ */
+
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; font-size: 0.84rem; color: var(--ink-soft); margin: 0 0 1rem; }
+.legend b { font-family: var(--font-data); font-weight: 400; }
+.legend .req, .matrix td.g.req { color: var(--alarm); }
+.legend .unk, .matrix td.g.unk { color: var(--possible); }
+.legend .no,  .matrix td.g.no  { color: var(--ink-faint); }
+
+.scroll table.matrix { font-size: 0.86rem; }
+.matrix thead th { position: sticky; top: 0; }
+.matrix td { white-space: nowrap; }
+.matrix td.g { text-align: center; font-family: var(--font-data); font-size: 1rem; width: 2.6rem; }
+.matrix td.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; text-align: right; }
+.matrix td.pid, .matrix .pid { font-family: var(--font-data); font-size: 0.76rem; color: var(--ink-faint); }
+.matrix .unk { color: var(--possible); }
+.matrix .no { color: var(--ink-faint); }
+
+/* --- Program cards ----------------------------------------------------------- */
+
+.state-head {
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 2.5rem 0 0.75rem;
+}
+.prog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.5rem;
+  margin: 0 0 1.25rem;
+  scroll-margin-top: 5rem;
+}
+.prog > header { border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem; }
+.prog h3 { margin: 0 0 0.25rem; font-size: 1.1rem; letter-spacing: -0.01em; }
+.prog .sub { color: var(--ink-faint); font-size: 0.84rem; margin: 0; max-width: none; }
+.prog .sub .std-tag { margin-right: 0.4rem; }
+
+.two { display: grid; gap: 1rem 2rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 50rem) { .two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.two > div { min-width: 0; }
+.two h3 { margin-top: 0; }
+.prog { overflow-wrap: anywhere; }
+
+/* Gate chain */
+.flow { list-style: none; margin: 0 0 1.2rem; padding: 0; }
+.flow li { display: grid; grid-template-columns: 2rem 1fr; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px dashed var(--border); }
+.flow li:last-child { border-bottom: none; }
+.flow .n { font-family: var(--font-data); font-size: 0.72rem; color: var(--ink-faint); padding-top: 0.25rem; text-align: right; }
+.flow .q { font-weight: 600; }
+.flow .a { font-size: 0.9rem; color: var(--ink-soft); margin: 0.1rem 0 0; max-width: none; }
+.flow .ev { font-size: 0.82rem; color: var(--ink-faint); margin: 0.15rem 0 0; font-style: italic; max-width: none; }
+.flow .verdict { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; margin-right: 0.4rem; }
+.pass { color: var(--likely); }
+.fail { color: var(--alarm); }
+.flag { color: var(--possible); }
+
+/* Intake steps — a real sequence, so they are numbered */
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.6rem; padding: 0.45rem 0; font-size: 0.92rem; }
+.steps li::before {
+  counter-increment: s;
+  content: counter(s);
+  font-family: var(--font-data);
+  font-size: 0.72rem;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 50%;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: grid;
+  place-items: center;
+  margin-top: 0.15rem;
+}
+.steps b { display: block; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.1rem; }
+.steps a { word-break: break-word; }
+
+.note p { max-width: none; }
+
+@media print { .prog { break-inside: avoid; } }
