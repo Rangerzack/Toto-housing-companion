@@ -10,6 +10,10 @@ on:
         description: "Path to the income limits CSV in this repo"
         required: false
         default: "data/income_limits_template.csv"
+      rent_csv_path:
+        description: "Optional: path to a rent limits CSV to load in the same run"
+        required: false
+        default: ""
 
 jobs:
   load:
@@ -43,3 +47,9 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python scripts/load_income_limits.py "${{ inputs.csv_path }}"
+
+      - name: Load rent limits
+        if: ${{ inputs.rent_csv_path != '' }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python scripts/load_rent_limits.py "${{ inputs.rent_csv_path }}"
