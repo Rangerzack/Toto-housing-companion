@@ -47,3 +47,12 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python scripts/load_data.py "${{ inputs.csv_path }}" "${{ inputs.state }}"
+
+  # The screening-flows SOP is generated from the programs just loaded, so it
+  # is rebuilt and committed whenever a load changes anything it describes.
+  flows:
+    needs: load
+    uses: ./.github/workflows/generate-flows.yml
+    permissions:
+      contents: write
+      actions: write

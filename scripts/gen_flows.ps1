@@ -137,7 +137,7 @@ foreach ($p in $programs) {
   })
 }
 
-$flows | ConvertTo-Json -Depth 6 | Set-Content "$sp\flows.json" -Encoding UTF8
+$flows | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $sp 'flows.json') -Encoding UTF8
 
 # --- HTML --------------------------------------------------------------------------
 $sym = @{ required = '●'; 'not-required' = '○'; unknown = '?' }
@@ -404,9 +404,9 @@ $site = @'
   </body>
 </html>
 '@
-New-Item -ItemType Directory -Force "$repo\web\flows" | Out-Null
-[System.IO.File]::WriteAllText("$repo\web\flows\index.html", $site, (New-Object System.Text.UTF8Encoding($false)))
-Copy-Item "$sp\flows.json" "$repo\docs\flows.json" -Force
+New-Item -ItemType Directory -Force (Join-Path $repo 'web/flows') | Out-Null
+[System.IO.File]::WriteAllText((Join-Path $repo 'web/flows/index.html'), $site, (New-Object System.Text.UTF8Encoding($false)))
+Copy-Item (Join-Path $sp 'flows.json') (Join-Path $repo 'docs/flows.json') -Force
 "programs: $($flows.Count)"
 "required gates: $(($flows | ForEach-Object { $_.gates } | Where-Object { $_.state -eq 'required' }).Count)"
 "unknown gates : $(($flows | ForEach-Object { $_.gates } | Where-Object { $_.state -eq 'unknown' }).Count)"
