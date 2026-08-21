@@ -5,6 +5,15 @@
 -- are the answer to "why is this program being measured against that table?"
 -- and to "did anything get classified oddly after the last load?".
 
+-- These columns are added by 0013, but this view is re-created on every
+-- migration pass and must carry the final column set: "create or replace
+-- view" cannot drop or reorder columns, so if a later migration widened the
+-- view, this one re-running with the narrower shape fails with "cannot drop
+-- columns from view". Creating them here (idempotently) lets 0009 own the
+-- view's shape regardless of which migration ran last.
+alter table income_standards add column if not exists published_when text;
+alter table income_standards add column if not exists effective_when text;
+
 -- ---------------------------------------------------------------------------
 -- One row per program, with the dataset it uses and the text that decided it.
 -- ---------------------------------------------------------------------------
@@ -46,7 +55,11 @@ select
     (select string_agg(pc.county, '; ' order by pc.county)
        from program_counties pc
       where pc.program_id = p.program_id
-        and pc.state_code = p.state_code) as counties
+        and pc.state_code = p.state_code) as counties,
+
+    -- When the dataset is republished; populated by 0013.
+    s.published_when,
+    s.effective_when
 from programs p
 left join program_income_rules r on r.program_id = p.program_id
 left join income_standards s     on s.standard_id = r.standard_id
