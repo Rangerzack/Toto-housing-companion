@@ -1,0 +1,9 @@
+standard_id,area_id,tier_pct,household_size_min,household_size_max,amount,effective_date,expires_date,variant,source_url,notes
+JHCDC-HCV,OR-JOSEPHINE,50,1,1,29700,2025-04-01,,,https://jhcdc.net/applicants/,JHCDC published monthly limit $2475 x 12
+JHCDC-HCV,OR-JOSEPHINE,50,2,2,33948,2025-04-01,,,https://jhcdc.net/applicants/,JHCDC published monthly limit $2829 x 12
+JHCDC-HCV,OR-JOSEPHINE,50,3,3,38196,2025-04-01,,,https://jhcdc.net/applicants/,JHCDC published monthly limit $3183 x 12
+JHCDC-HCV,OR-JOSEPHINE,50,4,4,42396,2025-04-01,,,https://jhcdc.net/applicants/,JHCDC published monthly limit $3533 x 12
+JHCDC-HCV,OR-JOSEPHINE,50,5,5,45792,2025-04-01,,,https://jhcdc.net/applicants/,JHCDC published monthly limit $3816 x 12
+JHCDC-HCV,OR-JOSEPHINE,50,6,6,49200,2025-04-01,,,https://jhcdc.net/applicants/,JHCDC published monthly limit $4100 x 12
+JHCDC-HCV,OR-JOSEPHINE,50,7,7,52596,2025-04-01,,,https://jhcdc.net/applicants/,JHCDC published monthly limit $4383 x 12
+JHCDC-HCV,OR-JOSEPHINE,50,8,8,55992,2025-04-01,,,https://jhcdc.net/applicants/,JHCDC published monthly limit $4666 x 12

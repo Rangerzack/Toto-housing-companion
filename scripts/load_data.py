@@ -170,18 +170,26 @@ FPG_AREA_BY_STATE = {'AK': 'US-AK', 'HI': 'US-HI'}
 USDA_PATTERN = re.compile(r'\bUSDA\b|section 502|rural development|rural housing', re.I)
 
 
-# Some programs are measured against a table their administering agency
-# publishes, not against the national dataset it derives from. Section 8
-# eligibility is determined by the housing authority, so the Jackson County
-# voucher programs follow HAJC's published limits.
+# Voucher programs follow the housing authority that administers them.
 #
-# These cannot be inferred from the income-standard prose — it says "50% AMI",
-# which is true of both HUD's table and HAJC's — so the authority is recorded
-# explicitly. NED vouchers are drawn from the same waiting list and HAJC states
-# they use the same limits.
+# Section 8 eligibility is determined by the PHA, and each PHA publishes its
+# own income limits for its own jurisdiction — HAJC for Jackson County, JHCDC
+# for Josephine. Those tables derive from HUD's, but the authority is the
+# agency, and they set their own effective dates and can lag a HUD revision.
+#
+# This cannot be inferred from the income-standard prose: it says "50% AMI",
+# which is equally true of HUD's table and the PHA's. So the authority is
+# recorded per program.
+#
+# Adding a PHA: create its standard and load its published figures, then add
+# the program here. A voucher program with no entry falls through to HUD-MFI,
+# which will usually give the right number and quietly stop doing so the moment
+# that authority diverges.
 PROGRAM_STANDARD_OVERRIDES = {
+    # HAJC states NED vouchers come off the same waiting list under the same limits.
     'HAJC-HCV-OR-001': ('HAJC-HCV', 'OR-JACKSON'),
     'HAJC-NED-OR-001': ('HAJC-HCV', 'OR-JACKSON'),
+    'JHCDC-HCV-OR-001': ('JHCDC-HCV', 'OR-JOSEPHINE'),
 }
 
 
