@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Income Standards SOP — Toto Housing Companion</title>
+    <meta name="description" content="Which income dataset each housing program is tested against, why, and where the figures come from." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff0055' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10.5 12 3l9 7.5'/%3E%3Cpath d='M5 9.5V21h14V9.5'/%3E%3Cpath d='M9.5 21v-6h5v6'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+    <link rel="stylesheet" href="../styles.css?v=__BUILD__" />
+    <link rel="stylesheet" href="sop.css?v=__BUILD__" />
+  </head>
+  <body class="sop">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="wrap wrap--sop site-header__inner">
+        <a class="brand" href="../">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></svg>
+          </span>
+          <span class="brand__text"><strong>Toto Housing Companion</strong><small>Income standards SOP</small></span>
+        </a>
+        <a class="btn btn--ghost btn--sm" href="../data/">Back to the limits</a>
+      </div>
+    </header>
+    <div class="shell">
+    
+      <header class="masthead">
+        <p class="eyebrow">Standard Operating Procedure · revised</p>
+        <h1>Choosing a program's income standard</h1>
+        <p class="standfirst">
+          Which dataset a program is tested against, why that one and not another,
+          and where the numbers come from. Fifteen standards, two states, and a
+          separate table for rent.
+        </p>
+      </header>
+    
+      <nav class="rail" aria-label="Contents">
+        <h2>Contents</h2>
+        <ol>
+          <li><a href="#rule">The governing rule</a></li>
+          <li><a href="#procedure">Decision procedure</a></li>
+          <li><a href="#standards">The standards</a></li>
+          <li class="sub"><a href="#pha">HAJC-HCV · JHCDC-HCV</a></li>
+          <li class="sub"><a href="#hud-mfi">HUD-MFI</a></li>
+          <li class="sub"><a href="#hud-mtsp">HUD-MTSP</a></li>
+          <li class="sub"><a href="#hera">HUD-MTSP-HERA</a></li>
+          <li class="sub"><a href="#home-htf">HUD-HOME · HUD-HTF</a></li>
+          <li class="sub"><a href="#mirl-thgf">OHCS-MIRL · OHCS-THGF</a></li>
+          <li class="sub"><a href="#smi">OR-SMI · MN-SMI</a></li>
+          <li class="sub"><a href="#hhs-fpg">HHS-FPG</a></li>
+          <li class="sub"><a href="#usda">USDA 502</a></li>
+          <li class="sub"><a href="#ohcs-bond">OHCS-BOND</a></li>
+          <li><a href="#rent">Rent limits</a></li>
+          <li><a href="#loading">Adding a limit table</a></li>
+          <li><a href="#calendar">Refresh calendar</a></li>
+          <li><a href="#inventory">What is loaded</a></li>
+          <li><a href="#screener">What the screener does</a></li>
+        </ol>
+      </nav>
+    
+      <main id="main">
+    
+        <section id="rule">
+          <h2 class="head">The governing rule</h2>
+          <div class="creed">
+            <p>
+              A program is tested against the standard its own published materials
+              name. Never against whichever standard is convenient, and never
+              against a default.
+            </p>
+            <p>
+              When the standard or the threshold is unknown, apply <strong>no income
+              test</strong>. A missing limit must never quietly become a wrong one.
+            </p>
+          </div>
+          <p>
+            The failure this guards against is not a crash. It is a plausible-looking
+            number that turns away a household the program was built to serve — and
+            several of the standards below exist because two tables agreed to the
+            dollar right up until they didn't.
+          </p>
+        </section>
+    
+        <section id="procedure">
+          <h2 class="head">Decision procedure</h2>
+          <p>
+            Work down the list and stop at the first match. The order is load-bearing.
+            It mirrors <code>income_standard_for()</code> in
+            <code>scripts/load_data.py</code>, so a person and the loader reach the
+            same answer.
+          </p>
+    
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr><th></th><th>If…</th><th>Use</th><th>Area</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="step">0</td><td><strong>A specific agency determines eligibility and publishes its own table</strong> — Section 8, NED, or Homeownership Voucher</td><td><span class="std-tag">HAJC-HCV</span> <span class="std-tag">JHCDC-HCV</span></td><td>that agency's county</td></tr>
+                <tr><td class="step">1</td><td>“state median income”, “SMI”, “% of the State of Oregon Median Income”</td><td><span class="std-tag">OR-SMI</span> / <span class="std-tag">MN-SMI</span> — the state it operates in</td><td>that state</td></tr>
+                <tr><td class="step">2</td><td>“federal poverty guidelines”, “FPG”, “FPL”, “% of poverty”</td><td><span class="std-tag">HHS-FPG</span></td><td>US-48 / AK / HI</td></tr>
+                <tr><td class="step">3</td><td>LIHTC, Tax-Exempt Bond, or LIFT project</td><td><span class="std-tag">HUD-MTSP</span> — never HERA by default</td><td>applicant's county</td></tr>
+                <tr><td class="step">4</td><td>HOME, CDBG, or Housing Trust Fund project</td><td><span class="std-tag">HUD-HOME</span> / <span class="std-tag">HUD-HTF</span></td><td>applicant's county</td></tr>
+                <tr><td class="step">5</td><td>Oregon MIRL or Tribal Housing Grant Fund</td><td><span class="std-tag">OHCS-MIRL</span> / <span class="std-tag">OHCS-THGF</span></td><td>applicant's county</td></tr>
+                <tr><td class="step">6</td><td>“area median income”, “AMI”, “HUD income limits”, “median family income”</td><td><span class="std-tag">HUD-MFI</span></td><td>applicant's county</td></tr>
+                <tr><td class="step">7</td><td>USDA Section 502 loan</td><td><span class="std-tag">USDA-502-*</span></td><td>applicant's county</td></tr>
+                <tr><td class="step">8</td><td>“not income-tested”, “no published income table”, “not a fixed AMI test”</td><td><strong>none</strong></td><td>—</td></tr>
+                <tr><td class="step">9</td><td>Eligibility flows from another program (“must be an approved EAP recipient”)</td><td>that program's standard, noted as derivative</td><td>—</td></tr>
+                <tr><td class="step">10</td><td>Anything else</td><td><strong>none</strong>, and flag for research</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+    
+          <h3>Why the agency's own table comes first</h3>
+          <p>
+            Section 8 eligibility is determined by the public housing authority that
+            administers the voucher, and each PHA publishes limits for its own
+            jurisdiction. Those derive from HUD's — HAJC's matches HUD-MFI at 50% to
+            the dollar today — which is exactly why leaving a voucher on HUD's table
+            is easy to miss: it gives the right number until the two diverge. They
+            can: the effective dates already differ (HAJC 1 May 2026, HUD 1 June),
+            and JHCDC's posted table is dated April 2025.
+          </p>
+          <div class="note">
+            <span class="label">Cannot be inferred</span>
+            <p>
+              The income text says “50% AMI”, which is equally true of HUD's table
+              and the PHA's. So the authority is recorded per program in
+              <code>PROGRAM_STANDARD_OVERRIDES</code>. A voucher program with no entry
+              falls through to HUD-MFI and will quietly stop being right the moment
+              its authority diverges.
+            </p>
+          </div>
+    
+          <h3>Why SMI is checked before FPG</h3>
+          <p>
+            Minnesota's Energy Assistance Program tests at 50% SMI, but its write-up
+            also mentions “sizes 19–20 use 110% FPG”. Reading that as the primary
+            standard drops the four-person limit from <strong>$71,998 to
+            $33,000</strong>.
+          </p>
+          <div class="note hard">
+            <span class="label">This was wrong once</span>
+            <p>
+              FPG was checked first in an earlier revision and every EAP program was
+              reclassified as poverty-tested. Programs that genuinely test on poverty
+              level never mention SMI at all, so SMI wins when both appear.
+            </p>
+          </div>
+    
+          <h3>Why category is not used</h3>
+          <p>
+            <code>ACCESS-RVAR-OAR-OR-001</code> sits under <em>Down Payment
+            Assistance</em> but tests against “the State of Oregon Median Income
+            Limit”. Classifying by category put it on county AMI and resolved its
+            limit to $88,313 instead of the correct $103,342. The program's own text
+            decides; category is a fallback only for rows with no income language.
+          </p>
+        </section>
+    
+        <section id="standards">
+          <h2 class="head">The standards</h2>
+    
+          <article class="spec" id="pha">
+            <header>
+              <h3>HAJC-HCV · JHCDC-HCV</h3>
+              <div class="full">Housing authority voucher limits · 8 rows each</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd>Section 8 Housing Choice Vouchers, NED vouchers, and the Homeownership Voucher — each under the authority that administers it. Three HAJC programs, one JHCDC.</dd>
+              <dt>Why this one</dt><dd>The PHA makes the eligibility decision and publishes the table an applicant is actually measured against.</dd>
+              <dt>Sources</dt><dd>HAJC: <a href="https://hajc.net/housing-programs/housing-choice-voucher/">hajc.net</a> (posted 1 May 2026)<br>JHCDC: <a href="https://jhcdc.net/applicants/">jhcdc.net/applicants</a> (posted 1 April 2025)</dd>
+              <dt>Published</dt><dd>By each authority after HUD issues new limits, on its own timing. That independence is the whole reason these are tracked separately.</dd>
+            </dl>
+            <div class="note">
+              <span class="label">Watch for</span>
+              <p>
+                JHCDC publishes <strong>monthly</strong> figures, stored here annualised
+                (× 12). Its posted table predates HUD's FY2026 limits and runs about
+                1.4% above them — most likely the page is stale rather than Josephine
+                genuinely using higher thresholds. Confirm with JHCDC before relying
+                on it for a determination.
+              </p>
+              <p>
+                HAJC's page also carries a stale 2021 table under its FAQ. The current
+                figures are the ones under “Income limits”.
+              </p>
+            </div>
+          </article>
+    
+          <article class="spec" id="hud-mfi">
+            <header>
+              <h3>HUD-MFI</h3>
+              <div class="full">HUD Section 8 income limits · 904 rows · 28 counties</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd>Rent assistance, most down-payment assistance — anything citing “area median income” that is not run by a PHA with its own table.</dd>
+              <dt>Source</dt><dd><a href="https://www.huduser.gov/portal/datasets/il.html">huduser.gov/portal/datasets/il.html</a>, via HUD's API (free token in <code>HUD_API_TOKEN</code>).</dd>
+              <dt>Published</dt><dd>Annually, spring → effective ~1 June.</dd>
+              <dt>Refresh</dt><dd><strong>The only automated one.</strong> Run the <em>Fetch HUD income limits</em> workflow with the new year.</dd>
+            </dl>
+            <div class="note">
+              <span class="label">Watch for</span>
+              <p>
+                The 30% tier is <strong>not</strong> 30% of median. HUD's “extremely
+                low income” figure is the greater of 30% AMI or the poverty guideline,
+                so for larger households the poverty floor takes over — Jackson's
+                four-person ELI is $33,000 where a straight 30% would be $29,450.
+                Tiers are not proportional; scaling between them is an estimate and
+                must never exclude anyone.
+              </p>
+            </div>
+          </article>
+    
+          <article class="spec" id="hud-mtsp">
+            <header>
+              <h3>HUD-MTSP</h3>
+              <div class="full">Multifamily Tax Subsidy Project limits · 400 income, 420 rent · 2024–2026</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd>LIHTC at whichever tier the project elected (20–80%), Tax-Exempt Bonds, <strong>LIFT rental at 60%</strong>, <strong>LIFT homeownership at 80%</strong>.</dd>
+              <dt>Why this one</dt><dd>None of those publishes its own figures. All test against MTSP, so one table answers all three.</dd>
+              <dt>Source</dt><dd>OHCS workbook (<em>Open Data Download</em> on the <a href="https://www.oregon.gov/ohcs/compliance-monitoring/pages/rent-income-limits.aspx">OHCS dashboard</a>), “Actual Income &amp; Rent Limits” tab.</dd>
+              <dt>Published</dt><dd>Annually ~1 May; owners implement by mid-June.</dd>
+            </dl>
+            <p><strong>Why not HUD-MFI:</strong> they agree at 50% and 60% for Jackson, then diverge at 80% — $78,480 against $78,500 for four people. HUD caps each Section 8 tier separately; every MTSP tier is an exact multiple of the 50% figure. Small here, far wider in HERA-special areas.</p>
+          </article>
+    
+          <article class="spec" id="hera">
+            <header>
+              <h3>HUD-MTSP-HERA</h3>
+              <div class="full">MTSP HERA Special · 400 income, 350 rent · routed to nothing</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd><strong>Nothing, by default — and that is deliberate.</strong></dd>
+              <dt>What it is</dt><dd>Housing and Economic Recovery Act limits, applying only to LIHTC projects <strong>placed in service before 2009</strong>. Newer projects use HUD-MTSP. For Jackson County it runs $2,350–$3,760 above Actual at 50–80%.</dd>
+              <dt>Source</dt><dd>OHCS workbook, “MTSP HERA” tab; <a href="https://www.huduser.gov/portal/datasets/mtsp.html#data_2026">huduser.gov MTSP</a>.</dd>
+            </dl>
+            <div class="note hard">
+              <span class="label">Not a county-level dataset</span>
+              <p>
+                Which table applies is a property of the <em>building</em>, not the
+                county, and the program matrix does not carry placed-in-service dates.
+                Routing a program here would raise its limits for every building it
+                does not apply to. It exists so a caseworker looking at a specific
+                older property can resolve the right figure.
+              </p>
+            </div>
+          </article>
+    
+          <article class="spec" id="home-htf">
+            <header>
+              <h3>HUD-HOME · HUD-HTF</h3>
+              <div class="full">HOME/CDBG and Housing Trust Fund · 192 + 48 income, 126 + 42 rent</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd>HOME Investment Partnerships and CDBG at 30/50/60/80%; the national Housing Trust Fund at a single ELI tier. No program in the matrix uses either yet.</dd>
+              <dt>Why separate from HUD-MFI</dt><dd>HOME limits match Section 8 at 50% and 80% but differ at 30%, where HOME publishes the unadjusted figure and Section 8 applies the poverty floor. Different programs, different tables.</dd>
+              <dt>Sources</dt><dd><a href="https://www.huduser.gov/portal/datasets/home-income-limits.html">HOME</a> · <a href="https://www.huduser.gov/portal/datasets/HTF-Income-limits.html">HTF</a></dd>
+              <dt>Published</dt><dd>Annually, effective ~1 June.</dd>
+            </dl>
+            <p>HOME/CDBG also publishes three <em>kinds</em> of rent for the same unit — Fair Market Rent, High Rent Limit, Low Rent Limit — which is why rent limits have their own table.</p>
+          </article>
+    
+          <article class="spec" id="mirl-thgf">
+            <header>
+              <h3>OHCS-MIRL · OHCS-THGF</h3>
+              <div class="full">Moderate Income Rural Limit · Tribal Housing Grant Fund · 192 + 64 income</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd>Oregon's Moderate-Income Revolving Loan program and Tribal Housing Grant Fund, at 50/80/100/120%. No program uses either yet.</dd>
+              <dt>Why two standards for identical figures</dt><dd>They are separately administered, published on separate tabs, with separate effective dates (MIRL 1 June, THGF 30 June). They agree today; keeping them apart means a future divergence shows up as data rather than as a wrong answer.</dd>
+              <dt>Source</dt><dd><a href="https://www.huduser.gov/portal/datasets/cdbg-income-limits.html">huduser.gov CDBG limits</a>, via the OHCS workbook.</dd>
+            </dl>
+            <p>Both are proportional — the 100% row is OHCS's median and every tier is an exact multiple of it.</p>
+          </article>
+    
+          <article class="spec" id="smi">
+            <header>
+              <h3>OR-SMI · MN-SMI</h3>
+              <div class="full">State median income · 24 + 48 rows · statewide</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd>Oregon utility and energy programs at <strong>60% SMI</strong>; Minnesota's Energy Assistance Program and the programs keyed to it at <strong>50% SMI</strong>.</dd>
+              <dt>Why this one</dt><dd>These test against <em>state</em> median, not the county's. For a two-person household, 60% of Oregon SMI is <strong>$50,194</strong> while Josephine's 60% AMI is <strong>$40,140</strong>.</dd>
+              <dt>Sources</dt><dd><a href="https://liheapch.acf.gov/profiles/povertytables/FY2026/orsmi.htm">Oregon</a> · <a href="https://liheapch.acf.gov/profiles/povertytables/FY2026/mnsmi.htm">Minnesota</a> — HHS via the LIHEAP Clearinghouse.</dd>
+              <dt>Published</dt><dd>Each federal fiscal year, summer → effective 1 October.</dd>
+            </dl>
+            <div class="note hard">
+              <span class="label">The trap</span>
+              <p>
+                For a four-person household, Oregon at 60% is <strong>$73,816</strong>
+                and Minnesota at 50% is <strong>$73,969</strong> — 0.2% apart. A
+                program on the wrong state's table looks correct in every spot check
+                and is still wrong. The tier differs by state too; copying it across
+                is as wrong as copying the table.
+              </p>
+            </div>
+          </article>
+    
+          <article class="spec" id="hhs-fpg">
+            <header>
+              <h3>HHS-FPG</h3>
+              <div class="full">Federal poverty guidelines · 36 rows · national</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd>Emergency General Assistance (Stearns, Benton, Sherburne) and the four FHPAP providers — all at <strong>200% FPG</strong>.</dd>
+              <dt>Source</dt><dd><a href="https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines">aspe.hhs.gov</a>.</dd>
+              <dt>Published</dt><dd>Each January, in the Federal Register.</dd>
+            </dl>
+            <p>Only the 100% figures are stored; multiples like 200% are exact arithmetic. The 2026 guidelines for households of 3–8 match HUD's Jackson County ELI figures to the dollar — two independent sources agreeing.</p>
+          </article>
+    
+          <article class="spec" id="usda">
+            <header>
+              <h3>USDA-502-GUARANTEED</h3>
+              <div class="full">USDA Section 502 rural home loans · 168 rows · 28 counties</div>
+            </header>
+            <dl class="facts">
+              <dt>Used for</dt><dd>Section 502 guaranteed loans at 115% (moderate income); the very-low and low rows are published alongside.</dd>
+              <dt>Source</dt><dd>HB-1-3555 Appendix 5, issued as a procedure notice each federal fiscal year (FY2026: PN 657, 13 July 2026); <a href="https://www.rd.usda.gov/resources/directives/handbooks">rd.usda.gov handbooks</a>.</dd>
+              <dt>Status</dt><dd><code>USDA-502-DIRECT</code> is declared but empty — the Direct appendix (HB-1-3550) has not been supplied.</dd>
+            </dl>
+            <div class="note">
+              <span class="label">Why not borrow HUD's table</span>
+              <p>
+                For 22 of 24 Oregon area/tier combinations the two agree to the dollar.
+                Grants Pass is the exception, running about 1.4% higher at every tier
+                and bracket. A USDA program measured against HUD would be right in
+                eleven counties and wrong in Josephine — the hardest kind of error to
+                notice.
+              </p>
+              <p>
+                USDA publishes in <strong>brackets</strong> — one figure for 1–4
+                persons, another for 5–8 — stored as published and expanded on lookup.
+                And its “115%” is defined as the greater of three formulas, so the
+                standard is not marked proportional.
+              </p>
+            </div>
+            <div class="note hard">
+              <span class="label">Corrected</span>
+              <p>
+                An earlier load carried two Jackson rows from secondary sources
+                ($119,850 against the published $122,800). They were removed in
+                migration 0010 rather than kept as history, because they were never
+                accurate for any period.
+              </p>
+            </div>
+          </article>
+    
+          <article class="spec" id="ohcs-bond">
+            <header>
+              <h3>OHCS-BOND</h3>
+              <div class="full">OHCS Flex Lending &amp; Mortgage Credit Certificate · no rows</div>
+            </header>
+            <dl class="facts">
+              <dt>Status</dt><dd><strong>Declared but empty.</strong> Both programs currently carry no income test. OHCS publishes these limits by county, household size, and targeted-area status, but no stable table has been found. A known gap, not an oversight.</dd>
+            </dl>
+          </article>
+        </section>
+    
+        <section id="rent">
+          <h2 class="head">Rent limits</h2>
+          <p>
+            Rent limits live in their own table, <code>rent_limits</code>, because
+            they are a different shape: they vary by <strong>bedroom count</strong>
+            rather than household size, and HOME/CDBG publishes three kinds of rent
+            for the same unit, which <code>income_limits</code> has no column for.
+          </p>
+          <pre><code>select rent_limit_for('HUD-MTSP', 'OR-JACKSON', 2, 60);
+    -- 1324   (2-bedroom, 60% tier, monthly)
+    
+    select rent_limit_for('HUD-HOME', 'OR-JACKSON', 2, null, 'high_rent');
+    -- 1413</code></pre>
+          <p>
+            Arguments: <code>(standard, area, bedrooms, tier, kind, as_of_date)</code>.
+            Tier is NULL for kinds that are not tier-based. Newest effective date
+            wins, as with income — a 2024 as-of query returns that year's $1,186.
+          </p>
+          <p>
+            <strong>Nothing in the screener reads rents yet.</strong> They are loaded
+            so the data is in place for program-side work — the maximum rent a
+            voucher covers, whether a unit falls under a project's cap — rather than
+            for applicant screening. 1,130 rows across six standards.
+          </p>
+        </section>
+    
+        <section id="loading">
+          <h2 class="head">Adding or updating a limit table</h2>
+          <ul class="plain">
+            <li>Get the figures from the publisher named above. <strong>Never</strong> from a summary, a search result, or a secondary site — those have been wrong three times in this project.</li>
+            <li>Put them in the loader's CSV format, documented in <code>scripts/load_income_limits.py</code> (or <code>load_rent_limits.py</code>).</li>
+            <li>Run the <strong>Load income limits</strong> workflow; fill <code>rent_csv_path</code> to load rents in the same run.</li>
+          </ul>
+          <p>
+            The loader upserts rather than truncating, so limits accumulate and past
+            determinations stay reproducible. An unknown <code>standard_id</code> or
+            <code>area_id</code> aborts the load.
+          </p>
+          <div class="note">
+            <span class="label">Superseding is not replacing</span>
+            <p>
+              The upsert key includes <code>effective_date</code>. Loading a new year
+              adds rows alongside the old — correct when the old rows were genuinely
+              in force, wrong when they were mistaken. Replacing provisional figures
+              with published ones needs a deliberate delete, as in migration 0010.
+            </p>
+          </div>
+    
+          <h3>Validate before trusting</h3>
+          <ul class="plain">
+            <li><strong>Tier ordering.</strong> 30% &lt; 50% &lt; 60% &lt; 80% at every household size; 5–8 bracket above 1–4.</li>
+            <li><strong>Known relationships.</strong> HUD's 60% row is exactly 1.2× its 50% row; MTSP tiers are exact multiples of the 50% row.</li>
+            <li><strong>Match against the source itself</strong>, not a neighbouring dataset. The Minnesota USDA figures were confirmed by locating every value in the source text, which is the check that catches a parsing error. Comparing to HUD would not have — each program uses a specific dataset, and one does not override the other.</li>
+          </ul>
+          <div class="note hard">
+            <span class="label">Why the checks exist</span>
+            <p>
+              A parsing bug silently filled every 80% row with 50% figures, because
+              <code>LOW INCOME</code> also matches inside <code>VERY LOW INCOME</code>.
+              Spot checks passed; tier ordering exposed it. Another flattened
+              nested arrays so both USDA brackets took the same value; ordering
+              caught that too.
+            </p>
+          </div>
+        </section>
+    
+        <section id="calendar">
+          <h2 class="head">Refresh calendar</h2>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>When</th><th>Standard</th><th>Effective</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr><td>January</td><td><span class="std-tag">HHS-FPG</span></td><td>On publication</td><td>Reload the national table</td></tr>
+                <tr><td>~1 May</td><td><span class="std-tag">HUD-MTSP</span> <span class="std-tag">HUD-MTSP-HERA</span></td><td>Mid-June</td><td>Export the OHCS workbook, rebuild the OHCS CSVs</td></tr>
+                <tr><td>Spring</td><td><span class="std-tag">HUD-MFI</span></td><td>~1 June</td><td>Run the fetch workflow with the new year</td></tr>
+                <tr><td>Spring</td><td><span class="std-tag">HUD-HOME</span> <span class="std-tag">HUD-HTF</span> <span class="std-tag">OHCS-MIRL</span></td><td>~1 June</td><td>Same OHCS workbook export</td></tr>
+                <tr><td>Spring</td><td><span class="std-tag">OHCS-THGF</span></td><td>30 June</td><td>Same OHCS workbook export</td></tr>
+                <tr><td>After HUD</td><td><span class="std-tag">HAJC-HCV</span> <span class="std-tag">JHCDC-HCV</span></td><td>Each PHA's own date</td><td>Check both PHA pages, reload</td></tr>
+                <tr><td>~July</td><td><span class="std-tag">USDA-502-GUARANTEED</span></td><td>Date of the notice</td><td>New HB-1-3555 Appendix 5, re-parse</td></tr>
+                <tr><td>Summer</td><td><span class="std-tag">OR-SMI</span> <span class="std-tag">MN-SMI</span></td><td>1 October</td><td>Reload both state tables</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            Only <span class="std-tag">HUD-MFI</span> is automated. The five
+            OHCS-workbook standards come from one export, so that is a single annual
+            task rather than five. This schedule also lives in the database, on
+            <code>income_standards.published_when</code>, and surfaces in every
+            dataset report.
+          </p>
+        </section>
+    
+        <section id="inventory">
+          <h2 class="head">What is loaded right now</h2>
+          <div class="scroll">
+            <table>
+              <thead><tr><th>Standard</th><th class="num">Income rows</th><th class="num">Areas</th><th class="num">Rent rows</th><th>Years</th></tr></thead>
+              <tbody>
+                <tr><td><span class="std-tag">HUD-MFI</span></td><td class="num">904</td><td class="num">28</td><td class="num">—</td><td>2026</td></tr>
+                <tr><td><span class="std-tag">HUD-MTSP</span></td><td class="num">400</td><td class="num">2</td><td class="num">420</td><td>2024–2026</td></tr>
+                <tr><td><span class="std-tag">HUD-MTSP-HERA</span></td><td class="num">400</td><td class="num">2</td><td class="num">350</td><td>2024–2026</td></tr>
+                <tr><td><span class="std-tag">HUD-HOME</span></td><td class="num">192</td><td class="num">2</td><td class="num">126</td><td>2024–2026</td></tr>
+                <tr><td><span class="std-tag">HUD-HTF</span></td><td class="num">48</td><td class="num">2</td><td class="num">42</td><td>2024–2026</td></tr>
+                <tr><td><span class="std-tag">OHCS-MIRL</span></td><td class="num">192</td><td class="num">2</td><td class="num">144</td><td>2024–2026</td></tr>
+                <tr><td><span class="std-tag">OHCS-THGF</span></td><td class="num">64</td><td class="num">2</td><td class="num">48</td><td>2026</td></tr>
+                <tr><td><span class="std-tag">USDA-502-GUARANTEED</span></td><td class="num">168</td><td class="num">28</td><td class="num">—</td><td>FY2026</td></tr>
+                <tr><td><span class="std-tag">OR-SMI</span></td><td class="num">24</td><td class="num">1</td><td class="num">—</td><td>FFY2026</td></tr>
+                <tr><td><span class="std-tag">MN-SMI</span></td><td class="num">48</td><td class="num">1</td><td class="num">—</td><td>FFY2026–27</td></tr>
+                <tr><td><span class="std-tag">HHS-FPG</span></td><td class="num">36</td><td class="num">3</td><td class="num">—</td><td>2026</td></tr>
+                <tr><td><span class="std-tag">HAJC-HCV</span></td><td class="num">8</td><td class="num">1</td><td class="num">—</td><td>2026</td></tr>
+                <tr><td><span class="std-tag">JHCDC-HCV</span></td><td class="num">8</td><td class="num">1</td><td class="num">—</td><td>2025</td></tr>
+                <tr><td><span class="std-tag">USDA-502-DIRECT</span></td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td>not supplied</td></tr>
+                <tr><td><span class="std-tag">OHCS-BOND</span></td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td>no table located</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            <strong>2,492 income rows, 1,130 rent rows.</strong> The multi-area
+            standards cover both states; the OHCS-workbook standards cover Jackson
+            and Josephine only, by request — the workbook holds every Oregon county
+            and the rest are a one-line change to the builder.
+          </p>
+          <p>
+            Which programs use which: 73 programs, 31 with an income test. Five new
+            standards have no program on them yet — correctly, since no HOME, HTF,
+            MIRL, or THGF program is in the matrix. Run the <strong>Report program
+            datasets</strong> workflow for the per-program listing.
+          </p>
+        </section>
+    
+        <section id="screener">
+          <h2 class="head">What the screener does with all this</h2>
+          <ul class="plain">
+            <li>The standard and tier live in <code>program_income_rules</code>, derived from each program's own text at load time. They are <strong>data, not logic</strong>.</li>
+            <li>A missing tier means <strong>no income test</strong>, not a default.</li>
+            <li>A missing limit returns <code>NULL</code>, and the program stays in results with a “worth checking” note.</li>
+            <li>Being over a limit on <strong>gross</strong> income flags rather than excludes, because programs test income <em>after</em> deductions. Only clearly-over incomes are filtered.</li>
+            <li>Household sizes 1–8 are published; 9–12 extrapolate by HUD's rule — add 8% of the 4-person limit per extra person. Exact for proportional standards, an estimate for the rest, and an estimate never excludes anyone.</li>
+            <li>Scaling to an unstored tier is exact for <span class="std-tag">HHS-FPG</span> <span class="std-tag">HUD-MTSP</span> <span class="std-tag">HUD-MTSP-HERA</span> <span class="std-tag">OR-SMI</span> <span class="std-tag">MN-SMI</span> <span class="std-tag">OHCS-MIRL</span> <span class="std-tag">OHCS-THGF</span>, and an estimate for the rest.</li>
+          </ul>
+        </section>
+    
+      </main>
+    
+      <footer class="colophon">
+        <p>
+          Every program and its dataset: <code>docs/program_income_datasets.csv</code>,
+          or the <em>Report program datasets</em> workflow for a live export. Schema and
+          lookup functions in <code>supabase/migrations/0004</code>, <code>0014</code>,
+          <code>0015</code>; classification in <code>scripts/load_data.py</code>.
+        </p>
+      </footer>
+    
+    </div>
+    <footer class="site-footer">
+      <div class="wrap wrap--sop">
+        <p>This procedure is the source of truth for how the screener chooses an income standard. The same text lives in the repository at <code>docs/SOP-income-standards.md</code>.</p>
+      </div>
+    </footer>
+  </body>
+</html>

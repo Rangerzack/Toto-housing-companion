@@ -1,0 +1,227 @@
+/* The SOP as a page on the site. A long document read top to bottom, so it
+   gets a reading measure, a sticky contents rail, and the site's own tokens —
+   it should look like the same product as the screener and the limits page. */
+
+:root {
+  /* Two local tokens the site has no equivalent for. The brand red is already
+     doing the work of links and tags, so "this was wrong once" needs its own
+     colour or the two meanings collide. */
+  --alarm: #8c322b;
+  --alarm-soft: #fbeae7;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --alarm: #e08b82; --alarm-soft: #301b19; }
+}
+
+.wrap--sop { max-width: 74rem; }
+.brand { text-decoration: none; color: inherit; }
+
+/* --- Layout ---------------------------------------------------------- */
+
+.shell {
+  max-width: 74rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+@media (min-width: 64rem) {
+  .shell { grid-template-columns: 14rem minmax(0, 1fr); align-items: start; }
+}
+
+.masthead {
+  grid-column: 1 / -1;
+  padding: 2.75rem 0 1.75rem;
+  border-bottom: 2px solid var(--ink);
+}
+.eyebrow {
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin: 0 0 0.8rem;
+}
+.masthead h1 {
+  font-size: clamp(1.9rem, 1.3rem + 2.4vw, 2.8rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin: 0 0 0.8rem;
+  text-wrap: balance;
+  max-width: 22ch;
+}
+.standfirst { font-size: 1.05rem; color: var(--ink-soft); max-width: 62ch; margin: 0; text-wrap: pretty; }
+
+/* --- Contents rail --------------------------------------------------- */
+
+.rail { font-size: 0.86rem; }
+@media (min-width: 64rem) { .rail { position: sticky; top: 5rem; padding-top: 2.25rem; } }
+.rail h2 {
+  font-family: var(--font-data);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.8rem;
+  font-weight: 600;
+}
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.1rem; }
+.rail a {
+  display: block;
+  padding: 0.32rem 0.6rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-left: 2px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.rail a:hover, .rail a:focus-visible { color: var(--ink); border-left-color: var(--brand); background: var(--surface); }
+.rail .sub { padding-left: 1.25rem; font-size: 0.8rem; }
+
+/* --- Body text ------------------------------------------------------- */
+
+main { padding: 2.25rem 0 4rem; min-width: 0; }
+section + section { margin-top: 3.25rem; }
+h2.head {
+  font-size: clamp(1.35rem, 1.1rem + 1vw, 1.75rem);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-strong);
+  text-wrap: balance;
+}
+h3 { font-size: 1rem; font-weight: 700; margin: 1.9rem 0 0.55rem; }
+main p { margin: 0 0 1rem; max-width: 68ch; text-wrap: pretty; color: var(--ink); }
+main a { color: var(--primary); font-weight: 600; text-decoration: none; }
+main a:hover { text-decoration: underline; }
+code {
+  font-family: var(--font-data);
+  font-size: 0.87em;
+  background: var(--surface-sunken);
+  padding: 0.08em 0.38em;
+  border-radius: 3px;
+}
+pre {
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  font-family: var(--font-data);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  margin: 0 0 1.2rem;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+ul.plain { margin: 0 0 1.2rem; padding-left: 1.15rem; max-width: 68ch; }
+ul.plain li { margin-bottom: 0.5rem; }
+
+/* --- The governing rule ---------------------------------------------- */
+
+.creed {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--brand);
+  border-radius: var(--radius-sm);
+  padding: 1.3rem 1.5rem;
+  margin: 0 0 1.5rem;
+}
+.creed p { margin: 0; font-size: 1.02rem; max-width: none; }
+.creed p + p { margin-top: 0.7rem; color: var(--ink-soft); font-size: 0.95rem; }
+
+/* --- Tables ---------------------------------------------------------- */
+
+.scroll { overflow-x: auto; margin: 0 0 1.4rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.scroll table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+.scroll th, .scroll td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.scroll thead th {
+  font-family: var(--font-data);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  background: var(--surface-sunken);
+  white-space: nowrap;
+}
+.scroll tbody tr:last-child td { border-bottom: none; }
+td.num, th.num { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.step { font-family: var(--font-data); color: var(--brand); font-weight: 600; width: 2.4rem; }
+.std-tag {
+  font-family: var(--font-data);
+  font-size: 0.8em;
+  color: var(--brand);
+  background: var(--primary-tint);
+  padding: 0.1em 0.42em;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+/* --- Standard spec cards ---------------------------------------------- */
+
+.spec {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.35rem 1.5rem;
+  margin: 0 0 1.1rem;
+}
+.spec > header { border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem; }
+.spec h3 { margin: 0 0 0.15rem; font-family: var(--font-data); font-size: 1rem; color: var(--brand); letter-spacing: -0.01em; }
+.spec .full { color: var(--ink-faint); font-size: 0.84rem; }
+.facts { display: grid; gap: 0.5rem 1.2rem; margin: 0; }
+@media (min-width: 620px) { .facts { grid-template-columns: 8.5rem 1fr; } }
+.facts dt {
+  font-family: var(--font-data);
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-top: 0.2rem;
+}
+.facts dd { margin: 0; font-size: 0.93rem; }
+.facts dd p { margin: 0; max-width: 62ch; }
+.facts a { word-break: break-word; }
+.spec p { font-size: 0.93rem; }
+
+/* --- Callouts ---------------------------------------------------------- */
+
+.note {
+  border-left: 3px solid var(--possible);
+  background: var(--possible-tint);
+  padding: 0.85rem 1.1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: 1rem 0;
+}
+.note.hard { border-left-color: var(--alarm); background: var(--alarm-soft); }
+.note .label {
+  font-family: var(--font-data);
+  font-size: 0.66rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--possible);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+.note.hard .label { color: var(--alarm); }
+.note p { margin: 0; font-size: 0.92rem; max-width: 64ch; }
+.note p + p { margin-top: 0.6rem; }
+
+.colophon {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border-strong);
+  padding: 1.5rem 0 1rem;
+  color: var(--ink-faint);
+  font-size: 0.86rem;
+}
+.colophon p { max-width: 70ch; color: var(--ink-faint); }
+
+:focus-visible { outline: 3px solid var(--primary-ring); outline-offset: 2px; border-radius: 3px; }
+
+@media print {
+  .site-header, .site-footer, .rail { display: none !important; }
+  .shell { grid-template-columns: 1fr; }
+  .spec, .note, .creed { break-inside: avoid; }
+}
