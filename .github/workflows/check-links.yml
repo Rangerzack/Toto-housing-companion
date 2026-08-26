@@ -1,0 +1,68 @@
+name: Check program links
+
+# Programs carry source URLs and application-form URLs that agencies move or
+# delete without notice. This checks every one monthly and opens (or updates)
+# a single issue listing the failures, so link rot becomes a to-do item
+# instead of a dead end an applicant discovers.
+on:
+  schedule:
+    - cron: '0 14 3 * *'   # 3rd of each month, 14:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch URLs and check them
+        shell: pwsh
+        run: |
+          $H = @{ apikey = 'sb_publishable_uWoahvwMH3VYZ7n2egHi8Q_AJBUSZjQ' }
+          $base = 'https://vhhcicawkhokncnhzboe.supabase.co/rest/v1'
+          $progs = Invoke-RestMethod -Uri "$base/programs?select=program_id,program_name,source_url&is_active=eq.true&limit=2000" -Headers $H
+          $forms = Invoke-RestMethod -Uri "$base/forms?select=program_id,form_url&has_real_form=eq.true&limit=2000" -Headers $H
+          $targets = @()
+          foreach ($p in $progs) { if ($p.source_url -match '^https?://') { $targets += [pscustomobject]@{ id = $p.program_id; kind = 'source'; url = $p.source_url } } }
+          foreach ($f in $forms) { if ($f.form_url -match '^https?://') { $targets += [pscustomobject]@{ id = $f.program_id; kind = 'form'; url = $f.form_url } } }
+          $failures = @()
+          foreach ($t in $targets | Sort-Object url -Unique) {
+            $status = $null
+            foreach ($method in 'Head', 'Get') {
+              try {
+                $r = Invoke-WebRequest -Uri $t.url -Method $method -MaximumRedirection 5 -TimeoutSec 30 `
+                  -UserAgent 'Mozilla/5.0 (link check; Toto Housing Companion)' -SkipHttpErrorCheck
+                $status = [int]$r.StatusCode
+              } catch { $status = -1 }
+              # Some servers reject HEAD (405/403) but serve GET fine.
+              if ($status -ge 200 -and $status -lt 400) { break }
+            }
+            if ($status -lt 200 -or $status -ge 400) {
+              $failures += "| $($t.id) | $($t.kind) | $status | $($t.url) |"
+              Write-Host "FAIL $status $($t.url)"
+            }
+          }
+          "count=$($failures.Count)" >> $env:GITHUB_OUTPUT
+          $bodyPath = "$env:RUNNER_TEMP/body.md"
+          if ($failures.Count) {
+            @("Checked $($targets.Count) URLs on $(Get-Date -Format 'yyyy-MM-dd'). These failed:", '',
+              '| Program | Kind | Status | URL |', '|---|---|---|---|') + $failures +
+            @('', 'Status -1 means the request errored (DNS, TLS, timeout). Mirrored copies of the intake forms live in `web/forms/`.') |
+              Set-Content $bodyPath -Encoding utf8
+          }
+          "failures=$($failures.Count)" >> $env:GITHUB_ENV
+        id: check
+
+      - name: Open or update the issue
+        if: env.failures != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Broken program links ($(date +%Y-%m))"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "Broken program links in:title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          fi

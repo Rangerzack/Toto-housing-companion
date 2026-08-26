@@ -1064,3 +1064,38 @@ main:has(.step--results.is-active) {
     max-width: none;
   }
 }
+
+/* --- What happens next: intake steps folded into a result card ---------- */
+
+.result__next {
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+.result__next summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--primary);
+  list-style-position: inside;
+}
+.result__next summary:hover { text-decoration: underline; }
+.result__next dl {
+  margin: 0.6rem 0 0;
+  display: grid;
+  gap: 0.15rem 0;
+}
+.result__next dt {
+  font-family: var(--font-data);
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 0.45rem;
+}
+.result__next dt:first-child { margin-top: 0; }
+.result__next dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}

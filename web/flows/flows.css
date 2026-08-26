@@ -28,6 +28,7 @@ figcaption { font-size: 0.86rem; color: var(--ink-soft); margin-top: 0.75rem; ma
 .legend .req, .matrix td.g.req { color: var(--alarm); }
 .legend .unk, .matrix td.g.unk { color: var(--possible); }
 .legend .no,  .matrix td.g.no  { color: var(--ink-faint); }
+.legend .qual, .matrix td.g.qual { color: var(--brand); }
 
 .scroll table.matrix { font-size: 0.86rem; }
 .matrix thead th { position: sticky; top: 0; }
@@ -79,6 +80,7 @@ figcaption { font-size: 0.86rem; color: var(--ink-soft); margin-top: 0.75rem; ma
 .pass { color: var(--likely); }
 .fail { color: var(--alarm); }
 .flag { color: var(--possible); }
+.qual { color: var(--brand); }
 
 /* Intake steps — a real sequence, so they are numbered */
 .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }

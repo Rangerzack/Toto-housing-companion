@@ -49,6 +49,7 @@ function Esc($s) { if ($null -eq $s) { return '' }; ([string]$s).Replace('&','&a
 function Read-Rule($t) {
   $v = "$t".Trim()
   if ($v -eq '' -or $v -match '^(no|none|n/a)\b' -or $v -match '^not\b' -or $v -match 'priority only' -or $v -match 'voluntary demographic') { return 'not-required' }
+  if ($v -match '^qualifying\b|\bqualifies\b') { return 'qualifying' }
   if ($v -match '^yes\b' -or $v -match '\bmust\b' -or $v -match '\brequired?\b') { return 'required' }
   return 'unknown'
 }
@@ -145,8 +146,8 @@ foreach ($p in $programs) {
 $flows | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $sp 'flows.json') -Encoding UTF8
 
 # --- HTML --------------------------------------------------------------------------
-$sym = @{ required = '●'; 'not-required' = '○'; unknown = '?' }
-$symTitle = @{ required = 'required — a "no" excludes'; 'not-required' = 'no requirement'; unknown = 'not documented — flagged, never excludes' }
+$sym = @{ required = '●'; 'not-required' = '○'; unknown = '?'; qualifying = '◐' }
+$symTitle = @{ required = 'required — a "no" excludes'; 'not-required' = 'no requirement'; unknown = 'not documented — flagged, never excludes'; qualifying = 'qualifying path — any one of the program''s ◐ paths is enough' }
 $helpLabel = @{ finding = 'Finding a place'; staying = 'Staying housed'; utility = 'Utility bill' }
 $tenLabel = @{ renting = 'renting'; homeowner = 'own my home'; buying = 'hoping to buy'; unhoused = 'not stably housed'; 'unhoused?' = 'not stably housed (kept in, flagged)' }
 function Money($n) { if ($null -eq $n) { return '' }; '$' + ('{0:N0}' -f [double]$n) }
@@ -262,7 +263,7 @@ W @'
 <tr><td>4</td><td>Rent, own, buying, or not stably housed?</td><td>hard where documented</td><td>Removes programs whose documented tenure does not include yours. Skipped entirely on the utility path. A program with no tenure documented is kept and flagged.</td></tr>
 <tr><td>5</td><td>How many people in your household?</td><td>—</td><td>Selects the row of the income table. Sizes 1–8 are published; larger households extrapolate by HUD's rule.</td></tr>
 <tr><td>6</td><td>Roughly what does your household earn?</td><td>hard at 120%</td><td>Compared to the program's published limit for your size. Over the limit but within 20%: kept and flagged, because programs count income after deductions. More than 20% over: removed. No published limit: kept and flagged. Skipped if you don't answer.</td></tr>
-<tr><td>7</td><td>Does any of this apply? (seven boxes)</td><td>soft</td><td>Each program's documented rule is read as <b>required</b>, <b>no requirement</b>, or <b>not documented</b>. A required gate you didn't tick demotes the program to "possible" with a note — it never hides it. Being unhoused implies the crisis box; choosing the utility path implies the utility-account box.</td></tr>
+<tr><td>7</td><td>Does any of this apply? (seven boxes)</td><td>soft</td><td>Each program's documented rule is read as <b>required</b>, <b>no requirement</b>, a <b>qualifying path</b>, or <b>not documented</b>. A required gate you didn't tick demotes the program to "possible" with a note — it never hides it. A program's qualifying paths are pooled: matching any single one satisfies all of them. Being unhoused implies the crisis box; choosing the utility path implies the utility-account box.</td></tr>
 </tbody></table></div>
 </section>
 '@
@@ -270,7 +271,7 @@ W @'
 # --- matrix ---
 W '<section id="matrix"><h2 class="head">Gate matrix: every program, every gate, at a glance</h2>'
 W '<p>Rows are programs in the order they appear below. The seven gate columns are the circumstance questions, read exactly as the screener reads each program''s documented rule. The income column is the resolved limit for a four-person household in the program''s first listed county.</p>'
-W '<div class="legend"><span><b class="req">●</b> required — an unticked box demotes</span><span><b class="no">○</b> no requirement</span><span><b class="unk">?</b> not documented — flagged, never excludes</span></div>'
+W '<div class="legend"><span><b class="req">●</b> required — an unticked box demotes</span><span><b class="qual">◐</b> qualifying path — any one is enough</span><span><b class="no">○</b> no requirement</span><span><b class="unk">?</b> not documented — flagged, never excludes</span></div>'
 W '<div class="scroll"><table class="matrix"><thead><tr><th>Program</th><th>Help path</th><th>Tenure</th><th>Income (4p)</th><th title="veteran">Vet</th><th title="age 60+">60+</th><th title="disability">Dis</th><th title="children / pregnancy">Kids</th><th title="crisis">Crisis</th><th title="first-time buyer">FTB</th><th title="utility account">Util</th></tr></thead><tbody>'
 foreach ($st in @('OR','MN')) {
   W "<tr><td colspan=`"11`" style=`"background:var(--sunk);font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)`">$(if($st -eq 'OR'){'Oregon'}else{'Minnesota'})</td></tr>"
@@ -278,7 +279,7 @@ foreach ($st in @('OR','MN')) {
     $hp = ($f.help_paths | ForEach-Object { $helpLabel[$_] }) -join ' · '
     $tn = if ($f.tenure.any) { 'any (not documented)' } else { ($f.tenure.matches | ForEach-Object { $tenLabel[$_] }) -join ' · ' }
     $inc = if (-not $f.income.tested) { '<span class="no">none</span>' } elseif ($null -ne $f.income.limit_4p) { "$(if($f.income.approx){'≈ '})$(Money $f.income.limit_4p) <span class=`"pid`">$($f.income.tier)% $(Esc $f.income.standard)</span>" } else { "<span class=`"unk`">$($f.income.tier)% $(Esc $f.income.standard) — not published</span>" }
-    $cells = ($f.gates | ForEach-Object { $cls = switch ($_.state) { 'required' {'req'} 'unknown' {'unk'} default {'no'} }; "<td class=`"g $cls`" title=`"$(Esc $symTitle[$_.state])`">$($sym[$_.state])</td>" }) -join ''
+    $cells = ($f.gates | ForEach-Object { $cls = switch ($_.state) { 'required' {'req'} 'unknown' {'unk'} 'qualifying' {'qual'} default {'no'} }; "<td class=`"g $cls`" title=`"$(Esc $symTitle[$_.state])`">$($sym[$_.state])</td>" }) -join ''
     W "<tr><td><a href=`"#p-$(Esc $f.program_id)`">$(Esc $f.name)</a><br><span class=`"pid`">$(Esc $f.program_id)</span></td><td style=`"white-space:normal`">$(Esc $hp)</td><td style=`"white-space:normal`">$(Esc $tn)</td><td class=`"num`">$inc</td>$cells</tr>"
   }
 }
@@ -313,7 +314,7 @@ foreach ($st in @('OR','MN')) {
     # 6 circumstances
     $n = 6
     foreach ($g in $f.gates) {
-      $v = switch ($g.state) { 'required' { '<span class="verdict fail">required</span>A "no" demotes this program to possible and explains why.' } 'unknown' { '<span class="verdict flag">not documented</span>Kept; flagged "may have requirements".' } default { '<span class="verdict pass">no requirement</span>' } }
+      $v = switch ($g.state) { 'required' { '<span class="verdict fail">required</span>A "no" demotes this program to possible and explains why.' } 'unknown' { '<span class="verdict flag">not documented</span>Kept; flagged "may have requirements".' } 'qualifying' { '<span class="verdict qual">qualifying path</span>Any one of this program''s qualifying paths is enough; only if none matches is the program demoted with a combined note.' } default { '<span class="verdict pass">no requirement</span>' } }
       if ($g.state -eq 'not-required' -and $g.evidence -eq '') { continue }
       $ev = ''; if ($g.evidence) { $ev = '<p class="ev">' + (Esc $g.evidence) + '</p>' }
       W "<li><span class=`"n`">$n</span><div><div class=`"q`">$(Esc $g.question)</div><p class=`"a`">$v</p>$ev</div></li>"

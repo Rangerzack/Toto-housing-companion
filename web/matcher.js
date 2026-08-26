@@ -39,13 +39,23 @@ const NO_REQUIREMENT_PATTERNS = [
 
 const REQUIREMENT_PATTERNS = [/^\s*yes\b/i, /\bmust\b/i, /\brequired?\b/i];
 
+// "QUALIFYING: 65 years of age or older" / "62 or older QUALIFIES" — one of
+// several routes into the program, any single one of which is enough. These
+// are not requirements: someone who qualifies through disability must not be
+// demoted for leaving the veteran box unticked. All of a program's qualifying
+// rules are pooled and satisfied together by any one matching circumstance.
+// (The deliberately narrow pattern skips prose like "households qualify
+// without FSS participation", which is an exemption note, not a route.)
+const QUALIFYING_PATTERN = /^\s*qualifying\b|\bqualifies\b/i;
+
 /**
  * Reads a prose rule field.
- * @returns {'required'|'not-required'|'unknown'}
+ * @returns {'required'|'not-required'|'qualifying'|'unknown'}
  */
 export function readRule(text) {
   const value = (text || '').trim();
   if (NO_REQUIREMENT_PATTERNS.some((re) => re.test(value))) return 'not-required';
+  if (QUALIFYING_PATTERN.test(value)) return 'qualifying';
   if (REQUIREMENT_PATTERNS.some((re) => re.test(value))) return 'required';
   return value ? 'unknown' : 'not-required';
 }
@@ -298,9 +308,21 @@ export function evaluateProgram(program, answers, lookup, proportional) {
       Boolean(answers.circumstances?.utilityAccount) || answers.help === 'utility',
   };
 
+  // Any-of qualifying paths are pooled across all of a program's rules:
+  // matching ANY one path satisfies the whole group, and only when none
+  // matches does the program get a single combined note.
+  const qualifyingUnmet = [];
+  let qualifyingMet = false;
+
   for (const { key, field, label } of CIRCUMSTANCE_RULES) {
     const state = readRule(eligibility[field]);
     const personHasIt = Boolean(circumstances[key]);
+
+    if (state === 'qualifying') {
+      if (personHasIt) qualifyingMet = true;
+      else qualifyingUnmet.push(label);
+      continue;
+    }
 
     // An unticked box is NOT a "no". The person may not have read that far,
     // may be unsure, or may not have thought it applied — and the question
@@ -318,6 +340,14 @@ export function evaluateProgram(program, answers, lookup, proportional) {
         checks.push(`May have requirements around ${label}.`);
       }
     }
+  }
+
+  if (!qualifyingMet && qualifyingUnmet.length) {
+    checks.push(
+      qualifyingUnmet.length === 1
+        ? `Qualifies through ${qualifyingUnmet[0]} — confirm this applies to your household.`
+        : `Qualifies through any one of: ${qualifyingUnmet.join('; ')} — matching a single one is enough.`,
+    );
   }
 
   return {

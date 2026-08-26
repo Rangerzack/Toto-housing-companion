@@ -588,6 +588,33 @@ function renderResultCard({ program, verdict, checks }) {
     );
   }
 
+  // What happens after a match: the program's own intake process, folded
+  // away so the card stays scannable. Everything here is already in the
+  // fetched embeds — no extra request.
+  const nextSteps = [];
+  const openness = [program.application_status, program.application_window]
+    .filter(Boolean)
+    .join(' — ');
+  if (openness) nextSteps.push(['Is it open?', openness]);
+  if (program.application_method) nextSteps.push(['How to apply', program.application_method]);
+  if (program.required_documents) nextSteps.push(['What to bring', program.required_documents]);
+  if (contacts.address) nextSteps.push(['Where', contacts.address]);
+  if (nextSteps.length) {
+    card.append(
+      el('details', { class: 'result__next' }, [
+        el('summary', { text: 'What happens next' }),
+        el(
+          'dl',
+          {},
+          nextSteps.flatMap(([term, value]) => [
+            el('dt', { text: term }),
+            el('dd', { text: value }),
+          ]),
+        ),
+      ]),
+    );
+  }
+
   const contactBits = [];
   const phone = contactLink({
     value: contacts.phone,
