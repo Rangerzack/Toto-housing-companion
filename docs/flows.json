@@ -786,8 +786,8 @@
         "key": "children",
         "question": "Are there children, or is someone pregnant?",
         "label": "children in the household or pregnancy",
-        "state": "unknown",
-        "evidence": "EXCLUSIONARY - households with minor children apply under Emergency Assistance (EA) instead"
+        "state": "not-required",
+        "evidence": "No requirement for EGA itself - households WITH minor children apply under Emergency Assistance (EA) instead"
       },
       {
         "key": "crisis",
@@ -897,8 +897,8 @@
         "key": "crisis",
         "question": "Facing eviction, a shutoff, or displacement?",
         "label": "an eviction, shutoff, or displacement crisis",
-        "state": "unknown",
-        "evidence": "Typically yes"
+        "state": "required",
+        "evidence": "Yes - typically requires an active utility or housing emergency"
       },
       {
         "key": "firstTimeBuyer",
@@ -2108,16 +2108,16 @@
       "evidence": "Renter or Homeowner"
     },
     "income": {
-      "tested": false,
-      "standard": "HUD-MFI",
-      "standard_name": "HUD Multifamily Tax Subsidy / Section 8 Income Limits",
-      "tier": null,
-      "area": "applicant county",
+      "tested": true,
+      "standard": "MN-SMI",
+      "standard_name": "Minnesota State Median Income",
+      "tier": 50,
+      "area": "MN",
       "example_county": "Stearns",
-      "limit_4p": null,
-      "approx": null,
-      "evidence": "Must be an approved EAP (LIHEAP) recipient for the current heating season",
-      "republished": "Annually, usually announced in spring"
+      "limit_4p": 71998.0,
+      "approx": false,
+      "evidence": "Must be an approved EAP (LIHEAP) recipient for the current heating season; EAP eligibility is at or below 50% of State Median Income",
+      "republished": "Each federal fiscal year, issued by HHS over the summer"
     },
     "gates": [
       {
@@ -2214,16 +2214,16 @@
       "evidence": "Renter or Homeowner"
     },
     "income": {
-      "tested": false,
-      "standard": "HUD-MFI",
-      "standard_name": "HUD Multifamily Tax Subsidy / Section 8 Income Limits",
-      "tier": null,
-      "area": "applicant county",
+      "tested": true,
+      "standard": "MN-SMI",
+      "standard_name": "Minnesota State Median Income",
+      "tier": 50,
+      "area": "MN",
       "example_county": "Stearns",
-      "limit_4p": null,
-      "approx": null,
-      "evidence": "Must be an approved EAP (LIHEAP) recipient for the current heating season",
-      "republished": "Annually, usually announced in spring"
+      "limit_4p": 71998.0,
+      "approx": false,
+      "evidence": "Must be an approved EAP (LIHEAP) recipient for the current heating season; EAP eligibility is at or below 50% of State Median Income",
+      "republished": "Each federal fiscal year, issued by HHS over the summer"
     },
     "gates": [
       {
@@ -3060,8 +3060,8 @@
         "key": "disability",
         "question": "Does a household member have a disability?",
         "label": "a household member with a disability",
-        "state": "unknown",
-        "evidence": "Improvements to meet the needs of a person with a disability are an eligible use"
+        "state": "not-required",
+        "evidence": "No requirement - improvements to meet the needs of a person with a disability are an eligible use"
       },
       {
         "key": "children",
@@ -3163,8 +3163,8 @@
         "key": "disability",
         "question": "Does a household member have a disability?",
         "label": "a household member with a disability",
-        "state": "unknown",
-        "evidence": "Accessibility improvements are an eligible use; a companion Emergency & Accessibility Loan Program also exists"
+        "state": "not-required",
+        "evidence": "No requirement - accessibility improvements are an eligible use; a companion Emergency & Accessibility Loan Program also exists"
       },
       {
         "key": "children",
@@ -4493,8 +4493,8 @@
         "key": "veteran",
         "question": "Is a household member a veteran?",
         "label": "veteran status",
-        "state": "unknown",
-        "evidence": "Dedicated veteran programming available"
+        "state": "not-required",
+        "evidence": "None (priority only) - dedicated veteran programming available"
       },
       {
         "key": "senior",
@@ -5129,8 +5129,8 @@
         "key": "children",
         "question": "Are there children, or is someone pregnant?",
         "label": "children in the household or pregnancy",
-        "state": "unknown",
-        "evidence": "EXCLUSIONARY - households with minor children apply under Emergency Assistance (EA) instead"
+        "state": "not-required",
+        "evidence": "No requirement for EGA itself - households WITH minor children apply under Emergency Assistance (EA) instead"
       },
       {
         "key": "crisis",
@@ -5542,8 +5542,8 @@
         "key": "children",
         "question": "Are there children, or is someone pregnant?",
         "label": "children in the household or pregnancy",
-        "state": "unknown",
-        "evidence": "EXCLUSIONARY - households with minor children apply under Emergency Assistance (EA) instead"
+        "state": "not-required",
+        "evidence": "No requirement for EGA itself - households WITH minor children apply under Emergency Assistance (EA) instead"
       },
       {
         "key": "crisis",
@@ -6330,16 +6330,16 @@
       "evidence": "Renter or Homeowner"
     },
     "income": {
-      "tested": false,
-      "standard": "HUD-MFI",
-      "standard_name": "HUD Multifamily Tax Subsidy / Section 8 Income Limits",
-      "tier": null,
-      "area": "applicant county",
+      "tested": true,
+      "standard": "MN-SMI",
+      "standard_name": "Minnesota State Median Income",
+      "tier": 50,
+      "area": "MN",
       "example_county": "Stearns",
-      "limit_4p": null,
-      "approx": null,
-      "evidence": "Must be an approved EAP (LIHEAP) recipient for the current heating season",
-      "republished": "Annually, usually announced in spring"
+      "limit_4p": 71998.0,
+      "approx": false,
+      "evidence": "Must be an approved EAP (LIHEAP) recipient for the current heating season; EAP eligibility is at or below 50% of State Median Income",
+      "republished": "Each federal fiscal year, issued by HHS over the summer"
     },
     "gates": [
       {
@@ -6645,16 +6645,16 @@
       "evidence": "Renter or Homeowner"
     },
     "income": {
-      "tested": false,
-      "standard": "HUD-MFI",
-      "standard_name": "HUD Multifamily Tax Subsidy / Section 8 Income Limits",
-      "tier": null,
-      "area": "applicant county",
+      "tested": true,
+      "standard": "MN-SMI",
+      "standard_name": "Minnesota State Median Income",
+      "tier": 50,
+      "area": "MN",
       "example_county": "Stearns",
-      "limit_4p": null,
-      "approx": null,
-      "evidence": "Must be an approved EAP (LIHEAP) recipient for the current heating season",
-      "republished": "Annually, usually announced in spring"
+      "limit_4p": 71998.0,
+      "approx": false,
+      "evidence": "Must be an approved EAP (LIHEAP) recipient for the current heating season; EAP eligibility is at or below 50% of State Median Income",
+      "republished": "Each federal fiscal year, issued by HHS over the summer"
     },
     "gates": [
       {
@@ -6750,16 +6750,16 @@
       "evidence": "Renter or Homeowner"
     },
     "income": {
-      "tested": false,
-      "standard": "HUD-MFI",
-      "standard_name": "HUD Multifamily Tax Subsidy / Section 8 Income Limits",
-      "tier": null,
-      "area": "applicant county",
+      "tested": true,
+      "standard": "MN-SMI",
+      "standard_name": "Minnesota State Median Income",
+      "tier": 50,
+      "area": "MN",
       "example_county": "Stearns",
-      "limit_4p": null,
-      "approx": null,
-      "evidence": "Must receive Energy Assistance (EAP)",
-      "republished": "Annually, usually announced in spring"
+      "limit_4p": 71998.0,
+      "approx": false,
+      "evidence": "Must receive Energy Assistance (EAP); EAP eligibility is at or below 50% of State Median Income",
+      "republished": "Each federal fiscal year, issued by HHS over the summer"
     },
     "gates": [
       {
