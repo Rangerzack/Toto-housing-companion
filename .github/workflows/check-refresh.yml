@@ -1,0 +1,69 @@
+name: Check standard freshness
+
+# Every income standard republishes on a known annual cadence
+# (data/refresh_calendar.json). This compares the newest effective_date
+# loaded for each standard against the most recent expected refresh that is
+# comfortably in the past, and keeps one issue updated with anything overdue
+# - so a stale table announces itself instead of waiting to be noticed.
+on:
+  schedule:
+    - cron: '0 15 3 * *'   # 3rd of each month, 15:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare loaded dates against the calendar
+        shell: pwsh
+        run: |
+          $cal = Get-Content data/refresh_calendar.json -Raw | ConvertFrom-Json
+          $H = @{ apikey = 'sb_publishable_uWoahvwMH3VYZ7n2egHi8Q_AJBUSZjQ' }
+          $base = 'https://vhhcicawkhokncnhzboe.supabase.co/rest/v1'
+          $today = (Get-Date).Date
+          $overdue = @()
+          foreach ($p in $cal.standards.PSObject.Properties) {
+            $sid = $p.Name; $c = $p.Value
+            $r = Invoke-RestMethod -Uri "$base/income_limits?select=effective_date&standard_id=eq.$sid&order=effective_date.desc&limit=1" -Headers $H
+            $newest = if ($r.Count) { [datetime]$r[0].effective_date } else { $null }
+            # Age-based rule: every standard here republishes annually, so a
+            # table whose newest effective date is older than a year plus the
+            # grace period has missed a cycle. (Anchoring on an expected month
+            # false-flags tables that go effective BEFORE that month - HAJC's
+            # May 1 table against a June anchor - so age is the test, and
+            # expected_month in the JSON is documentation of when to look.)
+            $age = if ($newest) { ($today - $newest).TotalDays } else { [double]::MaxValue }
+            if ($age -gt (365 + $c.grace_days)) {
+              $shown = if ($newest) { $newest.ToString('yyyy-MM-dd') } else { 'never loaded' }
+              $overdue += "| $sid | $shown | month $($c.expected_month) | $($c.note) [source]($($c.source)) |"
+              Write-Host "OVERDUE $sid (newest $shown)"
+            } else {
+              Write-Host "ok      $sid (newest $($newest.ToString('yyyy-MM-dd')))"
+            }
+          }
+          $bodyPath = "$env:RUNNER_TEMP/body.md"
+          if ($overdue.Count) {
+            @("Checked $(Get-Date -Format 'yyyy-MM-dd'). These standards look overdue for a refresh:", '',
+              '| Standard | Newest loaded | Usually republishes | Where to look |', '|---|---|---|---|') + $overdue +
+            @('', 'Cadence and grace periods live in `data/refresh_calendar.json`. Load new tables with the load-income-limits workflow; the SOP at /sop/ documents each source.') |
+              Set-Content $bodyPath -Encoding utf8
+          }
+          "overdue=$($overdue.Count)" >> $env:GITHUB_ENV
+
+      - name: Open or update the issue
+        if: env.overdue != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Income standards overdue for refresh ($(date +%Y-%m))"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "overdue for refresh in:title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          fi

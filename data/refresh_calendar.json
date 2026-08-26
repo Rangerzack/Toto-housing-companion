@@ -1,0 +1,84 @@
+{
+  "_comment": "When each income standard is expected to republish. check-refresh.yml compares the newest effective_date in income_limits against the most recent expected refresh that is at least grace_days in the past, and opens an issue for anything overdue. expected_month is 1-12; grace_days absorbs normal publication slippage. Standards with no rows loaded on purpose (placeholders) are listed in skip.",
+  "skip": ["USDA-502-DIRECT", "OHCS-BOND"],
+  "standards": {
+    "HHS-FPG": {
+      "expected_month": 1,
+      "grace_days": 60,
+      "note": "HHS publishes the poverty guidelines in mid-January, effective January.",
+      "source": "https://aspe.hhs.gov/topics/poverty-economic-mobility/poverty-guidelines"
+    },
+    "HUD-MFI": {
+      "expected_month": 4,
+      "grace_days": 75,
+      "note": "HUD income limits publish each spring, usually April.",
+      "source": "https://www.huduser.gov/portal/datasets/il.html"
+    },
+    "HUD-MTSP": {
+      "expected_month": 5,
+      "grace_days": 75,
+      "note": "MTSP (LIHTC) limits follow the HUD income limits by a few weeks.",
+      "source": "https://www.huduser.gov/portal/datasets/mtsp.html"
+    },
+    "HUD-MTSP-HERA": {
+      "expected_month": 5,
+      "grace_days": 75,
+      "note": "HERA Special publishes with the MTSP set.",
+      "source": "https://www.huduser.gov/portal/datasets/mtsp.html"
+    },
+    "HUD-HOME": {
+      "expected_month": 6,
+      "grace_days": 75,
+      "note": "HOME limits publish in late spring, effective June.",
+      "source": "https://www.hudexchange.info/programs/home/home-income-limits/"
+    },
+    "HUD-HTF": {
+      "expected_month": 6,
+      "grace_days": 75,
+      "note": "Housing Trust Fund limits publish with the HOME set.",
+      "source": "https://www.hudexchange.info/programs/htf/"
+    },
+    "OR-SMI": {
+      "expected_month": 10,
+      "grace_days": 60,
+      "note": "LIHEAP state median income is set per federal fiscal year, effective October 1.",
+      "source": "https://liheapch.acf.hhs.gov/tables/sanctioned.htm"
+    },
+    "MN-SMI": {
+      "expected_month": 10,
+      "grace_days": 60,
+      "note": "LIHEAP state median income is set per federal fiscal year, effective October 1.",
+      "source": "https://liheapch.acf.hhs.gov/tables/sanctioned.htm"
+    },
+    "OHCS-MIRL": {
+      "expected_month": 6,
+      "grace_days": 90,
+      "note": "OHCS issues its rent and income limits workbook after HUD's spring release.",
+      "source": "https://www.oregon.gov/ohcs/development/pages/income-rent-utility-limits.aspx"
+    },
+    "OHCS-THGF": {
+      "expected_month": 6,
+      "grace_days": 90,
+      "note": "Published in the same OHCS workbook as MIRL.",
+      "source": "https://www.oregon.gov/ohcs/development/pages/income-rent-utility-limits.aspx"
+    },
+    "HAJC-HCV": {
+      "expected_month": 6,
+      "grace_days": 120,
+      "note": "HAJC republishes its voucher limits after HUD's release; PHAs can lag.",
+      "source": "https://hajc.net/housing-programs/housing-choice-voucher/"
+    },
+    "JHCDC-HCV": {
+      "expected_month": 6,
+      "grace_days": 120,
+      "note": "JHCDC republishes after HUD's release; confirm by phone if flagged.",
+      "source": "https://www.josephinehousing.org/"
+    },
+    "USDA-502-GUARANTEED": {
+      "expected_month": 6,
+      "grace_days": 90,
+      "note": "USDA revises the HB-1-3555 Appendix 5 guaranteed limits annually, usually early summer.",
+      "source": "https://www.rd.usda.gov/files/RD-GRHLimitMap.pdf"
+    }
+  }
+}

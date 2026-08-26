@@ -26,43 +26,62 @@ jobs:
           $targets = @()
           foreach ($p in $progs) { if ($p.source_url -match '^https?://') { $targets += [pscustomobject]@{ id = $p.program_id; kind = 'source'; url = $p.source_url } } }
           foreach ($f in $forms) { if ($f.form_url -match '^https?://') { $targets += [pscustomobject]@{ id = $f.program_id; kind = 'form'; url = $f.form_url } } }
+          # A full browser User-Agent and Accept headers, because government and
+          # nonprofit sites routinely 403 anything that looks like a script.
+          $ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+          $accept = @{ Accept = 'text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8'; 'Accept-Language' = 'en-US,en;q=0.9' }
           $failures = @()
+          $blocked = @()
           foreach ($t in $targets | Sort-Object url -Unique) {
             $status = $null
             foreach ($method in 'Head', 'Get') {
               try {
                 $r = Invoke-WebRequest -Uri $t.url -Method $method -MaximumRedirection 5 -TimeoutSec 30 `
-                  -UserAgent 'Mozilla/5.0 (link check; Toto Housing Companion)' -SkipHttpErrorCheck
+                  -UserAgent $ua -Headers $accept -SkipHttpErrorCheck
                 $status = [int]$r.StatusCode
               } catch { $status = -1 }
               # Some servers reject HEAD (405/403) but serve GET fine.
               if ($status -ge 200 -and $status -lt 400) { break }
             }
-            if ($status -lt 200 -or $status -ge 400) {
+            if ($status -ge 200 -and $status -lt 400) { continue }
+            # 403 and 429 from a CDN are almost always bot protection, not a
+            # dead link - a person in a real browser gets through. Track them
+            # separately so they never page anyone, but stay visible.
+            if ($status -in 403, 429) {
+              $blocked += "| $($t.id) | $($t.kind) | $status | $($t.url) |"
+              Write-Host "BLOCKED $status $($t.url)"
+            } else {
               $failures += "| $($t.id) | $($t.kind) | $status | $($t.url) |"
               Write-Host "FAIL $status $($t.url)"
             }
           }
-          "count=$($failures.Count)" >> $env:GITHUB_OUTPUT
           $bodyPath = "$env:RUNNER_TEMP/body.md"
           if ($failures.Count) {
-            @("Checked $($targets.Count) URLs on $(Get-Date -Format 'yyyy-MM-dd'). These failed:", '',
+            $lines = @("Checked $($targets.Count) URLs on $(Get-Date -Format 'yyyy-MM-dd'). These failed:", '',
               '| Program | Kind | Status | URL |', '|---|---|---|---|') + $failures +
-            @('', 'Status -1 means the request errored (DNS, TLS, timeout). Mirrored copies of the intake forms live in `web/forms/`.') |
-              Set-Content $bodyPath -Encoding utf8
+              @('', 'Status -1 means the request errored (DNS, TLS, timeout). Mirrored copies of the intake forms live in `web/forms/`.')
+            if ($blocked.Count) {
+              $lines += @('', 'Blocked by bot protection (403/429) - almost certainly fine in a real browser, spot-check when convenient:', '',
+                '| Program | Kind | Status | URL |', '|---|---|---|---|') + $blocked
+            }
+            $lines | Set-Content $bodyPath -Encoding utf8
           }
           "failures=$($failures.Count)" >> $env:GITHUB_ENV
         id: check
 
-      - name: Open or update the issue
-        if: env.failures != '0'
+      - name: Open, update, or close the issue
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           title="Broken program links ($(date +%Y-%m))"
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "Broken program links in:title" --json number --jq '.[0].number')
-          if [ -n "$existing" ]; then
-            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RUNNER_TEMP/body.md"
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          if [ "$failures" != "0" ]; then
+            if [ -n "$existing" ]; then
+              gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+            else
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+            fi
+          elif [ -n "$existing" ]; then
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY" \
+              --comment "All links check out on $(date +%Y-%m-%d) - closing. (403/429 bot-blocked links, if any, are tracked in the run log only.)"
           fi
