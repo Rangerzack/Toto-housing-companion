@@ -375,8 +375,8 @@
         "key": "crisis",
         "question": "Facing eviction, a shutoff, or displacement?",
         "label": "an eviction, shutoff, or displacement crisis",
-        "state": "unknown",
-        "evidence": "Homeless or at imminent risk of homelessness"
+        "state": "required",
+        "evidence": "Yes - must be homeless or at imminent risk of homelessness"
       },
       {
         "key": "firstTimeBuyer",
@@ -452,21 +452,21 @@
         "key": "veteran",
         "question": "Is a household member a veteran?",
         "label": "veteran status",
-        "state": "unknown",
+        "state": "qualifying",
         "evidence": "QUALIFYING: member of the Minnesota National Guard or other military reserves ordered into active military service"
       },
       {
         "key": "senior",
         "question": "Is a household member 60 or older?",
         "label": "the age of household members",
-        "state": "unknown",
+        "state": "qualifying",
         "evidence": "QUALIFYING: 65 years of age or older"
       },
       {
         "key": "disability",
         "question": "Does a household member have a disability?",
         "label": "a household member with a disability",
-        "state": "unknown",
+        "state": "qualifying",
         "evidence": "QUALIFYING: retired by virtue of a permanent and total disability"
       },
       {
@@ -978,8 +978,8 @@
         "key": "senior",
         "question": "Is a household member 60 or older?",
         "label": "the age of household members",
-        "state": "unknown",
-        "evidence": "Homeless Youth Transitional Housing serves youth up to age 24 (and youth with their own children)"
+        "state": "not-required",
+        "evidence": "No age requirement for most services; the Homeless Youth Transitional Housing component serves youth up to age 24 (and youth with their own children)"
       },
       {
         "key": "disability",
@@ -2041,8 +2041,8 @@
         "key": "children",
         "question": "Are there children, or is someone pregnant?",
         "label": "children in the household or pregnancy",
-        "state": "unknown",
-        "evidence": "Primarily serves families with children ages birth through 5 who are at risk of child welfare involvement"
+        "state": "required",
+        "evidence": "Yes - primarily serves families with children ages birth through 5 who are at risk of child welfare involvement"
       },
       {
         "key": "crisis",
@@ -2446,8 +2446,8 @@
         "key": "disability",
         "question": "Does a household member have a disability?",
         "label": "a household member with a disability",
-        "state": "unknown",
-        "evidence": "Reasonable accommodations made for sweat-equity hours for health or disability reasons"
+        "state": "not-required",
+        "evidence": "No requirement - reasonable accommodations made for sweat-equity hours for health or disability reasons"
       },
       {
         "key": "children",
@@ -2744,15 +2744,15 @@
         "key": "senior",
         "question": "Is a household member 60 or older?",
         "label": "the age of household members",
-        "state": "unknown",
-        "evidence": "Elderly households qualify without FSS participation"
+        "state": "not-required",
+        "evidence": "No requirement - elderly households are exempt from the FSS participation requirement"
       },
       {
         "key": "disability",
         "question": "Does a household member have a disability?",
         "label": "a household member with a disability",
-        "state": "unknown",
-        "evidence": "Disabled households qualify without FSS participation"
+        "state": "not-required",
+        "evidence": "No requirement - disabled households are exempt from the FSS participation requirement"
       },
       {
         "key": "children",
@@ -2867,8 +2867,8 @@
         "key": "crisis",
         "question": "Facing eviction, a shutoff, or displacement?",
         "label": "an eviction, shutoff, or displacement crisis",
-        "state": "unknown",
-        "evidence": "Homeless, at risk of homelessness, or living in an institutional setting"
+        "state": "required",
+        "evidence": "Yes - must be homeless, at risk of homelessness, or living in an institutional setting"
       },
       {
         "key": "firstTimeBuyer",
@@ -3582,8 +3582,8 @@
         "key": "children",
         "question": "Are there children, or is someone pregnant?",
         "label": "children in the household or pregnancy",
-        "state": "unknown",
-        "evidence": "Also serves families with minor children experiencing homelessness"
+        "state": "not-required",
+        "evidence": "No requirement - also serves families with minor children experiencing homelessness"
       },
       {
         "key": "crisis",
@@ -3905,8 +3905,8 @@
         "key": "firstTimeBuyer",
         "question": "Has nobody in the household owned a home in 3 years?",
         "label": "first-time homebuyer status",
-        "state": "unknown",
-        "evidence": "Generally yes (has not owned a principal residence in the prior 3 years), consistent with federal MCC/mortgage revenue bond rules"
+        "state": "required",
+        "evidence": "Yes - generally must not have owned a principal residence in the prior 3 years (waived in federally designated targeted areas), consistent with federal MCC/mortgage rules"
       },
       {
         "key": "utilityAccount",
@@ -4105,8 +4105,8 @@
         "key": "crisis",
         "question": "Facing eviction, a shutoff, or displacement?",
         "label": "an eviction, shutoff, or displacement crisis",
-        "state": "unknown",
-        "evidence": "Serves both housed people at risk of eviction and people already unhoused"
+        "state": "not-required",
+        "evidence": "No requirement - serves both housed people at risk of eviction and people already unhoused; anyone can speak with a navigator"
       },
       {
         "key": "firstTimeBuyer",
@@ -4723,8 +4723,8 @@
         "key": "crisis",
         "question": "Facing eviction, a shutoff, or displacement?",
         "label": "an eviction, shutoff, or displacement crisis",
-        "state": "unknown",
-        "evidence": "At risk of eviction, or already experiencing homelessness"
+        "state": "required",
+        "evidence": "Yes - must be at risk of eviction, or already experiencing homelessness"
       },
       {
         "key": "firstTimeBuyer",
@@ -4822,8 +4822,8 @@
         "key": "crisis",
         "question": "Facing eviction, a shutoff, or displacement?",
         "label": "an eviction, shutoff, or displacement crisis",
-        "state": "unknown",
-        "evidence": "Households at risk of eviction or utility shutoff"
+        "state": "required",
+        "evidence": "Yes - for households at risk of eviction or utility shutoff"
       },
       {
         "key": "firstTimeBuyer",
@@ -5959,8 +5959,8 @@
         "key": "crisis",
         "question": "Facing eviction, a shutoff, or displacement?",
         "label": "an eviction, shutoff, or displacement crisis",
-        "state": "unknown",
-        "evidence": "Homeless or at risk of homelessness"
+        "state": "required",
+        "evidence": "Yes - must be homeless or at risk of homelessness"
       },
       {
         "key": "firstTimeBuyer",
@@ -6570,7 +6570,7 @@
         "key": "disability",
         "question": "Does a household member have a disability?",
         "label": "a household member with a disability",
-        "state": "required",
+        "state": "qualifying",
         "evidence": "QUALIFYING FACTOR - chronic or severe medical condition; a certified medical form must be on file"
       },
       {
@@ -6773,14 +6773,14 @@
         "key": "senior",
         "question": "Is a household member 60 or older?",
         "label": "the age of household members",
-        "state": "unknown",
+        "state": "qualifying",
         "evidence": "62 or older QUALIFIES (age-based eligibility)"
       },
       {
         "key": "disability",
         "question": "Does a household member have a disability?",
         "label": "a household member with a disability",
-        "state": "unknown",
+        "state": "qualifying",
         "evidence": "Household member with a disability also qualifies"
       },
       {
