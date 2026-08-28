@@ -884,6 +884,19 @@ function renderResultCard({ program, verdict, checks }, { open = false, lead = f
               text: `${checks.length} thing${checks.length === 1 ? '' : 's'} worth checking`,
             })
           : null,
+        // In the summary so a program can be pinned without opening the
+        // fold; the handler stops the click from toggling the details.
+        el('button', {
+          type: 'button',
+          class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
+          'data-program': program.program_id,
+          text: planToggleLabel(program.program_id),
+          onclick: (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            togglePlan(program.program_id);
+          },
+        }),
       ]),
       el('span', { class: 'result__headside' }, [
         el('span', {
@@ -1008,16 +1021,7 @@ function renderResultCard({ program, verdict, checks }, { open = false, lead = f
       }),
     );
   }
-  actions.push(
-    el('button', {
-      type: 'button',
-      class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
-      'data-program': program.program_id,
-      text: planToggleLabel(program.program_id),
-      onclick: () => togglePlan(program.program_id),
-    }),
-  );
-  card.append(el('div', { class: 'result__actions' }, actions));
+  if (actions.length) card.append(el('div', { class: 'result__actions' }, actions));
 
   return outer;
 }
