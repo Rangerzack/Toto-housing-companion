@@ -914,9 +914,12 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
   // whether to open it — name, who runs it, and how many caveats wait
   // inside. Nineteen tall cards were a nineteen-screen scroll on a phone;
   // nineteen rows with the best match already open is a page.
-  const outer = el('li', { class: `result${lead ? ' result--lead' : ''}` });
+  const outer = el('li', { class: `result${lead ? ' result--lead' : ''}${open ? ' is-open' : ''}` });
   const fold = el('details', { class: 'result__fold', open });
   const card = el('div', { class: 'result__body' });
+  // A class mirror of the fold state, because styling collapsed cards via
+  // :has() risks the same stale-invalidation bug the choice cards hit.
+  fold.addEventListener('toggle', () => outer.classList.toggle('is-open', fold.open));
 
   fold.append(
     el('summary', { class: 'result__head' }, [
@@ -1248,21 +1251,41 @@ async function renderResults() {
     const sections = sectionDisplayOrder()
       .map((s) => ({ ...s, items: matches.filter((m) => sectionOf(m.program.category) === s.id) }))
       .filter((s) => s.items.length);
-    const listOf = (items, leadFirst) =>
-      el(
+    // Each section shows its best four; the rest sit behind a Show-more
+    // button so a long list stays a guide rather than a directory.
+    const VISIBLE_PER_SECTION = 4;
+    const sectionBlock = (items, leadFirst) => {
+      const frag = document.createDocumentFragment();
+      const list = el(
         'ul',
         { class: 'results__list' },
-        items.map((m, i) =>
+        items.slice(0, VISIBLE_PER_SECTION).map((m, i) =>
           renderResultCard(m, { open: leadFirst && i === 0, lead: leadFirst && i === 0 }),
         ),
       );
+      frag.append(list);
+      const rest = items.slice(VISIBLE_PER_SECTION);
+      if (rest.length) {
+        const btn = el('button', {
+          type: 'button',
+          class: 'btn btn--ghost btn--sm results__more',
+          text: `Show ${rest.length} more`,
+          onclick: () => {
+            rest.forEach((m) => list.append(renderResultCard(m, {})));
+            btn.remove();
+          },
+        });
+        frag.append(btn);
+      }
+      return frag;
+    };
     if (sections.length === 1) {
-      host.append(listOf(sections[0].items, true));
+      host.append(sectionBlock(sections[0].items, true));
     } else {
       sections.forEach((s, si) => {
         host.append(
           el('p', { class: 'results__group', text: `${s.label} (${s.items.length})` }),
-          listOf(s.items, si === 0),
+          sectionBlock(s.items, si === 0),
         );
       });
     }
@@ -1280,7 +1303,12 @@ async function renderResults() {
         type: 'button',
         class: 'btn btn--ghost',
         text: 'Print or save',
-        onclick: () => window.print(),
+        onclick: () => {
+          // The printout is a full referral sheet, so folded-away
+          // programs come out from behind their Show-more buttons first.
+          $$('.results__more').forEach((b) => b.click());
+          window.print();
+        },
       }),
       el('button', {
         type: 'button',

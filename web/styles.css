@@ -1242,6 +1242,43 @@ main:has(.step--results.is-active) {
   background: color-mix(in srgb, var(--primary) 12%, transparent);
   color: var(--primary);
   font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Collapsed cards keep one uniform footprint so a grid row reads as a tidy
+   set: the name clamps to two lines, the one-line rows truncate, the tag
+   row stays a single clipped line, and in grid mode a shared min-height
+   evens out cards that have fewer optional rows. `.is-open` is the
+   JS-mirrored fold state. */
+.result:not(.is-open) .result__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.result:not(.is-open) .result__admin,
+.result:not(.is-open) .result__caveats {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.result:not(.is-open) .result__fit {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  /* A tag that doesn't fit fades out instead of being sliced mid-letter. */
+  mask-image: linear-gradient(90deg, #000 85%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+}
+@media (min-width: 48rem) {
+  /* The floor equals the fullest collapsed variant (two-line name, tag
+     row, caveat line), so every collapsed card lands at the same height. */
+  .result:not(.is-open) { min-height: 14.5rem; }
+}
+
+/* Show-more sits under its section's grid, centred. */
+.results__more {
+  display: block;
+  margin: 0.9rem auto 0;
 }
 
 .result__fold summary {
