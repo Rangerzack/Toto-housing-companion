@@ -214,6 +214,7 @@ function currentStep() {
 }
 
 function showStep(name, { fromHistory = false } = {}) {
+  document.getElementById('program-dialog')?.close();
   stepIndex = STEPS.indexOf(name);
 
   $$('.step').forEach((section) => {
@@ -903,32 +904,21 @@ function sectionDisplayOrder() {
     .sort((a, b) => a.rank - b.rank);
 }
 
-function renderResultCard({ program, verdict, checks, fit }, { open = false, lead = false } = {}) {
-  const eligibility = program.eligibility || {};
-  const contacts = program.contacts || {};
-  const counties = (program.program_counties || [])
-    .map((c) => c.county)
-    .filter((c) => c !== 'Unspecified');
+function renderResultCard(match, { lead = false } = {}) {
+  const { program, verdict, checks, fit } = match;
 
-  // The card is a fold: the collapsed row carries just enough to decide
-  // whether to open it — name, who runs it, and how many caveats wait
-  // inside. Nineteen tall cards were a nineteen-screen scroll on a phone;
-  // nineteen rows with the best match already open is a page.
-  const outer = el('li', { class: `result${lead ? ' result--lead' : ''}${open ? ' is-open' : ''}` });
-  const fold = el('details', { class: 'result__fold', open });
-  const card = el('div', { class: 'result__body' });
-  // The open card is a detail view: program facts in a readable main
-  // column, and everything actionable (next steps, contact, buttons) in
-  // an aside rail that sits to the right on wide screens.
-  const main = el('div', { class: 'result__main' });
-  const aside = el('div', { class: 'result__aside' });
-  card.append(main, aside);
-  // A class mirror of the fold state, because styling collapsed cards via
-  // :has() risks the same stale-invalidation bug the choice cards hit.
-  fold.addEventListener('toggle', () => outer.classList.toggle('is-open', fold.open));
+  // The card stays compact — name, who runs it, tags, benefit, caveat
+  // count. Details open in a focused dialog instead of expanding in
+  // place, so the grid never distorts.
+  const outer = el('li', { class: `result${lead ? ' result--lead' : ''}` });
+  outer.addEventListener('click', (event) => {
+    // Links and buttons inside the card do their own thing.
+    if (event.target.closest('a, button')) return;
+    openProgramDialog(match);
+  });
 
-  fold.append(
-    el('summary', { class: 'result__head' }, [
+  outer.append(
+    el('div', { class: 'result__head' }, [
       el('div', { class: 'result__headmain' }, [
         el('h3', { class: 'result__name', text: program.program_name }),
         program.administrator &&
@@ -965,10 +955,11 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
           class: `badge badge--${verdict}`,
           text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
         }),
-        el('span', {
-          class: 'result__chev',
-          'aria-hidden': 'true',
-          html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>',
+        el('button', {
+          type: 'button',
+          class: 'btn btn--ghost btn--sm',
+          text: 'Details',
+          onclick: () => openProgramDialog(match),
         }),
       ]),
       // The full benefit stays visible on the collapsed card — what a
@@ -983,8 +974,23 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
         : null,
     ]),
   );
-  fold.append(card);
-  outer.append(fold);
+
+  return outer;
+}
+
+// The full program detail shown inside the dialog: facts in a readable
+// main column, everything actionable in an aside rail.
+function buildProgramDetail({ program, checks }) {
+  const eligibility = program.eligibility || {};
+  const contacts = program.contacts || {};
+  const counties = (program.program_counties || [])
+    .map((c) => c.county)
+    .filter((c) => c !== 'Unspecified');
+
+  const card = el('div', { class: 'result__body' });
+  const main = el('div', { class: 'result__main' });
+  const aside = el('div', { class: 'result__aside' });
+  card.append(main, aside);
 
   const tags = [program.category, counties.length ? counties.join(', ') : null].filter(Boolean);
   if (tags.length) {
@@ -1098,8 +1104,53 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
   if (aside.childElementCount) card.classList.add('has-aside');
   else aside.remove();
 
-  return outer;
+  return card;
 }
+
+const programDialog = document.getElementById('program-dialog');
+
+function openProgramDialog(match) {
+  const { program, verdict, fit } = match;
+  const pieces = [
+    el('div', { class: 'pdialog__top' }, [
+      el('span', {
+        class: `badge badge--${verdict}`,
+        text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
+      }),
+      el('button', {
+        type: 'button',
+        class: 'pdialog__close',
+        'aria-label': 'Close',
+        text: '✕',
+        onclick: () => programDialog.close(),
+      }),
+    ]),
+    el('h3', { class: 'result__name', id: 'pdialog-title', text: program.program_name }),
+    program.administrator && el('p', { class: 'result__admin', text: program.administrator }),
+    fit && fit.length
+      ? el(
+          'div',
+          { class: 'result__fit' },
+          fit.map((k) => el('span', { class: 'tag tag--fit', text: FIT_LABELS[k] || k })),
+        )
+      : null,
+    el('button', {
+      type: 'button',
+      class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
+      'data-program': program.program_id,
+      text: planToggleLabel(program.program_id),
+      onclick: () => togglePlan(program.program_id),
+    }),
+    buildProgramDetail(match),
+  ].filter(Boolean);
+  programDialog.replaceChildren(...pieces);
+  programDialog.showModal();
+}
+
+// Tapping the dimmed backdrop closes the dialog; Esc works natively.
+programDialog?.addEventListener('click', (event) => {
+  if (event.target === programDialog) programDialog.close();
+});
 
 function renderNotice({ icon, title, body, actionLabel, onAction }) {
   return el('div', { class: 'notice' }, [
@@ -1214,7 +1265,7 @@ async function renderResults() {
       el('p', {
         class: 'results__summary',
         text: likely
-          ? 'The best matches are open below — tap any other program to see its details and next steps.'
+          ? 'Tap any program to see its details and next steps — the best matches are listed first.'
           : 'These are worth a call — each has a requirement we couldn\'t confirm from your answers.',
       }),
     el(
@@ -1279,7 +1330,7 @@ async function renderResults() {
         'ul',
         { class: 'results__list' },
         items.slice(0, VISIBLE_PER_SECTION).map((m, i) =>
-          renderResultCard(m, { open: leadFirst && i === 0, lead: leadFirst && i === 0 }),
+          renderResultCard(m, { lead: leadFirst && i === 0 }),
         ),
       );
       frag.append(list);

@@ -800,14 +800,13 @@ main:has(.step--results.is-active) {
   display: grid;
   gap: 1rem;
   grid-template-columns: 1fr;
-  /* Collapsed cards stretch to their row, so every row reads as one even
-     band; an open card takes the whole row instead (below). */
+  /* Cards stretch to their row, so every row reads as one even band.
+     Details open in the program dialog, never in place. */
   align-items: stretch;
   list-style: none;
   padding: 0;
   margin: 0;
 }
-.result.is-open { grid-column: 1 / -1; }
 @media (min-width: 40rem) {
   .results__list { grid-template-columns: repeat(2, 1fr); }
 }
@@ -825,6 +824,7 @@ main:has(.step--results.is-active) {
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s, transform 0.2s;
+  cursor: pointer;
   /* Cards sit side by side, so a long program name or a bare URL must wrap
      rather than force the column wider than its share of the grid. */
   min-width: 0;
@@ -1257,11 +1257,6 @@ main:has(.step--results.is-active) {
   margin: 0.9rem auto 0;
 }
 
-.result__fold summary {
-  list-style: none;
-  cursor: pointer;
-}
-.result__fold summary::-webkit-details-marker { display: none; }
 .result__head {
   display: flex;
   align-items: flex-start;
@@ -1284,19 +1279,7 @@ main:has(.step--results.is-active) {
   font-size: 0.8125rem;
   color: var(--possible);
 }
-.result__chev {
-  display: grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  color: var(--ink-faint);
-  transition: transform 0.2s;
-}
-.result__chev svg { width: 1.1rem; height: 1.1rem; }
-.result__fold[open] .result__chev { transform: rotate(180deg); }
-.result__fold[open] .result__caveats { display: none; }
-
-/* Open-card detail layout: facts left, action rail right (stacked on
+/* Dialog detail layout: facts left, action rail right (stacked on
    small screens). The rail is a panel holding next steps, contact, and
    the buttons — the standard expanded-listing pattern. */
 .result__aside {
@@ -1311,15 +1294,50 @@ main:has(.step--results.is-active) {
   border-top: 0;
 }
 .result__summary { max-width: 70ch; }
-@media (min-width: 64rem) {
-  .result.is-open .result__body.has-aside {
+@media (min-width: 48rem) {
+  .pdialog .result__body.has-aside {
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-    gap: 0 2.5rem;
+    gap: 0 2rem;
     align-items: start;
   }
-  .result.is-open .result__body.has-aside .result__aside { margin-top: 0.35rem; }
+  .pdialog .result__body.has-aside .result__aside { margin-top: 0.35rem; }
 }
+
+/* --- Program detail dialog -------------------------------------------- */
+dialog.pdialog {
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 1.5rem 1.6rem;
+  width: min(56rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+dialog.pdialog::backdrop { background: rgba(15, 12, 10, 0.55); }
+.pdialog__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+.pdialog__close {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+}
+.pdialog__close:hover { color: var(--ink); background: var(--surface-sunken); }
+.pdialog .plan-toggle { margin-top: 0.7rem; }
+.pdialog .result__body { margin-top: 1.1rem; }
 
 /* The full "What you may get" block on the collapsed card; the open body
    carries its own copy, so this one hides then. */
@@ -1344,7 +1362,6 @@ main:has(.step--results.is-active) {
   text-transform: uppercase;
   color: var(--ink-faint);
 }
-.result__fold[open] .result__gets { display: none; }
 .result__body { margin-top: 0.35rem; }
 
 .chip--edit {
