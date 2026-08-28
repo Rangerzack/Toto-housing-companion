@@ -237,6 +237,8 @@ function showStep(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   if (name === 'results') renderResults();
+  if (name === 'plan') renderPlan();
+  updatePlanUi();
 }
 
 // Walks STEPS in the given direction, skipping any step not currently asked.
@@ -269,6 +271,9 @@ function restart() {
   $('#household-size').value = '1';
   $('#income').value = '';
   $('#income-feedback').textContent = '';
+  plan = [];
+  savePlan();
+  syncChoiceSelection();
   syncHouseholdUi();
   syncCircumstanceVisibility();
   refreshContinueButtons();
@@ -499,6 +504,205 @@ function syncCircumstanceVisibility() {
   $('#ftb-choice').hidden = answers.situation !== 'buying';
 }
 
+// Selection is mirrored to a class the moment any choice input changes.
+// The stylesheet's :has(input:checked) rule SHOULD do this alone, but
+// browsers were observed caching the non-matching state for these cards and
+// never repainting on the flip (Chrome 151, against the live site) — which
+// left people tapping answers with no visible response. The class is the
+// guarantee; :has() stays as the declarative fallback.
+function syncChoiceSelection() {
+  $$('.choice input').forEach((input) => {
+    input.closest('.choice').classList.toggle('is-selected', input.checked);
+  });
+}
+document.addEventListener('change', (event) => {
+  if (event.target instanceof HTMLInputElement && event.target.closest('.choice')) {
+    syncChoiceSelection();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Housing plan
+// ---------------------------------------------------------------------------
+// Programs pinned from the results into the short list someone will actually
+// work: every intake step expanded, contacts inline, printable. It lives in
+// this browser tab only (sessionStorage) — like every other answer here,
+// nothing leaves the device.
+
+const PLAN_KEY = 'toto-plan';
+let plan = [];
+try {
+  plan = JSON.parse(sessionStorage.getItem(PLAN_KEY) || '[]');
+  if (!Array.isArray(plan)) plan = [];
+} catch {
+  plan = [];
+}
+
+function savePlan() {
+  try {
+    sessionStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+  } catch {
+    /* private browsing: the plan still works for this page view */
+  }
+}
+
+const inPlan = (id) => plan.includes(id);
+
+function togglePlan(id) {
+  plan = inPlan(id) ? plan.filter((p) => p !== id) : [...plan, id];
+  savePlan();
+  updatePlanUi();
+}
+
+const planToggleLabel = (id) => (inPlan(id) ? '✓ In your plan' : '+ Add to plan');
+
+function updatePlanUi() {
+  $$('.plan-toggle').forEach((btn) => {
+    const chosen = inPlan(btn.dataset.program);
+    btn.textContent = planToggleLabel(btn.dataset.program);
+    btn.classList.toggle('plan-toggle--on', chosen);
+  });
+  const bar = $('#plan-bar');
+  if (bar) {
+    bar.hidden = plan.length === 0 || currentStep() !== 'results';
+    $('#plan-count').textContent =
+      `${plan.length} program${plan.length === 1 ? '' : 's'} in your plan`;
+  }
+}
+
+function renderPlan() {
+  const host = $('#plan-state');
+  host.replaceChildren();
+
+  const chosen = plan
+    .map((id) => (programs || []).find((p) => p.program_id === id))
+    .filter(Boolean);
+
+  if (!chosen.length) {
+    host.append(
+      renderNotice({
+        icon: '📋',
+        title: 'Your plan is empty',
+        body: 'Add programs from your results with the "+ Add to plan" button, and they collect here with every step you need to apply.',
+        actionLabel: 'Back to results',
+        onAction: () => showStep('results'),
+      }),
+    );
+    return;
+  }
+
+  host.append(
+    el('div', { class: 'plan__header' }, [
+      el('h2', { class: 'results__count', text: 'Your housing plan' }),
+      el('p', {
+        class: 'results__summary',
+        text: `${chosen.length} program${chosen.length === 1 ? '' : 's'} to work through, with every application step in one place. Print it, or save it as a PDF to bring to a caseworker.`,
+      }),
+      el('div', { class: 'plan__actions' }, [
+        el('button', {
+          type: 'button',
+          class: 'btn btn--primary',
+          text: 'Print or save as PDF',
+          onclick: () => window.print(),
+        }),
+        el('button', {
+          type: 'button',
+          class: 'btn btn--ghost',
+          text: 'Back to results',
+          onclick: () => showStep('results'),
+        }),
+      ]),
+    ]),
+  );
+
+  const list = el('ol', { class: 'plan__list' });
+  for (const program of chosen) {
+    const contacts = program.contacts || {};
+    const item = el('li', { class: 'plan-item' });
+
+    item.append(
+      el('div', { class: 'plan-item__top' }, [
+        el('div', {}, [
+          el('h3', { class: 'result__name', text: program.program_name }),
+          program.administrator &&
+            el('p', { class: 'result__admin', text: program.administrator }),
+        ]),
+        el('button', {
+          type: 'button',
+          class: 'btn btn--ghost btn--sm plan-item__remove',
+          text: 'Remove',
+          onclick: () => {
+            togglePlan(program.program_id);
+            renderPlan();
+          },
+        }),
+      ]),
+    );
+
+    const steps = [];
+    const openness = [program.application_status, program.application_window]
+      .filter(Boolean)
+      .join(' — ');
+    if (openness) steps.push(['Is it open?', openness]);
+    if (program.application_method) steps.push(['How to apply', program.application_method]);
+    if (program.required_documents) steps.push(['What to bring', program.required_documents]);
+    if (contacts.address) steps.push(['Where', contacts.address]);
+    if (contacts.intake_hours) steps.push(['Hours', contacts.intake_hours]);
+    if (steps.length) {
+      item.append(
+        el(
+          'dl',
+          { class: 'plan-item__steps' },
+          steps.flatMap(([term, value]) => [el('dt', { text: term }), el('dd', { text: value })]),
+        ),
+      );
+    }
+
+    const contactBits = [];
+    const phone = contactLink({
+      value: contacts.phone,
+      pattern: PHONE_RE,
+      scheme: 'tel',
+      sanitize: (v) => v.replace(/[^\d+]/g, ''),
+    });
+    if (phone) contactBits.push(phone);
+    const email = contactLink({ value: contacts.email, pattern: EMAIL_RE, scheme: 'mailto' });
+    if (email) contactBits.push(email);
+    if (contactBits.length) item.append(el('div', { class: 'result__contact' }, contactBits));
+
+    const links = [];
+    const formUrl = formUrlFor(program);
+    if (formUrl) {
+      links.push(
+        el('a', {
+          class: 'btn btn--primary btn--sm',
+          href: formUrl,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          text: 'Get the application form',
+        }),
+      );
+    }
+    if (program.source_url) {
+      links.push(
+        el('a', {
+          class: 'btn btn--ghost btn--sm',
+          href: program.source_url,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          text: 'Program details',
+        }),
+      );
+    }
+    if (links.length) item.append(el('div', { class: 'result__actions plan-item__links' }, links));
+
+    list.append(item);
+  }
+  host.append(list);
+}
+
+$('#plan-view')?.addEventListener('click', () => showStep('plan'));
+
 // ---------------------------------------------------------------------------
 // Results
 // ---------------------------------------------------------------------------
@@ -658,9 +862,16 @@ function renderResultCard({ program, verdict, checks }) {
       }),
     );
   }
-  if (actions.length) {
-    card.append(el('div', { class: 'result__actions' }, actions));
-  }
+  actions.push(
+    el('button', {
+      type: 'button',
+      class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
+      'data-program': program.program_id,
+      text: planToggleLabel(program.program_id),
+      onclick: () => togglePlan(program.program_id),
+    }),
+  );
+  card.append(el('div', { class: 'result__actions' }, actions));
 
   return card;
 }

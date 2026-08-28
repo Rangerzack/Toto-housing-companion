@@ -316,7 +316,20 @@
       <section class="step step--results" data-step="results" tabindex="-1">
         <div id="results-state"></div>
       </section>
+
+      <!-- Housing plan: programs pinned from the results ------------------- -->
+      <section class="step" data-step="plan" tabindex="-1">
+        <div id="plan-state"></div>
+      </section>
     </main>
+
+    <!-- Sticky plan bar, visible on results once anything is pinned -------- -->
+    <div class="plan-bar" id="plan-bar" hidden>
+      <div class="wrap plan-bar__inner">
+        <span id="plan-count" class="plan-bar__count">0 programs in your plan</span>
+        <button type="button" class="btn btn--primary btn--sm" id="plan-view">View my plan</button>
+      </div>
+    </div>
 
     <footer class="site-footer">
       <div class="wrap">

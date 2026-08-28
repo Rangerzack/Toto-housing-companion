@@ -484,18 +484,25 @@ main:has(.step--results.is-active) {
   border-radius: 6px;
 }
 
-.choice:has(input:checked) {
+/* Selection paints through BOTH a :has() rule and a JS-mirrored class:
+   browsers were observed caching the :has() non-match for these cards and
+   never repainting when the input flips (Chrome 151, live site). The class
+   is what guarantees a person sees their choice. */
+.choice:has(input:checked),
+.choice.is-selected {
   border-color: var(--primary);
   background: var(--primary-tint);
 }
 
-.choice:has(input:checked)::before {
+.choice:has(input:checked)::before,
+.choice.is-selected::before {
   border-color: var(--primary);
   background: var(--primary);
   box-shadow: inset 0 0 0 4px var(--surface);
 }
 
-.choice--check:has(input:checked)::before {
+.choice--check:has(input:checked)::before,
+.choice--check.is-selected::before {
   box-shadow: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
   background-size: 0.95rem;
@@ -1098,4 +1105,92 @@ main:has(.step--results.is-active) {
   margin: 0;
   font-size: 0.88rem;
   color: var(--ink-soft);
+}
+
+/* --- Housing plan ----------------------------------------------------- */
+
+.plan-toggle--on {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-tint);
+}
+
+.plan-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: 30;
+}
+.plan-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  max-width: var(--wrap-results);
+}
+.plan-bar__count {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.plan__header { padding: 2.5rem 0 0; }
+.plan__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.25rem 0 2rem;
+}
+.plan__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.plan-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+.plan-item__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.plan-item__steps { margin: 1rem 0 0; }
+.plan-item__steps dt {
+  font-family: var(--font-data);
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 0.45rem;
+}
+.plan-item__steps dt:first-child { margin-top: 0; }
+.plan-item__steps dd {
+  margin: 0;
+  font-size: 0.9063rem;
+  color: var(--ink-soft);
+}
+
+@media print {
+  .plan-bar,
+  .plan__actions,
+  .plan-item__remove {
+    display: none !important;
+  }
+  .plan-item {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
 }
