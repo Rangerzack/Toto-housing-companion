@@ -265,8 +265,16 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   // Which of the person's confirmed circumstances this program is built
   // around — used to rank targeted programs (veteran services for a
   // veteran) above generic ones, and shown as a tag on the card.
+  //
+  // Homeless-serving is documented inconsistently: Maslow says it in
+  // eligible_tenure ("unstably housed"), Rogue Retreat only in its crisis
+  // rule ("already experiencing homelessness"), Hope House only in the
+  // program name — so all three columns are read.
   const fit = [];
-  if (unhoused && /homeless|unstably housed|transitional|unhoused/.test((eligibility.eligible_tenure || '').toLowerCase())) {
+  const unhousedEvidence = [eligibility.eligible_tenure, eligibility.crisis_required, program.program_name]
+    .join(' ')
+    .toLowerCase();
+  if (unhoused && /homeless|unstably housed|transitional|unhoused|shelter/.test(unhousedEvidence)) {
     fit.push('unhoused');
   }
   if (tenure === 'no-match') {
