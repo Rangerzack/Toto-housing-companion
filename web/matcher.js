@@ -255,6 +255,11 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   if (needs.includes('rental')) situations.push('renting');
   if (needs.includes('buying')) situations.push('buying');
   if (needs.includes('staying') && answers.situation) situations.push(answers.situation);
+  // The not-stably-housed box only ever widens tenure matching, so it is
+  // skipped when the list is empty — an empty list (utility-only visits)
+  // already matches everything.
+  const unhoused = Boolean(answers.circumstances?.unhoused);
+  if (unhoused && situations.length) situations.push('unhoused');
   const tenure = matchesTenure(eligibility.eligible_tenure, situations);
   if (tenure === 'no-match') {
     return { verdict: 'excluded', checks, reason: 'Serves a different housing situation' };
@@ -323,7 +328,7 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   // squarely meant for them.
   const circumstances = {
     ...(answers.circumstances || {}),
-    crisis: Boolean(answers.circumstances?.crisis) || situations.includes('unhoused'),
+    crisis: Boolean(answers.circumstances?.crisis) || unhoused,
     // Someone who came here to pay a utility bill has a utility bill. Making
     // them tick the box as well produced a caveat on almost every Minnesota
     // result, since 28 of its 34 programs gate on the account.

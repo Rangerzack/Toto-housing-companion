@@ -242,7 +242,7 @@ W @'
 <text x="560" y="81" font-weight="600">4 · Rent or own</text><text x="560" y="99" font-size="11">only if "staying"</text>
 <text x="720" y="81" font-weight="600">5 · Household</text><text x="720" y="99" font-size="11">1–12 people</text>
 <text x="880" y="81" font-weight="600">6 · Income</text><text x="880" y="99" font-size="11">gross, annual</text>
-<text x="1050" y="81" font-weight="600">7 · Circumstances</text><text x="1050" y="99" font-size="11">seven checkboxes</text>
+<text x="1050" y="81" font-weight="600">7 · Circumstances</text><text x="1050" y="99" font-size="11">eight checkboxes</text>
 </g>
 <g font-family="system-ui,sans-serif" font-size="10.5" fill="currentColor" text-anchor="middle">
 <text x="149" y="50">scopes</text><text x="149" y="40">limits</text>
@@ -264,7 +264,7 @@ W @'
 <tr><td>4</td><td>Do you rent or own your home?</td><td>hard where documented</td><td>Asked only when <em>Staying in my home</em> is picked; the other needs imply their tenure (rental → renter, buying → prospective buyer). Removes programs whose documented tenure matches none of your implied situations. A program with no tenure documented is kept and flagged.</td></tr>
 <tr><td>5</td><td>How many people in your household?</td><td>—</td><td>Selects the row of the income table. Sizes 1–8 are published; larger households extrapolate by HUD's rule.</td></tr>
 <tr><td>6</td><td>Roughly what does your household earn?</td><td>hard at 110%</td><td>Compared to the program's published limit for your size. Over the limit but within 10%: kept and flagged — a typed figure is an estimate, and programs measure income their own way (some count only the most recent month). More than 10% over: removed. No published limit: kept and flagged. Skipped if you don't answer.</td></tr>
-<tr><td>7</td><td>Does any of this apply? (seven boxes)</td><td>soft</td><td>Each program's documented rule is read as <b>required</b>, <b>no requirement</b>, a <b>qualifying path</b>, or <b>not documented</b>. A required gate you didn't tick demotes the program to "possible" with a note — it never hides it. A program's qualifying paths are pooled: matching any single one satisfies all of them. Being unhoused implies the crisis box; picking <em>Paying a utility bill</em> implies the utility-account box.</td></tr>
+<tr><td>7</td><td>Does any of this apply? (eight boxes)</td><td>soft</td><td>Each program's documented rule is read as <b>required</b>, <b>no requirement</b>, a <b>qualifying path</b>, or <b>not documented</b>. A required gate you didn't tick demotes the program to "possible" with a note — it never hides it. A program's qualifying paths are pooled: matching any single one satisfies all of them. Ticking <em>not stably housed</em> widens the tenure test to include unhoused-serving programs and implies the crisis box; picking <em>Paying a utility bill</em> implies the utility-account box.</td></tr>
 </tbody></table></div>
 </section>
 '@
