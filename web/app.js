@@ -211,7 +211,7 @@ function currentStep() {
   return STEPS[stepIndex];
 }
 
-function showStep(name) {
+function showStep(name, { fromHistory = false } = {}) {
   stepIndex = STEPS.indexOf(name);
 
   $$('.step').forEach((section) => {
@@ -235,6 +235,21 @@ function showStep(name) {
   const section = $(`.step[data-step="${name}"]`);
   section.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Each step is a history entry, so the browser's Back button walks the
+  // wizard; the results entry carries the shareable answers hash.
+  if (!fromHistory) {
+    const url =
+      name === 'results' && answers.county
+        ? location.pathname + location.search + encodeShareHash()
+        : location.pathname + location.search;
+    if (historyReady) history.pushState({ step: name }, '', url);
+    else {
+      history.replaceState({ step: name }, '', url);
+      historyReady = true;
+    }
+  }
+  saveAnswers(name);
 
   if (name === 'results') renderResults();
   if (name === 'plan') renderPlan();
@@ -535,6 +550,100 @@ document.addEventListener('change', (event) => {
   advanceTimer = setTimeout(() => {
     if (currentStep() === step) goNext();
   }, 450);
+});
+
+// ---------------------------------------------------------------------------
+// Keeping answers through refresh, Back, and shared links
+// ---------------------------------------------------------------------------
+// Three promises: the browser's Back button walks the wizard instead of
+// leaving it; a refresh resumes where the person was; and the results page
+// gets a URL that can be bookmarked or texted to a caseworker. Everything
+// stays on the device — the hash and sessionStorage are the only stores.
+
+const ANSWERS_KEY = 'toto-answers';
+let historyReady = false;
+
+function saveAnswers(step) {
+  try {
+    sessionStorage.setItem(ANSWERS_KEY, JSON.stringify({ answers, step }));
+  } catch {
+    /* private browsing */
+  }
+}
+
+const HELP_VALUES = ['finding', 'staying', 'utility'];
+
+function encodeShareHash() {
+  const circs = Object.keys(answers.circumstances).filter((k) => answers.circumstances[k]);
+  return (
+    '#a=' +
+    [
+      answers.state,
+      answers.county,
+      answers.help,
+      answers.situation || 'x',
+      answers.householdSize,
+      answers.income ?? 'x',
+      circs.join('+') || 'x',
+    ]
+      .map(encodeURIComponent)
+      .join('/')
+  );
+}
+
+function decodeShareHash(hash) {
+  const match = /^#a=(.+)$/.exec(hash || '');
+  if (!match) return null;
+  const parts = match[1].split('/').map(decodeURIComponent);
+  if (parts.length !== 7) return null;
+  const [state, county, help, situation, size, income, circs] = parts;
+  const config = STATES.find((s) => s.code === state);
+  const countyRow = config?.counties.find((c) => c.name === county);
+  if (!config || !countyRow || !HELP_VALUES.includes(help)) return null;
+  return {
+    state,
+    county,
+    areaId: countyRow.areaId,
+    statewideAreaId: config.statewideAreaId,
+    help,
+    situation: situation === 'x' ? (help === 'utility' ? 'utility' : null) : situation,
+    householdSize: Math.min(12, Math.max(1, Number(size) || 1)),
+    income: income === 'x' ? null : Number(income) || null,
+    circumstances:
+      circs === 'x' ? {} : Object.fromEntries(circs.split('+').map((k) => [k, true])),
+  };
+}
+
+// Rebuilds every input from `answers` after a restore.
+function hydrateUi() {
+  const check = (selector, value) => {
+    const input = $$(selector).find((i) => i.value === value);
+    if (input) input.checked = true;
+  };
+  check('#state-choices input', answers.state);
+  if (answers.state) buildCountyChoices();
+  check('#county-choices input', answers.county);
+  check('#help-choices input', answers.help);
+  buildSituationChoices();
+  check('#situation-choices input', answers.situation);
+  $('#household-size').value = String(answers.householdSize);
+  if (answers.income != null) $('#income').value = currency.format(answers.income);
+  for (const [key, value] of Object.entries(answers.circumstances || {})) {
+    if (value) check('#circumstance-choices input', key);
+  }
+  syncChoiceSelection();
+  syncHouseholdUi();
+  syncCircumstanceVisibility();
+  refreshContinueButtons();
+  if (answers.areaId) {
+    fetchLimits(answers.areaId, answers.statewideAreaId).then(updateIncomeFeedback).catch(() => {});
+  }
+}
+
+window.addEventListener('popstate', (event) => {
+  const step = event.state?.step;
+  const known = STEPS.includes(step) || step === 'plan';
+  showStep(known ? step : 'intro', { fromHistory: true });
 });
 
 // ---------------------------------------------------------------------------
@@ -1043,6 +1152,23 @@ async function renderResults() {
         }),
       ),
     ),
+    matches.length &&
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost btn--sm results__share',
+        text: 'Copy link to these results',
+        onclick: async (event) => {
+          try {
+            await navigator.clipboard.writeText(location.href);
+            event.target.textContent = 'Link copied ✓';
+            setTimeout(() => {
+              event.target.textContent = 'Copy link to these results';
+            }, 2000);
+          } catch {
+            /* clipboard denied: the URL in the address bar is the same link */
+          }
+        },
+      }),
   ]);
   host.append(header);
 
@@ -1141,7 +1267,28 @@ function init() {
 
   setHouseholdSize(1);
   refreshContinueButtons();
-  showStep('intro');
+
+  // A shared results link beats a saved session; a saved session beats
+  // starting over.
+  const shared = decodeShareHash(location.hash);
+  let resumeStep = null;
+  if (shared) {
+    Object.assign(answers, shared);
+    hydrateUi();
+    resumeStep = 'results';
+  } else {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(ANSWERS_KEY) || 'null');
+      if (saved && saved.answers && saved.answers.state) {
+        Object.assign(answers, saved.answers);
+        hydrateUi();
+        if (saved.step && saved.step !== 'intro') resumeStep = saved.step;
+      }
+    } catch {
+      /* a corrupt save just means starting fresh */
+    }
+  }
+  showStep(resumeStep || 'intro');
 
   // Warm the cache while the person reads the intro, so results feel instant.
   fetchPrograms()

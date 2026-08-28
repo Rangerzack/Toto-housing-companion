@@ -35,7 +35,9 @@
      at a glance, which it cannot do in the accent hue. */
   --likely: #1a7a4c;
   --likely-tint: #e9f5ee;
-  --possible: #a3620a;
+  /* Darkened from #a3620a: the "Possible match" badge at small sizes
+     measured 4.43:1 on the tint, just under AA's 4.5. */
+  --possible: #8f5608;
   --possible-tint: #fdf3e3;
 
   --radius-sm: 6px;
@@ -416,7 +418,9 @@ main:has(.step--results.is-active) {
 }
 
 .choices--grid {
-  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  /* 9rem lets a 375px phone fit two columns of counties instead of a
+     twelve-row list. */
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
 }
 
 /* Region heading above each county group. "Douglas" exists in both states, so
@@ -856,7 +860,7 @@ main:has(.step--results.is-active) {
   gap: 0.35rem;
   padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 650;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -1260,3 +1264,7 @@ main:has(.step--results.is-active) {
   border-color: var(--border-strong);
   color: var(--ink);
 }
+
+/* The copy-link button sits under the answer chips in the results header. */
+.results__share { margin: -1.25rem 0 2rem; }
+@media print { .results__share { display: none !important; } }
