@@ -1296,6 +1296,31 @@ main:has(.step--results.is-active) {
 .result__fold[open] .result__chev { transform: rotate(180deg); }
 .result__fold[open] .result__caveats { display: none; }
 
+/* Open-card detail layout: facts left, action rail right (stacked on
+   small screens). The rail is a panel holding next steps, contact, and
+   the buttons — the standard expanded-listing pattern. */
+.result__aside {
+  margin-top: 1.1rem;
+  padding: 1rem 1.15rem;
+  background: var(--surface-sunken);
+  border-radius: 10px;
+}
+.result__aside > :first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.result__summary { max-width: 70ch; }
+@media (min-width: 64rem) {
+  .result.is-open .result__body.has-aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 0 2.5rem;
+    align-items: start;
+  }
+  .result.is-open .result__body.has-aside .result__aside { margin-top: 0.35rem; }
+}
+
 /* The full "What you may get" block on the collapsed card; the open body
    carries its own copy, so this one hides then. */
 .result__gets {

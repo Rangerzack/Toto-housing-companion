@@ -917,6 +917,12 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
   const outer = el('li', { class: `result${lead ? ' result--lead' : ''}${open ? ' is-open' : ''}` });
   const fold = el('details', { class: 'result__fold', open });
   const card = el('div', { class: 'result__body' });
+  // The open card is a detail view: program facts in a readable main
+  // column, and everything actionable (next steps, contact, buttons) in
+  // an aside rail that sits to the right on wide screens.
+  const main = el('div', { class: 'result__main' });
+  const aside = el('div', { class: 'result__aside' });
+  card.append(main, aside);
   // A class mirror of the fold state, because styling collapsed cards via
   // :has() risks the same stale-invalidation bug the choice cards hit.
   fold.addEventListener('toggle', () => outer.classList.toggle('is-open', fold.open));
@@ -982,7 +988,7 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
 
   const tags = [program.category, counties.length ? counties.join(', ') : null].filter(Boolean);
   if (tags.length) {
-    card.append(
+    main.append(
       el(
         'div',
         { class: 'result__meta' },
@@ -992,11 +998,11 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
   }
 
   if (eligibility.summary) {
-    card.append(el('p', { class: 'result__summary', text: eligibility.summary }));
+    main.append(el('p', { class: 'result__summary', text: eligibility.summary }));
   }
 
   if (program.max_benefit) {
-    card.append(
+    main.append(
       el('div', { class: 'result__benefit' }, [
         el('span', { text: 'What you may get: ' }),
         el('strong', { text: program.max_benefit }),
@@ -1005,7 +1011,7 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
   }
 
   if (checks.length) {
-    card.append(
+    main.append(
       el('div', { class: 'checks' }, [
         el('p', { class: 'checks__title', text: 'Worth checking' }),
         el(
@@ -1029,8 +1035,8 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
   if (program.required_documents) nextSteps.push(['What to bring', program.required_documents]);
   if (contacts.address) nextSteps.push(['Where', contacts.address]);
   if (nextSteps.length) {
-    card.append(
-      el('details', { class: 'result__next' }, [
+    aside.append(
+      el('details', { class: 'result__next', open: true }, [
         el('summary', { text: 'What happens next' }),
         el(
           'dl',
@@ -1060,7 +1066,7 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
     contactBits.push(el('span', { text: contacts.intake_hours }));
   }
   if (contactBits.length) {
-    card.append(el('div', { class: 'result__contact' }, contactBits));
+    aside.append(el('div', { class: 'result__contact' }, contactBits));
   }
 
   const actions = [];
@@ -1087,7 +1093,10 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
       }),
     );
   }
-  if (actions.length) card.append(el('div', { class: 'result__actions' }, actions));
+  if (actions.length) aside.append(el('div', { class: 'result__actions' }, actions));
+
+  if (aside.childElementCount) card.classList.add('has-aside');
+  else aside.remove();
 
   return outer;
 }
