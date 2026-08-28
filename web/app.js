@@ -934,6 +934,15 @@ function renderResultCard({ program, verdict, checks, fit }, { open = false, lea
               fit.map((k) => el('span', { class: 'tag tag--fit', text: FIT_LABELS[k] || k })),
             )
           : null,
+        // The benefit stays visible on the collapsed card — what a program
+        // pays is half of deciding whether to open it. The open body shows
+        // the full block, so this line hides itself then.
+        program.max_benefit
+          ? el('p', { class: 'result__gets' }, [
+              el('span', { class: 'result__gets-label', text: 'May get: ' }),
+              el('span', { text: program.max_benefit }),
+            ])
+          : null,
         checks.length
           ? el('p', {
               class: 'result__caveats',

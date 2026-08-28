@@ -1271,8 +1271,9 @@ main:has(.step--results.is-active) {
 }
 @media (min-width: 48rem) {
   /* The floor equals the fullest collapsed variant (two-line name, tag
-     row, caveat line), so every collapsed card lands at the same height. */
-  .result:not(.is-open) { min-height: 14.5rem; }
+     row, benefit line, caveat line), so every collapsed card lands at the
+     same height. */
+  .result:not(.is-open) { min-height: 16.25rem; }
 }
 
 /* Show-more sits under its section's grid, centred. */
@@ -1315,6 +1316,25 @@ main:has(.step--results.is-active) {
 .result__chev svg { width: 1.1rem; height: 1.1rem; }
 .result__fold[open] .result__chev { transform: rotate(180deg); }
 .result__fold[open] .result__caveats { display: none; }
+
+/* One-line benefit on the collapsed card; the open body carries the full
+   "What you may get" block instead. */
+.result__gets {
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.result__gets-label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.result__fold[open] .result__gets { display: none; }
 .result__body { margin-top: 0.35rem; }
 
 .chip--edit {
