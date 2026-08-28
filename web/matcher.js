@@ -139,21 +139,26 @@ const HELP_PATTERNS = {
  * referral desks — are never filtered out. An unclassifiable category is
  * missing information, and missing information does not exclude anyone.
  */
-function matchesHelpType(category, help) {
-  if (help === 'staying') return true;
+function matchesHelpType(category, needs) {
+  if (!needs || !needs.length) return true;
 
   const text = category || '';
   const isUtility = HELP_PATTERNS.utility.test(text);
   const isHousing = HELP_PATTERNS.housing.test(text);
   if (!isUtility && !isHousing) return true;
 
-  return help === 'utility' ? isUtility : isHousing;
+  // "Staying in my home" spans housing AND utilities — a shutoff notice is
+  // one of the things that costs people their housing. A program matching
+  // ANY picked need stays in.
+  if (isUtility && (needs.includes('utility') || needs.includes('staying'))) return true;
+  if (isHousing && (needs.includes('rental') || needs.includes('staying') || needs.includes('buying'))) return true;
+  return false;
 }
 
-function matchesTenure(eligibleTenure, situation) {
-  // Utility programs serve renters and owners alike, so that path never asks
-  // about tenure and must never be filtered on it.
-  if (situation === 'utility') return 'match';
+function matchesTenure(eligibleTenure, situations) {
+  // Utility- or healthcare-only visits imply no situation at all, so nothing
+  // is filtered on tenure.
+  if (!situations || !situations.length) return 'match';
 
   const raw = (eligibleTenure || '').toLowerCase();
   if (!raw.trim()) return 'unknown';
@@ -167,21 +172,32 @@ function matchesTenure(eligibleTenure, situation) {
   const isBuyer = /prospective homeowner|first-time/.test(raw);
   const isUnhoused = /homeless|unstably housed|transitional|unhoused/.test(raw);
 
-  switch (situation) {
-    case 'renting':
-      return isRenter ? 'match' : 'no-match';
-    case 'homeowner':
-      return isOwner ? 'match' : 'no-match';
-    case 'buying':
-      return isBuyer ? 'match' : 'no-match';
-    case 'unhoused':
-      // Rent-support programs routinely move people from unhoused into a
-      // tenancy, so they stay in play rather than being filtered out.
-      if (isUnhoused) return 'match';
-      return isRenter ? 'unknown' : 'no-match';
-    default:
-      return 'unknown';
+  // A program matching ANY of the person's situations stays in.
+  let best = 'no-match';
+  for (const situation of situations) {
+    let verdict = 'unknown';
+    switch (situation) {
+      case 'renting':
+        verdict = isRenter ? 'match' : 'no-match';
+        break;
+      case 'homeowner':
+        verdict = isOwner ? 'match' : 'no-match';
+        break;
+      case 'buying':
+        verdict = isBuyer ? 'match' : 'no-match';
+        break;
+      case 'unhoused':
+        // Rent-support programs routinely move people from unhoused into a
+        // tenancy, so they stay in play rather than being filtered out.
+        verdict = isUnhoused ? 'match' : isRenter ? 'unknown' : 'no-match';
+        break;
+      default:
+        verdict = 'unknown';
+    }
+    if (verdict === 'match') return 'match';
+    if (verdict === 'unknown') best = 'unknown';
   }
+  return best;
 }
 
 // Circumstances the person can tell us about, paired with the prose column
@@ -222,18 +238,24 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   }
 
   // --- Kind of help (hard, where the category is classifiable) ----------
-  if (answers.help && !matchesHelpType(program.category, answers.help)) {
+  const needs = Array.isArray(answers.help) ? answers.help : answers.help ? [answers.help] : [];
+  if (needs.length && !matchesHelpType(program.category, needs)) {
     return {
       verdict: 'excluded',
       checks,
-      reason: answers.help === 'utility'
-        ? 'Not a utility assistance program'
-        : 'Helps with utility bills rather than finding housing',
+      reason: 'Helps with a different kind of need than the ones you picked',
     };
   }
 
   // --- Housing situation (hard, where documented) -----------------------
-  const tenure = matchesTenure(eligibility.eligible_tenure, answers.situation);
+  // Every picked need implies its situations: seeking a rental implies
+  // renting, buying implies a prospective buyer, and "staying in my home"
+  // carries the rent-or-own answer.
+  const situations = [];
+  if (needs.includes('rental')) situations.push('renting');
+  if (needs.includes('buying')) situations.push('buying');
+  if (needs.includes('staying') && answers.situation) situations.push(answers.situation);
+  const tenure = matchesTenure(eligibility.eligible_tenure, situations);
   if (tenure === 'no-match') {
     return { verdict: 'excluded', checks, reason: 'Serves a different housing situation' };
   }
@@ -301,12 +323,12 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   // squarely meant for them.
   const circumstances = {
     ...(answers.circumstances || {}),
-    crisis: Boolean(answers.circumstances?.crisis) || answers.situation === 'unhoused',
+    crisis: Boolean(answers.circumstances?.crisis) || situations.includes('unhoused'),
     // Someone who came here to pay a utility bill has a utility bill. Making
     // them tick the box as well produced a caveat on almost every Minnesota
     // result, since 28 of its 34 programs gate on the account.
     utilityAccount:
-      Boolean(answers.circumstances?.utilityAccount) || answers.help === 'utility',
+      Boolean(answers.circumstances?.utilityAccount) || needs.includes('utility'),
   };
 
   // Any-of qualifying paths are pooled across all of a program's rules:

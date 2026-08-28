@@ -66,11 +66,12 @@ function Tenure-Set($t) {
   return @{ any = $false; list = $list }
 }
 function Help-Paths($cat) {
+  # Q3 is multi-select: a program stays in when ANY picked need matches.
   $c = "$cat"
   $u = $c -match 'utility|energy|heat|water|sewer|electric|gas|weatheriz'
   $h = $c -match 'rent|housing|shelter|homeless|stabili|down payment|homebuyer|home ?ownership|home repair|mortgage|rehabilitation'
-  if (-not $u -and -not $h) { return @('finding','staying','utility') }
-  if ($u) { return @('utility','staying') } else { return @('finding','staying') }
+  if (-not $u -and -not $h) { return @('rental','staying','buying','utility') }
+  if ($u) { return @('utility','staying') } else { return @('rental','staying','buying') }
 }
 function Area-Id($county, $state) {
   if ($county -eq 'Statewide') { return $state }
@@ -148,7 +149,7 @@ $flows | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $sp 'flows.json') -Enc
 # --- HTML --------------------------------------------------------------------------
 $sym = @{ required = '●'; 'not-required' = '○'; unknown = '?'; qualifying = '◐' }
 $symTitle = @{ required = 'required — a "no" excludes'; 'not-required' = 'no requirement'; unknown = 'not documented — flagged, never excludes'; qualifying = 'qualifying path — any one of the program''s ◐ paths is enough' }
-$helpLabel = @{ finding = 'Finding a place'; staying = 'Staying housed'; utility = 'Utility bill' }
+$helpLabel = @{ rental = 'Finding a rental'; staying = 'Staying housed'; buying = 'Buying a home'; utility = 'Utility bill' }
 $tenLabel = @{ renting = 'renting'; homeowner = 'own my home'; buying = 'hoping to buy'; unhoused = 'not stably housed'; 'unhoused?' = 'not stably housed (kept in, flagged)' }
 function Money($n) { if ($null -eq $n) { return '' }; '$' + ('{0:N0}' -f [double]$n) }
 
@@ -227,7 +228,7 @@ W @'
 <section id="trunk"><h2 class="head">The shared trunk: what every applicant is asked</h2>
 <p>Seven questions, asked once, in this order. Each one prunes the list of programs. A program is never removed by a question it doesn't care about — only by a documented requirement the answer fails.</p>
 <figure>
-<svg viewBox="0 0 1180 250" role="img" aria-label="The seven screening questions in order, with what each one removes from the program list, and the utility path skipping the tenure question">
+<svg viewBox="0 0 1180 250" role="img" aria-label="The seven screening questions in order, with what each one removes from the program list; the rent-or-own question is asked only when staying in my home is picked">
 <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5 0 10z" fill="currentColor"/></marker></defs>
 <g fill="none" stroke="currentColor" stroke-width="1.5">
 <rect x="10" y="60" width="120" height="52" rx="4"/><rect x="170" y="60" width="120" height="52" rx="4"/><rect x="330" y="60" width="130" height="52" rx="4"/><rect x="500" y="60" width="120" height="52" rx="4"/><rect x="660" y="60" width="120" height="52" rx="4"/><rect x="820" y="60" width="120" height="52" rx="4"/><rect x="980" y="60" width="140" height="52" rx="4"/>
@@ -237,8 +238,8 @@ W @'
 <g font-family="system-ui,sans-serif" font-size="12" fill="currentColor" text-anchor="middle">
 <text x="70" y="81" font-weight="600">1 · State</text><text x="70" y="99" font-size="11">OR or MN</text>
 <text x="230" y="81" font-weight="600">2 · County</text><text x="230" y="99" font-size="11">that state only</text>
-<text x="395" y="81" font-weight="600">3 · Help needed</text><text x="395" y="99" font-size="11">find · stay · utility</text>
-<text x="560" y="81" font-weight="600">4 · Tenure</text><text x="560" y="99" font-size="11">rent · own · buy · unhoused</text>
+<text x="395" y="81" font-weight="600">3 · Help needed</text><text x="395" y="99" font-size="11">rental · stay · buy · utility (any)</text>
+<text x="560" y="81" font-weight="600">4 · Rent or own</text><text x="560" y="99" font-size="11">only if "staying"</text>
 <text x="720" y="81" font-weight="600">5 · Household</text><text x="720" y="99" font-size="11">1–12 people</text>
 <text x="880" y="81" font-weight="600">6 · Income</text><text x="880" y="99" font-size="11">gross, annual</text>
 <text x="1050" y="81" font-weight="600">7 · Circumstances</text><text x="1050" y="99" font-size="11">seven checkboxes</text>
@@ -250,7 +251,7 @@ W @'
 <text x="639" y="50">drops other</text><text x="639" y="40">tenures</text>
 <text x="799" y="50">picks the</text><text x="799" y="40">limit row</text>
 <text x="959" y="50">excludes if</text><text x="959" y="40">over ×1.1</text>
-<text x="560" y="190" fill="#c2410c">utility path skips tenure — those programs serve renters and owners alike</text>
+<text x="560" y="190" fill="#c2410c">rent-or-own is asked only when "staying in my home" is picked — the other needs imply their tenure</text>
 <text x="1050" y="150" fill="currentColor">unticked = unknown, never a "no":</text><text x="1050" y="164">a required gate demotes to "possible"</text><text x="1050" y="178">and explains itself</text>
 </g>
 </svg>
@@ -259,11 +260,11 @@ W @'
 <div class="scroll"><table><thead><tr><th>#</th><th>Question</th><th>Hard or soft</th><th>What it does to the program list</th></tr></thead><tbody>
 <tr><td>1</td><td>Which state are you in?</td><td>hard</td><td>Chooses the county list and which state's median-income table applies. Nothing is excluded yet.</td></tr>
 <tr><td>2</td><td>Which county do you live in?</td><td>hard</td><td>Removes every program that does not list this county or "Statewide" for this state. County names repeat across states — Douglas exists in both — so the pair is what matches.</td></tr>
-<tr><td>3</td><td>What do you need help with?</td><td>hard</td><td><em>Utility bill</em> keeps utility programs only. <em>Finding a place</em> keeps housing programs only. <em>Staying housed</em> keeps both — a shutoff notice is one of the things that costs people their housing. Programs whose category fits neither are never removed.</td></tr>
-<tr><td>4</td><td>Rent, own, buying, or not stably housed?</td><td>hard where documented</td><td>Removes programs whose documented tenure does not include yours. Skipped entirely on the utility path. A program with no tenure documented is kept and flagged.</td></tr>
+<tr><td>3</td><td>What do you need help with? (choose all that apply)</td><td>hard</td><td>Multi-select: <em>Finding a rental</em>, <em>Staying in my home</em>, <em>Buying a home</em>, <em>Paying a utility bill</em>. A program stays in when ANY picked need matches its category. Housing programs match rental, staying, and buying; utility programs match utility and staying — a shutoff notice is one of the things that costs people their housing. Programs whose category fits neither class are never removed.</td></tr>
+<tr><td>4</td><td>Do you rent or own your home?</td><td>hard where documented</td><td>Asked only when <em>Staying in my home</em> is picked; the other needs imply their tenure (rental → renter, buying → prospective buyer). Removes programs whose documented tenure matches none of your implied situations. A program with no tenure documented is kept and flagged.</td></tr>
 <tr><td>5</td><td>How many people in your household?</td><td>—</td><td>Selects the row of the income table. Sizes 1–8 are published; larger households extrapolate by HUD's rule.</td></tr>
 <tr><td>6</td><td>Roughly what does your household earn?</td><td>hard at 110%</td><td>Compared to the program's published limit for your size. Over the limit but within 10%: kept and flagged — a typed figure is an estimate, and programs measure income their own way (some count only the most recent month). More than 10% over: removed. No published limit: kept and flagged. Skipped if you don't answer.</td></tr>
-<tr><td>7</td><td>Does any of this apply? (seven boxes)</td><td>soft</td><td>Each program's documented rule is read as <b>required</b>, <b>no requirement</b>, a <b>qualifying path</b>, or <b>not documented</b>. A required gate you didn't tick demotes the program to "possible" with a note — it never hides it. A program's qualifying paths are pooled: matching any single one satisfies all of them. Being unhoused implies the crisis box; choosing the utility path implies the utility-account box.</td></tr>
+<tr><td>7</td><td>Does any of this apply? (seven boxes)</td><td>soft</td><td>Each program's documented rule is read as <b>required</b>, <b>no requirement</b>, a <b>qualifying path</b>, or <b>not documented</b>. A required gate you didn't tick demotes the program to "possible" with a note — it never hides it. A program's qualifying paths are pooled: matching any single one satisfies all of them. Being unhoused implies the crisis box; picking <em>Paying a utility bill</em> implies the utility-account box.</td></tr>
 </tbody></table></div>
 </section>
 '@
@@ -301,9 +302,9 @@ foreach ($st in @('OR','MN')) {
     # 2 help
     W "<li><span class=`"n`">2</span><div><div class=`"q`">What do you need help with?</div><p class=`"a`"><span class=`"verdict pass`">reached via</span>$(Esc (($f.help_paths | ForEach-Object { $helpLabel[$_] }) -join ' · '))</p><p class=`"ev`">category: $(Esc $f.category)</p></div></li>"
     # 3 tenure
-    if ($f.help_paths -contains 'utility' -and $f.help_paths.Count -eq 2) { $tenNote = ' (skipped on the utility path)' } else { $tenNote = '' }
-    if ($f.tenure.any) { W "<li><span class=`"n`">3</span><div><div class=`"q`">Rent, own, buying, or unhoused?$tenNote</div><p class=`"a`"><span class=`"verdict flag`">kept + flagged</span>Tenure not documented — never excludes.</p></div></li>" }
-    else { W "<li><span class=`"n`">3</span><div><div class=`"q`">Rent, own, buying, or unhoused?$tenNote</div><p class=`"a`"><span class=`"verdict pass`">must be</span>$(Esc (($f.tenure.matches | ForEach-Object { $tenLabel[$_] }) -join ' · '))</p><p class=`"ev`">$(Esc $f.tenure.evidence)</p></div></li>" }
+    if ($f.help_paths -contains 'utility' -and $f.help_paths.Count -eq 2) { $tenNote = ' (never filtered for a utility-only visit)' } else { $tenNote = '' }
+    if ($f.tenure.any) { W "<li><span class=`"n`">3</span><div><div class=`"q`">Tenure implied by your picks$tenNote</div><p class=`"a`"><span class=`"verdict flag`">kept + flagged</span>Tenure not documented — never excludes.</p></div></li>" }
+    else { W "<li><span class=`"n`">3</span><div><div class=`"q`">Tenure implied by your picks$tenNote</div><p class=`"a`"><span class=`"verdict pass`">must be</span>$(Esc (($f.tenure.matches | ForEach-Object { $tenLabel[$_] }) -join ' · '))</p><p class=`"ev`">$(Esc $f.tenure.evidence)</p></div></li>" }
     # 4-5 household + income
     if ($i.tested) {
       $lim = if ($null -ne $i.limit_4p) { "$(if($i.approx){'≈ '})$(Money $i.limit_4p) for 4 people in $(Esc $i.example_county)" } else { 'not published for this area — kept and flagged' }

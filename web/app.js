@@ -22,7 +22,9 @@ const STEPS = [
 function questionSteps() {
   return STEPS.filter((s) => {
     if (s === 'intro' || s === 'results') return false;
-    if (s === 'situation') return answers.help !== 'utility';
+    // Rent-or-own only matters for "staying in my home" — the other needs
+    // imply their situations on their own.
+    if (s === 'situation') return answers.help.includes('staying');
     return true;
   });
 }
@@ -32,7 +34,7 @@ const answers = {
   county: null,
   areaId: null, // income_areas row backing the chosen county
   statewideAreaId: null, // where that state's SMI limits live
-  help: null, // finding | staying | utility
+  help: [], // any of: rental | staying | buying | utility
   situation: null,
   householdSize: 1,
   income: null, // null means "not provided"
@@ -272,7 +274,7 @@ function restart() {
   answers.state = null;
   answers.areaId = null;
   answers.statewideAreaId = null;
-  answers.help = null;
+  answers.help = [];
   answers.situation = null;
   answers.householdSize = 1;
   answers.income = null;
@@ -300,7 +302,7 @@ function refreshContinueButtons() {
   const gates = {
     state: answers.state,
     county: answers.county,
-    help: answers.help,
+    help: answers.help.length,
     situation: answers.situation,
   };
   for (const [step, answered] of Object.entries(gates)) {
@@ -375,28 +377,17 @@ function buildCountyChoices() {
 // The tenure follow-up depends on what kind of help was asked for. Someone
 // looking for a place needs different options from someone trying to keep the
 // home they have, and asking one generic question served both badly.
-const SITUATION_SETS = {
-  finding: {
-    title: 'Which of these fits you best?',
-    hint: 'This decides whether we show rentals or homebuying help.',
-    options: [
-      ['renting', "I'm looking to rent", 'A place to rent, or help affording one'],
-      ['buying', "I'm hoping to buy a home", 'Down payment help, savings-match programs, first-time buyer loans'],
-      ['unhoused', "I don't have stable housing right now", 'Staying in a shelter, a vehicle, outside, or temporarily with others'],
-    ],
-  },
-  staying: {
-    title: 'Do you rent or own your home?',
-    hint: 'Programs differ depending on which, so this narrows things considerably.',
-    options: [
-      ['renting', 'I rent', 'Including if you are behind on rent or facing eviction'],
-      ['homeowner', 'I own my home', 'Including mortgage trouble and home repairs'],
-    ],
-  },
+const STAYING_SITUATION = {
+  title: 'Do you rent or own your home?',
+  hint: 'Programs differ depending on which, so this narrows things considerably.',
+  options: [
+    ['renting', 'I rent', 'Including if you are behind on rent or facing eviction'],
+    ['homeowner', 'I own my home', 'Including mortgage trouble and home repairs'],
+  ],
 };
 
 function buildSituationChoices() {
-  const set = SITUATION_SETS[answers.help];
+  const set = answers.help.includes('staying') ? STAYING_SITUATION : null;
   const container = $('#situation-choices');
   container.replaceChildren();
   if (!set) return;
@@ -425,14 +416,12 @@ function buildSituationChoices() {
 }
 
 function wireHelpChoices() {
-  $$('#help-choices input[type="radio"]').forEach((input) => {
+  $$('#help-choices input[type="checkbox"]').forEach((input) => {
     input.addEventListener('change', () => {
-      if (answers.help !== input.value) answers.situation = null;
-      answers.help = input.value;
-      // Utility programs serve renters and owners alike, so that path skips
-      // the tenure question and nothing needs to stay selected.
-      if (answers.help === 'utility') answers.situation = 'utility';
+      answers.help = $$('#help-choices input:checked').map((i) => i.value);
+      if (!answers.help.includes('staying')) answers.situation = null;
       buildSituationChoices();
+      syncCircumstanceVisibility();
       refreshContinueButtons();
     });
   });
@@ -516,7 +505,7 @@ function wireCircumstances() {
 // The first-time-buyer checkbox is only relevant to buyers; hiding it
 // elsewhere keeps the circumstances list short.
 function syncCircumstanceVisibility() {
-  $('#ftb-choice').hidden = answers.situation !== 'buying';
+  $('#ftb-choice').hidden = !answers.help.includes('buying');
 }
 
 // Selection is mirrored to a class the moment any choice input changes.
@@ -541,7 +530,8 @@ document.addEventListener('change', (event) => {
 // (the measured journey drops from ~15 taps to ~9). The timer debounces
 // keyboard arrow-through so a screen-reader or keyboard user exploring the
 // options isn't yanked forward mid-list; Back stays for corrections.
-const AUTO_ADVANCE_STEPS = new Set(['state', 'county', 'help', 'situation']);
+// The help step is multi-select now, so it keeps its Continue button.
+const AUTO_ADVANCE_STEPS = new Set(['state', 'county', 'situation']);
 let advanceTimer = null;
 document.addEventListener('change', (event) => {
   const step = event.target.closest('.step')?.dataset.step;
@@ -571,7 +561,9 @@ function saveAnswers(step) {
   }
 }
 
-const HELP_VALUES = ['finding', 'staying', 'utility'];
+const HELP_VALUES = ['rental', 'staying', 'buying', 'utility'];
+// Links minted before the multi-select help step keep working.
+const LEGACY_HELP = { finding: 'rental' };
 
 function encodeShareHash() {
   const circs = Object.keys(answers.circumstances).filter((k) => answers.circumstances[k]);
@@ -580,7 +572,7 @@ function encodeShareHash() {
     [
       answers.state,
       answers.county,
-      answers.help,
+      answers.help.join('+'),
       answers.situation || 'x',
       answers.householdSize,
       answers.income ?? 'x',
@@ -596,17 +588,24 @@ function decodeShareHash(hash) {
   if (!match) return null;
   const parts = match[1].split('/').map(decodeURIComponent);
   if (parts.length !== 7) return null;
-  const [state, county, help, situation, size, income, circs] = parts;
+  const [state, county, helpRaw, situationRaw, size, income, circs] = parts;
   const config = STATES.find((s) => s.code === state);
   const countyRow = config?.counties.find((c) => c.name === county);
-  if (!config || !countyRow || !HELP_VALUES.includes(help)) return null;
+  const help = helpRaw
+    .split('+')
+    .map((h) => LEGACY_HELP[h] || h)
+    .filter((h) => HELP_VALUES.includes(h));
+  if (!config || !countyRow || !help.length) return null;
+  let situation = situationRaw === 'x' ? null : situationRaw;
+  if (situation === 'buying' && !help.includes('buying')) help.push('buying');
+  if (!['renting', 'homeowner'].includes(situation)) situation = null;
   return {
     state,
     county,
     areaId: countyRow.areaId,
     statewideAreaId: config.statewideAreaId,
     help,
-    situation: situation === 'x' ? (help === 'utility' ? 'utility' : null) : situation,
+    situation,
     householdSize: Math.min(12, Math.max(1, Number(size) || 1)),
     income: income === 'x' ? null : Number(income) || null,
     circumstances:
@@ -623,7 +622,7 @@ function hydrateUi() {
   check('#state-choices input', answers.state);
   if (answers.state) buildCountyChoices();
   check('#county-choices input', answers.county);
-  check('#help-choices input', answers.help);
+  for (const need of answers.help) check('#help-choices input', need);
   buildSituationChoices();
   check('#situation-choices input', answers.situation);
   $('#household-size').value = String(answers.householdSize);
@@ -1048,17 +1047,16 @@ function answerChips() {
   const chips = [[`${answers.county} County, ${answers.state}`, 'county']];
 
   const helpLabels = {
-    finding: 'Finding a place',
+    rental: 'Finding a rental',
     staying: 'Staying housed',
+    buying: 'Buying a home',
     utility: 'Utility bill',
   };
-  chips.push([helpLabels[answers.help], 'help']);
+  chips.push([answers.help.map((h) => helpLabels[h] || h).join(' · '), 'help']);
 
   const situationLabels = {
     renting: 'Renting',
-    unhoused: 'Not stably housed',
     homeowner: 'Homeowner',
-    buying: 'Hoping to buy',
   };
   if (situationLabels[answers.situation]) chips.push([situationLabels[answers.situation], 'situation']);
   chips.push([
@@ -1285,6 +1283,16 @@ function init() {
       const saved = JSON.parse(sessionStorage.getItem(ANSWERS_KEY) || 'null');
       if (saved && saved.answers && saved.answers.state) {
         Object.assign(answers, saved.answers);
+        // Sessions saved before the multi-select help step.
+        if (typeof answers.help === 'string') {
+          answers.help = answers.help === 'finding' ? ['rental'] : [answers.help];
+        }
+        if (!Array.isArray(answers.help)) answers.help = [];
+        if (answers.situation === 'buying') {
+          if (!answers.help.includes('buying')) answers.help.push('buying');
+          answers.situation = null;
+        }
+        if (!['renting', 'homeowner'].includes(answers.situation)) answers.situation = null;
         hydrateUi();
         if (saved.step && saved.step !== 'intro') resumeStep = saved.step;
       }

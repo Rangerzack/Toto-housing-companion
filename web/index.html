@@ -150,37 +150,44 @@
         </div>
       </section>
 
-      <!-- 3. What kind of help --------------------------------------------- -->
+      <!-- 3. What kind of help (choose all that apply) --------------------- -->
       <section class="step" data-step="help" tabindex="-1">
         <h2 class="step__title">What do you need help with?</h2>
-        <p class="step__hint">Pick the one closest to why you're here today.</p>
-        <div class="choices" role="radiogroup" aria-labelledby="help-label" id="help-choices">
-          <label class="choice">
-            <input type="radio" name="help" value="finding" />
+        <p class="step__hint">Choose everything that applies — you can pick more than one.</p>
+        <div class="choices" role="group" aria-labelledby="help-label" id="help-choices">
+          <label class="choice choice--check">
+            <input type="checkbox" name="help" value="rental" />
             <span class="choice__body">
-              <span class="choice__title">Finding a place to live</span>
-              <span class="choice__desc">Looking for a rental, hoping to buy, or without stable housing right now</span>
+              <span class="choice__title">Finding a rental</span>
+              <span class="choice__desc">A place to rent, or help affording one</span>
             </span>
           </label>
-          <label class="choice">
-            <input type="radio" name="help" value="staying" />
+          <label class="choice choice--check">
+            <input type="checkbox" name="help" value="staying" />
             <span class="choice__body">
-              <span class="choice__title">Staying in the home I have</span>
+              <span class="choice__title">Staying in my home</span>
               <span class="choice__desc">Behind on rent or mortgage, facing eviction, or needing repairs</span>
             </span>
           </label>
-          <label class="choice">
-            <input type="radio" name="help" value="utility" />
+          <label class="choice choice--check">
+            <input type="checkbox" name="help" value="buying" />
+            <span class="choice__body">
+              <span class="choice__title">Buying a home</span>
+              <span class="choice__desc">Down payment help, first-time buyer programs, homebuyer classes</span>
+            </span>
+          </label>
+          <label class="choice choice--check">
+            <input type="checkbox" name="help" value="utility" />
             <span class="choice__body">
               <span class="choice__title">Paying a utility bill</span>
               <span class="choice__desc">Heat, electricity, gas, or water — including a shutoff notice</span>
             </span>
           </label>
         </div>
-        <span id="help-label" class="visually-hidden">Kind of help needed</span>
-        <p class="step__auto">Picking an answer moves you on — use Back to change it.</p>
+        <span id="help-label" class="visually-hidden">Kinds of help needed</span>
         <div class="step__actions">
           <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
         </div>
       </section>
 
