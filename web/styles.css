@@ -800,11 +800,14 @@ main:has(.step--results.is-active) {
   display: grid;
   gap: 1rem;
   grid-template-columns: 1fr;
-  align-items: start;
+  /* Collapsed cards stretch to their row, so every row reads as one even
+     band; an open card takes the whole row instead (below). */
+  align-items: stretch;
   list-style: none;
   padding: 0;
   margin: 0;
 }
+.result.is-open { grid-column: 1 / -1; }
 @media (min-width: 40rem) {
   .results__list { grid-template-columns: repeat(2, 1fr); }
 }
@@ -1269,12 +1272,6 @@ main:has(.step--results.is-active) {
   mask-image: linear-gradient(90deg, #000 85%, transparent);
   -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
 }
-@media (min-width: 48rem) {
-  /* The floor equals the fullest collapsed variant (two-line name, tag
-     row, benefit line, caveat line), so every collapsed card lands at the
-     same height. */
-  .result:not(.is-open) { min-height: 16.25rem; }
-}
 
 /* Show-more sits under its section's grid, centred. */
 .results__more {
@@ -1292,8 +1289,12 @@ main:has(.step--results.is-active) {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  /* Lets the full-width benefit block wrap onto its own line below. */
+  flex-wrap: wrap;
 }
-.result__headmain { min-width: 0; }
+/* flex-basis 0 keeps the name column sharing the row with the badge —
+   only the benefit block (flex-basis 100%) is allowed to wrap below. */
+.result__headmain { min-width: 0; flex: 1 1 0; }
 .result__headside {
   display: flex;
   align-items: center;
@@ -1317,15 +1318,21 @@ main:has(.step--results.is-active) {
 .result__fold[open] .result__chev { transform: rotate(180deg); }
 .result__fold[open] .result__caveats { display: none; }
 
-/* One-line benefit on the collapsed card; the open body carries the full
-   "What you may get" block instead. */
+/* The full "What you may get" block on the collapsed card; the open body
+   carries its own copy, so this one hides then. */
 .result__gets {
-  margin: 0.4rem 0 0;
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  background: var(--surface-sunken);
+  border-radius: 6px;
   font-size: 0.875rem;
-  color: var(--ink-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--ink);
 }
 .result__gets-label {
   font-size: 0.75rem;
