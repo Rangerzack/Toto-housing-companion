@@ -1,5 +1,108 @@
 [
   {
+    "program_id": "ACCESS-HBED-OR-001",
+    "name": "ACCESS Homeownership Center - Homebuyer Education & Counseling",
+    "administrator": "ACCESS (HUD-approved housing counseling agency)",
+    "state": "OR",
+    "category": "Homebuyer Education & Counseling",
+    "counties": [
+      "Jackson",
+      "Josephine"
+    ],
+    "help_paths": [
+      "finding",
+      "staying"
+    ],
+    "tenure": {
+      "any": false,
+      "matches": [
+        "homeowner",
+        "buying"
+      ],
+      "evidence": "Prospective homeowner (first-time homebuyer); current homeowners for post-purchase and foreclosure counseling"
+    },
+    "income": {
+      "tested": false,
+      "standard": "HUD-MFI",
+      "standard_name": "HUD Multifamily Tax Subsidy / Section 8 Income Limits",
+      "tier": null,
+      "area": "applicant county",
+      "example_county": "Jackson",
+      "limit_4p": null,
+      "approx": null,
+      "evidence": "None published - HUD-approved homebuyer education and counseling is open regardless of income",
+      "republished": "Annually, usually announced in spring"
+    },
+    "gates": [
+      {
+        "key": "veteran",
+        "question": "Is a household member a veteran?",
+        "label": "veteran status",
+        "state": "not-required",
+        "evidence": "None"
+      },
+      {
+        "key": "senior",
+        "question": "Is a household member 60 or older?",
+        "label": "the age of household members",
+        "state": "not-required",
+        "evidence": "None"
+      },
+      {
+        "key": "disability",
+        "question": "Does a household member have a disability?",
+        "label": "a household member with a disability",
+        "state": "not-required",
+        "evidence": "None"
+      },
+      {
+        "key": "children",
+        "question": "Are there children, or is someone pregnant?",
+        "label": "children in the household or pregnancy",
+        "state": "not-required",
+        "evidence": "None"
+      },
+      {
+        "key": "crisis",
+        "question": "Facing eviction, a shutoff, or displacement?",
+        "label": "an eviction, shutoff, or displacement crisis",
+        "state": "not-required",
+        "evidence": "No"
+      },
+      {
+        "key": "firstTimeBuyer",
+        "question": "Has nobody in the household owned a home in 3 years?",
+        "label": "first-time homebuyer status",
+        "state": "not-required",
+        "evidence": "No - classes serve anyone preparing to buy; the 3-year first-time definition applies to the down payment programs, not the classes"
+      },
+      {
+        "key": "utilityAccount",
+        "question": "Is a utility account in your name?",
+        "label": "a utility account in your name",
+        "state": "not-required",
+        "evidence": "No"
+      }
+    ],
+    "intake": {
+      "status": "Open - ongoing",
+      "window": "Year-round; class dates posted on the ACCESS website",
+      "method": "Complete the Homeownership Center intake form; register for classes through ACCESS or online via eHome America",
+      "documents": "Homeownership Center intake form (Section 2 if receiving housing counseling)",
+      "form_url": "https://accesshelps.org/wp-content/uploads/Homeownership-Intake-form.pdf",
+      "form_notes": "Same intake form as the ACCESS down payment programs",
+      "program_url": "https://accesshelps.org/homeownership/",
+      "phone": "541-779-6691",
+      "email": "",
+      "address": "3630 Aviation Way, Medford, OR 97504",
+      "hours": "Mon-Thu 7:30am-6pm, Fri 8am-4:30pm",
+      "priority": "",
+      "disqualifiers": "",
+      "benefit": "HUD-approved homebuyer education and counseling: Realizing the American Dream (8-hour class), eHome America online courses, financial literacy coaching, pre- and post-purchase counseling",
+      "max_benefit": "Class completion certificate - the usual prerequisite for down payment assistance and first-time buyer loan programs"
+    }
+  },
+  {
     "program_id": "ACCESS-HOAP-OR-001",
     "name": "Home Ownership Assistance Program (HOAP)",
     "administrator": "Oregon Housing and Community Services (OHCS), delivered locally by ACCESS Homeownership Center",
