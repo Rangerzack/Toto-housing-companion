@@ -10,8 +10,9 @@
       "Josephine"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -113,8 +114,9 @@
       "Josephine"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -214,8 +216,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -317,8 +320,9 @@
       "Josephine"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -422,8 +426,9 @@
       "Curry"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -527,8 +532,9 @@
       "Statewide"
     ],
     "help_paths": [
-      "finding",
+      "rental",
       "staying",
+      "buying",
       "utility"
     ],
     "tenure": {
@@ -942,8 +948,9 @@
       "Sherburne"
     ],
     "help_paths": [
-      "finding",
+      "rental",
       "staying",
+      "buying",
       "utility"
     ],
     "tenure": {
@@ -1046,8 +1053,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -2098,8 +2106,9 @@
       "Josephine"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": true,
@@ -2407,8 +2416,9 @@
       "Josephine"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -2508,8 +2518,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -2609,8 +2620,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -2711,8 +2723,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -2813,8 +2826,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -2914,8 +2928,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -3122,8 +3137,9 @@
       "Sherburne"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -3225,8 +3241,9 @@
       "Sherburne"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -3326,8 +3343,9 @@
       "Josephine"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -3636,8 +3654,9 @@
       "Josephine"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -3843,8 +3862,9 @@
       "Statewide"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -3946,8 +3966,9 @@
       "Statewide"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -4054,8 +4075,9 @@
       "Clackamas"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -4155,8 +4177,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": true,
@@ -4256,8 +4279,9 @@
       "Statewide"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": true,
@@ -4357,8 +4381,9 @@
       "Statewide"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -4460,8 +4485,9 @@
       "Statewide"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -4567,8 +4593,9 @@
       "Crow Wing"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -4773,8 +4800,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": true,
@@ -4872,8 +4900,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": true,
@@ -5801,8 +5830,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": true,
@@ -6006,8 +6036,9 @@
       "Klamath"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
@@ -6108,8 +6139,9 @@
       "Jackson"
     ],
     "help_paths": [
-      "finding",
-      "staying"
+      "rental",
+      "staying",
+      "buying"
     ],
     "tenure": {
       "any": false,
