@@ -1229,7 +1229,20 @@ main:has(.step--results.is-active) {
 .results__group--likely { color: var(--likely); }
 .results__group--possible { color: var(--possible); }
 
-.result--lead { border-top: 3px solid var(--likely); }
+.result--lead { border-top: 3px solid var(--primary); }
+
+/* "Built for you" tags in the card summary — why this program ranked first. */
+.result__fit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+.tag--fit {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+}
 
 .result__fold summary {
   list-style: none;

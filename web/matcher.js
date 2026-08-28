@@ -261,6 +261,14 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   const unhoused = Boolean(answers.circumstances?.unhoused);
   if (unhoused && situations.length) situations.push('unhoused');
   const tenure = matchesTenure(eligibility.eligible_tenure, situations);
+
+  // Which of the person's confirmed circumstances this program is built
+  // around — used to rank targeted programs (veteran services for a
+  // veteran) above generic ones, and shown as a tag on the card.
+  const fit = [];
+  if (unhoused && /homeless|unstably housed|transitional|unhoused/.test((eligibility.eligible_tenure || '').toLowerCase())) {
+    fit.push('unhoused');
+  }
   if (tenure === 'no-match') {
     return { verdict: 'excluded', checks, reason: 'Serves a different housing situation' };
   }
@@ -346,6 +354,14 @@ export function evaluateProgram(program, answers, lookup, proportional) {
     const state = readRule(eligibility[field]);
     const personHasIt = Boolean(circumstances[key]);
 
+    // A program that gates on something this household actually has is a
+    // targeted program, not just a non-conflict. The utility account is
+    // excluded: it is implied on every utility visit, so it separates
+    // nothing and is not a population.
+    if (personHasIt && key !== 'utilityAccount' && (state === 'required' || state === 'qualifying')) {
+      fit.push(key);
+    }
+
     if (state === 'qualifying') {
       if (personHasIt) qualifyingMet = true;
       else qualifyingUnmet.push(label);
@@ -381,6 +397,7 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   return {
     verdict: checks.length ? 'possible' : 'likely',
     checks,
+    fit,
     reason: null,
   };
 }
@@ -410,6 +427,12 @@ export function screenPrograms(programs, answers, lookup, proportional) {
 
   const verdictOrder = { likely: 0, possible: 1 };
   results.sort((a, b) => {
+    // Programs built for who this household is come first — a veteran sees
+    // veteran services at the top, even ahead of generic programs with
+    // fewer open questions. The card's tag says why it ranked there.
+    const byFit = (b.fit?.length || 0) - (a.fit?.length || 0);
+    if (byFit) return byFit;
+
     const byVerdict = verdictOrder[a.verdict] - verdictOrder[b.verdict];
     if (byVerdict) return byVerdict;
 

@@ -856,7 +856,54 @@ function contactLink({ value, pattern, scheme, sanitize }) {
   return el('a', { href: `${scheme}:${target}`, text: value });
 }
 
-function renderResultCard({ program, verdict, checks }, { open = false, lead = false } = {}) {
+// Labels for the "built for you" tags on a result card — shown when a
+// program specifically serves a circumstance the person confirmed.
+const FIT_LABELS = {
+  veteran: 'For veterans',
+  senior: 'For seniors 60+',
+  disability: 'For people with disabilities',
+  children: 'For families with children',
+  crisis: 'For crisis situations',
+  firstTimeBuyer: 'For first-time buyers',
+  unhoused: 'For people without stable housing',
+};
+
+// Results group by what a program actually is, so rent help, homebuying
+// help, and utility help never interleave. Classification order matters:
+// hybrid categories (utility payment + housing stabilisation) count as
+// their primary thing, checked first.
+const RESULT_SECTIONS = [
+  { id: 'buy', label: 'Buying a home', test: /down payment|homebuyer|home ?ownership/i },
+  { id: 'repair', label: 'Home repair', test: /home repair|rehabilitation|weatheriz/i },
+  { id: 'utility', label: 'Utility bills', test: /utility|energy|heat|water|sewer|electric|gas/i },
+  { id: 'housing', label: 'Housing & rent help', test: /rent|housing|shelter|homeless|stabili|eviction/i },
+];
+
+function sectionOf(category) {
+  return RESULT_SECTIONS.find((s) => s.test.test(category || ''))?.id || 'other';
+}
+
+// Sections the person actually asked about come first.
+function sectionDisplayOrder() {
+  const wants = {
+    housing: answers.help.includes('rental') || answers.help.includes('staying'),
+    buy: answers.help.includes('buying'),
+    repair: answers.help.includes('staying'),
+    utility: answers.help.includes('utility') || answers.help.includes('staying'),
+    other: false,
+  };
+  return [
+    { id: 'housing', label: 'Housing & rent help' },
+    { id: 'buy', label: 'Buying a home' },
+    { id: 'repair', label: 'Home repair' },
+    { id: 'utility', label: 'Utility bills' },
+    { id: 'other', label: 'Other support' },
+  ]
+    .map((s, i) => ({ ...s, rank: (wants[s.id] ? 0 : 100) + i }))
+    .sort((a, b) => a.rank - b.rank);
+}
+
+function renderResultCard({ program, verdict, checks, fit }, { open = false, lead = false } = {}) {
   const eligibility = program.eligibility || {};
   const contacts = program.contacts || {};
   const counties = (program.program_counties || [])
@@ -877,6 +924,13 @@ function renderResultCard({ program, verdict, checks }, { open = false, lead = f
         el('h3', { class: 'result__name', text: program.program_name }),
         program.administrator &&
           el('p', { class: 'result__admin', text: program.administrator }),
+        fit && fit.length
+          ? el(
+              'div',
+              { class: 'result__fit' },
+              fit.map((k) => el('span', { class: 'tag tag--fit', text: FIT_LABELS[k] || k })),
+            )
+          : null,
         checks.length
           ? el('p', {
               class: 'result__caveats',
@@ -1186,10 +1240,14 @@ async function renderResults() {
       }),
     );
   } else {
-    // Strong fits and worth-a-call render as separate labelled groups, the
-    // best match already open; everything else is a row that opens on tap.
-    const strong = matches.filter((m) => m.verdict === 'likely');
-    const maybe = matches.filter((m) => m.verdict !== 'likely');
+    // Results render as one labelled section per program type — rent help
+    // never interleaves with homebuying or utility help. Sections the
+    // person asked about come first, and inside each the matcher's order
+    // holds (targeted-fit programs, then strong fits). The top program of
+    // the first section opens; everything else is a row that opens on tap.
+    const sections = sectionDisplayOrder()
+      .map((s) => ({ ...s, items: matches.filter((m) => sectionOf(m.program.category) === s.id) }))
+      .filter((s) => s.items.length);
     const listOf = (items, leadFirst) =>
       el(
         'ul',
@@ -1198,15 +1256,15 @@ async function renderResults() {
           renderResultCard(m, { open: leadFirst && i === 0, lead: leadFirst && i === 0 }),
         ),
       );
-    if (strong.length && maybe.length) {
-      host.append(
-        el('p', { class: 'results__group results__group--likely', text: `Strong fits (${strong.length})` }),
-        listOf(strong, true),
-        el('p', { class: 'results__group results__group--possible', text: `Worth a call (${maybe.length})` }),
-        listOf(maybe, false),
-      );
+    if (sections.length === 1) {
+      host.append(listOf(sections[0].items, true));
     } else {
-      host.append(listOf(matches, strong.length > 0));
+      sections.forEach((s, si) => {
+        host.append(
+          el('p', { class: 'results__group', text: `${s.label} (${s.items.length})` }),
+          listOf(s.items, si === 0),
+        );
+      });
     }
   }
 
