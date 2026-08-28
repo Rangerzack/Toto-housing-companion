@@ -485,9 +485,11 @@ rest are a one-line change to the builder.
 - A missing tier means **no income test**, not a default.
 - A missing limit returns `NULL`, and the program stays in results with a
   "worth checking" note rather than being dropped.
-- Being over a limit on **gross** income flags rather than excludes, because
-  programs test income *after* deductions for dependents, childcare, and
-  medical costs. Only clearly-over incomes are filtered.
+- Being over a limit on **gross** income flags rather than excludes — the
+  figure typed in is an estimate, and programs measure income their own way
+  (Minnesota's EAP counts only the most recent month of gross income; HUD
+  programs apply deductions when setting the rent share). Only incomes more
+  than 10% over the limit are filtered.
 - Scaling to an unstored tier is exact for proportional standards
   (`HHS-FPG`, `HUD-MTSP`, `OR-SMI`, `MN-SMI`) and an estimate for the rest —
   and an estimate never excludes anyone.

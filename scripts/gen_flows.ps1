@@ -249,12 +249,12 @@ W @'
 <text x="479" y="50">drops other</text><text x="479" y="40">help types</text>
 <text x="639" y="50">drops other</text><text x="639" y="40">tenures</text>
 <text x="799" y="50">picks the</text><text x="799" y="40">limit row</text>
-<text x="959" y="50">excludes if</text><text x="959" y="40">over ×1.2</text>
+<text x="959" y="50">excludes if</text><text x="959" y="40">over ×1.1</text>
 <text x="560" y="190" fill="#c2410c">utility path skips tenure — those programs serve renters and owners alike</text>
 <text x="1050" y="150" fill="currentColor">unticked = unknown, never a "no":</text><text x="1050" y="164">a required gate demotes to "possible"</text><text x="1050" y="178">and explains itself</text>
 </g>
 </svg>
-<figcaption>The trunk is identical for every program. Arrow labels state what each answer removes. Income excludes only when gross income is more than 20% over the published limit, because programs test income after deductions; circumstances are soft gates — an unticked box demotes a program rather than hiding it.</figcaption>
+<figcaption>The trunk is identical for every program. Arrow labels state what each answer removes. Income excludes only when gross income is more than 10% over the published limit — a typed figure is an estimate, and programs measure income their own way (some count only the most recent month); circumstances are soft gates — an unticked box demotes a program rather than hiding it.</figcaption>
 </figure>
 <div class="scroll"><table><thead><tr><th>#</th><th>Question</th><th>Hard or soft</th><th>What it does to the program list</th></tr></thead><tbody>
 <tr><td>1</td><td>Which state are you in?</td><td>hard</td><td>Chooses the county list and which state's median-income table applies. Nothing is excluded yet.</td></tr>
@@ -262,7 +262,7 @@ W @'
 <tr><td>3</td><td>What do you need help with?</td><td>hard</td><td><em>Utility bill</em> keeps utility programs only. <em>Finding a place</em> keeps housing programs only. <em>Staying housed</em> keeps both — a shutoff notice is one of the things that costs people their housing. Programs whose category fits neither are never removed.</td></tr>
 <tr><td>4</td><td>Rent, own, buying, or not stably housed?</td><td>hard where documented</td><td>Removes programs whose documented tenure does not include yours. Skipped entirely on the utility path. A program with no tenure documented is kept and flagged.</td></tr>
 <tr><td>5</td><td>How many people in your household?</td><td>—</td><td>Selects the row of the income table. Sizes 1–8 are published; larger households extrapolate by HUD's rule.</td></tr>
-<tr><td>6</td><td>Roughly what does your household earn?</td><td>hard at 120%</td><td>Compared to the program's published limit for your size. Over the limit but within 20%: kept and flagged, because programs count income after deductions. More than 20% over: removed. No published limit: kept and flagged. Skipped if you don't answer.</td></tr>
+<tr><td>6</td><td>Roughly what does your household earn?</td><td>hard at 110%</td><td>Compared to the program's published limit for your size. Over the limit but within 10%: kept and flagged — a typed figure is an estimate, and programs measure income their own way (some count only the most recent month). More than 10% over: removed. No published limit: kept and flagged. Skipped if you don't answer.</td></tr>
 <tr><td>7</td><td>Does any of this apply? (seven boxes)</td><td>soft</td><td>Each program's documented rule is read as <b>required</b>, <b>no requirement</b>, a <b>qualifying path</b>, or <b>not documented</b>. A required gate you didn't tick demotes the program to "possible" with a note — it never hides it. A program's qualifying paths are pooled: matching any single one satisfies all of them. Being unhoused implies the crisis box; choosing the utility path implies the utility-account box.</td></tr>
 </tbody></table></div>
 </section>

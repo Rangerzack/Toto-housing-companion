@@ -20,11 +20,12 @@
 // while a false inclusion costs them a phone call.
 
 // How far over a published limit someone's GROSS income can be before the
-// program is ruled out. Programs test ADJUSTED income — gross minus deductions
-// for dependents, childcare, and medical or disability expenses — so a gross
-// figure modestly over the line often still qualifies. Anything inside the
-// margin is surfaced as a prompt instead of an exclusion.
-const OVER_LIMIT_MARGIN = 1.2;
+// program is ruled out. The figure typed into the wizard is a rough annual
+// estimate, and programs measure income their own way — some count only the
+// most recent month (Minnesota's EAP), some count different household
+// members, and HUD programs apply deductions when setting the rent share.
+// A figure modestly over the line is therefore a prompt, not an exclusion.
+const OVER_LIMIT_MARGIN = 1.1;
 
 const money = (amount) =>
   `$${Math.round(amount).toLocaleString('en-US')}`;
@@ -270,11 +271,11 @@ export function evaluateProgram(program, answers, lookup, proportional) {
     } else if (answers.income > limit.amount * OVER_LIMIT_MARGIN) {
       return { verdict: 'excluded', checks, reason: 'Household income is above the program limit' };
     } else if (answers.income > limit.amount) {
-      // Programs count ADJUSTED income — gross minus deductions for
-      // dependents, childcare, and medical or disability expenses — which is
-      // always lower than the gross figure someone types in here. Being over
-      // on gross is genuinely not a decision, so it is a prompt, not a cut.
-      checks.push(`Your income is above the published limit of ${money(limit.amount)}, but programs count income after deductions for dependents and medical costs — still worth applying.`);
+      // The annual figure typed here is an estimate, and programs measure
+      // income their own way — different windows, different members counted.
+      // Being modestly over on that basis is not a decision, so it is a
+      // prompt, not a cut.
+      checks.push(`Your income is a little above the published limit of ${money(limit.amount)}, but programs measure income their own way — some count only your most recent month — so it's still worth applying.`);
     }
   }
 

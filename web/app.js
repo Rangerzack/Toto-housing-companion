@@ -460,7 +460,7 @@ function updateIncomeFeedback() {
   } else if (answers.income <= at80) {
     feedback.textContent = `That's under the ${money(at80)} limit most housing programs use for a household of ${size}.`;
   } else {
-    feedback.textContent = `That's above the usual ${money(at80)} limit for a household of ${size}, but programs count income after deductions — you'll still see what may fit.`;
+    feedback.textContent = `That's above the usual ${money(at80)} limit for a household of ${size}, but close numbers are worth checking — programs measure income their own way — and you'll still see what may fit.`;
   }
 }
 
