@@ -1194,3 +1194,69 @@ main:has(.step--results.is-active) {
     border: 1px solid #ccc;
   }
 }
+
+/* --- Grouped, foldable results; auto-advance hint; editable chips ------ */
+
+.step__auto {
+  margin: 1rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.results__group {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 1.75rem 0 0.75rem;
+}
+.results__group--likely { color: var(--likely); }
+.results__group--possible { color: var(--possible); }
+
+.result--lead { border-top: 3px solid var(--likely); }
+
+.result__fold summary {
+  list-style: none;
+  cursor: pointer;
+}
+.result__fold summary::-webkit-details-marker { display: none; }
+.result__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.result__headmain { min-width: 0; }
+.result__headside {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+.result__caveats {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--possible);
+}
+.result__chev {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--ink-faint);
+  transition: transform 0.2s;
+}
+.result__chev svg { width: 1.1rem; height: 1.1rem; }
+.result__fold[open] .result__chev { transform: rotate(180deg); }
+.result__fold[open] .result__caveats { display: none; }
+.result__body { margin-top: 0.35rem; }
+
+.chip--edit {
+  cursor: pointer;
+  font-family: inherit;
+}
+.chip--edit:hover {
+  border-color: var(--border-strong);
+  color: var(--ink);
+}

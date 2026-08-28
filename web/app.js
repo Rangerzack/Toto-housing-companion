@@ -521,6 +521,22 @@ document.addEventListener('change', (event) => {
   }
 });
 
+// Single-choice steps advance on their own: picking the answer IS the
+// submission, and the pause lets the selection paint before the step moves
+// (the measured journey drops from ~15 taps to ~9). The timer debounces
+// keyboard arrow-through so a screen-reader or keyboard user exploring the
+// options isn't yanked forward mid-list; Back stays for corrections.
+const AUTO_ADVANCE_STEPS = new Set(['state', 'county', 'help', 'situation']);
+let advanceTimer = null;
+document.addEventListener('change', (event) => {
+  const step = event.target.closest('.step')?.dataset.step;
+  if (!AUTO_ADVANCE_STEPS.has(step) || event.target.type !== 'radio') return;
+  clearTimeout(advanceTimer);
+  advanceTimer = setTimeout(() => {
+    if (currentStep() === step) goNext();
+  }, 450);
+});
+
 // ---------------------------------------------------------------------------
 // Housing plan
 // ---------------------------------------------------------------------------
@@ -732,28 +748,49 @@ function contactLink({ value, pattern, scheme, sanitize }) {
   return el('a', { href: `${scheme}:${target}`, text: value });
 }
 
-function renderResultCard({ program, verdict, checks }) {
+function renderResultCard({ program, verdict, checks }, { open = false, lead = false } = {}) {
   const eligibility = program.eligibility || {};
   const contacts = program.contacts || {};
   const counties = (program.program_counties || [])
     .map((c) => c.county)
     .filter((c) => c !== 'Unspecified');
 
-  const card = el('li', { class: 'result' });
+  // The card is a fold: the collapsed row carries just enough to decide
+  // whether to open it — name, who runs it, and how many caveats wait
+  // inside. Nineteen tall cards were a nineteen-screen scroll on a phone;
+  // nineteen rows with the best match already open is a page.
+  const outer = el('li', { class: `result${lead ? ' result--lead' : ''}` });
+  const fold = el('details', { class: 'result__fold', open });
+  const card = el('div', { class: 'result__body' });
 
-  card.append(
-    el('div', { class: 'result__top' }, [
-      el('div', {}, [
+  fold.append(
+    el('summary', { class: 'result__head' }, [
+      el('div', { class: 'result__headmain' }, [
         el('h3', { class: 'result__name', text: program.program_name }),
         program.administrator &&
           el('p', { class: 'result__admin', text: program.administrator }),
+        checks.length
+          ? el('p', {
+              class: 'result__caveats',
+              text: `${checks.length} thing${checks.length === 1 ? '' : 's'} worth checking`,
+            })
+          : null,
       ]),
-      el('span', {
-        class: `badge badge--${verdict}`,
-        text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
-      }),
+      el('span', { class: 'result__headside' }, [
+        el('span', {
+          class: `badge badge--${verdict}`,
+          text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
+        }),
+        el('span', {
+          class: 'result__chev',
+          'aria-hidden': 'true',
+          html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>',
+        }),
+      ]),
     ]),
   );
+  fold.append(card);
+  outer.append(fold);
 
   const tags = [program.category, counties.length ? counties.join(', ') : null].filter(Boolean);
   if (tags.length) {
@@ -873,7 +910,7 @@ function renderResultCard({ program, verdict, checks }) {
   );
   card.append(el('div', { class: 'result__actions' }, actions));
 
-  return card;
+  return outer;
 }
 
 function renderNotice({ icon, title, body, actionLabel, onAction }) {
@@ -891,15 +928,18 @@ function renderNotice({ icon, title, body, actionLabel, onAction }) {
   ]);
 }
 
+// Each chip carries the step it edits: on the results page they are buttons
+// that jump straight back to that question, answers intact — a two-tap
+// correction instead of Start over.
 function answerChips() {
-  const chips = [`${answers.county} County, ${answers.state}`];
+  const chips = [[`${answers.county} County, ${answers.state}`, 'county']];
 
   const helpLabels = {
     finding: 'Finding a place',
     staying: 'Staying housed',
     utility: 'Utility bill',
   };
-  chips.push(helpLabels[answers.help]);
+  chips.push([helpLabels[answers.help], 'help']);
 
   const situationLabels = {
     renting: 'Renting',
@@ -907,12 +947,13 @@ function answerChips() {
     homeowner: 'Homeowner',
     buying: 'Hoping to buy',
   };
-  if (situationLabels[answers.situation]) chips.push(situationLabels[answers.situation]);
-  chips.push(
+  if (situationLabels[answers.situation]) chips.push([situationLabels[answers.situation], 'situation']);
+  chips.push([
     `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
-  );
-  if (answers.income != null) chips.push(`$${currency.format(answers.income)}/yr`);
-  else chips.push('Income not given');
+    'household',
+  ]);
+  if (answers.income != null) chips.push([`$${currency.format(answers.income)}/yr`, 'income']);
+  else chips.push(['Income not given', 'income']);
 
   return chips;
 }
@@ -971,24 +1012,36 @@ async function renderResults() {
   const matches = screenPrograms(programs, answers, limitLookup, proportionalStandards);
   const likely = matches.filter((m) => m.verdict === 'likely').length;
 
+  const possible = matches.length - likely;
+  const countText = !matches.length
+    ? 'No clear matches in this county'
+    : likely && possible
+      ? `${likely} strong fit${likely === 1 ? '' : 's'}, ${possible} more worth a call`
+      : likely
+        ? `${likely} strong fit${likely === 1 ? '' : 's'} for your situation`
+        : `${matches.length} program${matches.length === 1 ? '' : 's'} worth a call`;
+
   const header = el('div', { class: 'results__header' }, [
-    el('h2', {
-      class: 'results__count',
-      text: matches.length
-        ? `${matches.length} program${matches.length === 1 ? '' : 's'} may fit your situation`
-        : 'No clear matches in this county',
-    }),
+    el('h2', { class: 'results__count', text: countText }),
     matches.length &&
       el('p', {
         class: 'results__summary',
         text: likely
-          ? `${likely} look${likely === 1 ? 's' : ''} like a strong fit based on what you told us. Programs are listed best-match first.`
+          ? 'The best matches are open below — tap any other program to see its details and next steps.'
           : 'These are worth a call — each has a requirement we couldn\'t confirm from your answers.',
       }),
     el(
       'div',
       { class: 'results__chips' },
-      answerChips().map((c) => el('span', { class: 'chip', text: c })),
+      answerChips().map(([label, step]) =>
+        el('button', {
+          type: 'button',
+          class: 'chip chip--edit',
+          text: label,
+          title: 'Change this answer',
+          onclick: () => showStep(step),
+        }),
+      ),
     ),
   ]);
   host.append(header);
@@ -1005,13 +1058,28 @@ async function renderResults() {
       }),
     );
   } else {
-    host.append(
+    // Strong fits and worth-a-call render as separate labelled groups, the
+    // best match already open; everything else is a row that opens on tap.
+    const strong = matches.filter((m) => m.verdict === 'likely');
+    const maybe = matches.filter((m) => m.verdict !== 'likely');
+    const listOf = (items, leadFirst) =>
       el(
         'ul',
         { class: 'results__list' },
-        matches.map(renderResultCard),
-      ),
-    );
+        items.map((m, i) =>
+          renderResultCard(m, { open: leadFirst && i === 0, lead: leadFirst && i === 0 }),
+        ),
+      );
+    if (strong.length && maybe.length) {
+      host.append(
+        el('p', { class: 'results__group results__group--likely', text: `Strong fits (${strong.length})` }),
+        listOf(strong, true),
+        el('p', { class: 'results__group results__group--possible', text: `Worth a call (${maybe.length})` }),
+        listOf(maybe, false),
+      );
+    } else {
+      host.append(listOf(matches, strong.length > 0));
+    }
   }
 
   host.append(
