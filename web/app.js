@@ -324,6 +324,8 @@ function restart() {
     input.checked = false;
   });
   $('#county-choices').replaceChildren();
+  $('#county-filter').hidden = true;
+  $('#county-filter').value = '';
   $('#situation-choices').replaceChildren();
   $('#household-size').value = '1';
   $('#income').value = '';
@@ -381,6 +383,16 @@ function buildStateChoices() {
   }
 }
 
+// Hides county options that don't match the filter text. Filtering never
+// clears a selection — a chosen county stays chosen even when typed past.
+function filterCountyChoices() {
+  const query = $('#county-filter').value.trim().toLowerCase();
+  $$('#county-choices .choice').forEach((label) => {
+    const name = label.textContent.trim().toLowerCase();
+    label.hidden = Boolean(query) && !name.includes(query);
+  });
+}
+
 // Rebuilt whenever the state changes. Only that state's counties are offered,
 // which is what removes the old ambiguity — "Douglas" now means exactly one
 // county, because the state was already established.
@@ -388,8 +400,18 @@ function buildCountyChoices() {
   const container = $('#county-choices');
   container.replaceChildren();
 
+  const filter = $('#county-filter');
+  filter.value = '';
+
   const state = STATES.find((s) => s.code === answers.state);
-  if (!state) return;
+  if (!state) {
+    filter.hidden = true;
+    return;
+  }
+
+  // A dozen-plus radio tiles is a lot of scanning on a phone; a short list
+  // doesn't need the extra control.
+  filter.hidden = state.counties.length <= 8;
 
   for (const { name, areaId } of state.counties) {
     const input = el('input', { type: 'radio', name: 'county', value: name });
@@ -1189,6 +1211,7 @@ async function renderResults() {
 
 function init() {
   buildStateChoices();
+  $('#county-filter').addEventListener('input', filterCountyChoices);
   wireHelpChoices();
   wireRentGoalChoices();
   wireBedroomChoices();

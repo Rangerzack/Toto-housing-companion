@@ -143,6 +143,16 @@
           If you're not currently housed, choose the county where you're staying
           or where you'd like to find housing.
         </p>
+        <input
+          type="search"
+          id="county-filter"
+          class="county-filter"
+          placeholder="Type to narrow the list"
+          autocomplete="off"
+          aria-controls="county-choices"
+          aria-label="Filter counties"
+          hidden
+        />
         <div class="choices choices--grid" role="radiogroup" aria-labelledby="county-label" id="county-choices"></div>
         <span id="county-label" class="visually-hidden">County</span>
         <div class="step__actions">
