@@ -1576,3 +1576,67 @@ dialog.pdialog::backdrop { background: rgba(15, 12, 10, 0.55); }
     display: none !important;
   }
 }
+
+/* --- Rental preferences step ----------------------------------------- */
+
+/* Compact minimum-size pills: less chrome than full choice cards, since
+   the whole row is one field. */
+.choices--pills {
+  grid-template-columns: repeat(auto-fill, minmax(6.2rem, 1fr));
+  gap: 0.5rem;
+}
+.choices--pills .choice {
+  padding: 0.55rem 0.6rem;
+  min-height: 2.9rem;
+  justify-content: center;
+  text-align: center;
+}
+.choices--pills .choice::before {
+  display: none;
+}
+.choices--pills .choice__title {
+  font-size: 0.9375rem;
+}
+
+.money--prefs {
+  margin-bottom: 0.5rem;
+}
+
+/* --- Income period toggle -------------------------------------------- */
+
+.period-toggle {
+  display: inline-flex;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem;
+  gap: 0.2rem;
+  margin-bottom: 1rem;
+}
+.period-toggle__opt {
+  position: relative;
+  cursor: pointer;
+}
+.period-toggle__opt input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.period-toggle__opt span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 1.1rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.9375rem;
+  font-weight: 550;
+  color: var(--ink-soft);
+  transition: background 0.15s, color 0.15s;
+}
+.period-toggle__opt input:checked + span {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.period-toggle__opt input:focus-visible + span {
+  outline: 3px solid var(--primary-ring);
+  outline-offset: 2px;
+}

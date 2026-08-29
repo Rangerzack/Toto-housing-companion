@@ -95,6 +95,11 @@ export function normalizeListing(raw) {
 
   listing.rent = parseMoney(listing.rent);
   listing.bedrooms = parseBedrooms(listing.bedrooms);
+  // Baths arrive as 1, "1.5", or "2 baths" — first number wins.
+  if (listing.bathrooms != null && typeof listing.bathrooms !== 'number') {
+    const match = String(listing.bathrooms).match(/\d+(\.\d+)?/);
+    listing.bathrooms = match ? Number(match[0]) : null;
+  }
   listing.photo = parsePhoto(listing.photo);
   listing.subsidized =
     listing.subsidized === true ||
@@ -197,43 +202,55 @@ export function bedroomsLabel(bedrooms) {
 /**
  * Narrows listings to the person's answers and sorts them cheapest first.
  *
- * The same principle as the program matcher applies: missing information
- * never excludes. A listing without a county stays in (the API may already
- * be scoped), one without a bedroom count stays in whatever size was asked
- * for, and one without a rent figure sorts last rather than disappearing.
+ * The same principle as the program matcher applies to MISSING information:
+ * a listing without a county stays in (the API may already be scoped), one
+ * without a bedroom count passes any size test, and one without a rent
+ * figure sorts last rather than disappearing.
+ *
+ * The search preferences themselves work the way people search:
+ *   - bedrooms and bathrooms are FLOORS, not exact sizes — someone who can
+ *     live in a studio can live in a 1-bedroom, and max rent is what caps
+ *     the search from above;
+ *   - maxRent is a hard ceiling, because the person set it as one.
  *
  * `countiesForCity` covers APIs (like Range Lab's) whose records carry a
  * city but no county: given (city, state) it returns the county name(s)
- * that city sits in, or null when unknown — and unknown, as always, keeps
- * the listing in.
+ * that city sits in, or null when unknown — and unknown keeps the listing.
+ * `answers.counties` may name several local-area counties; a listing in any
+ * of them stays.
  *
  * @returns {{listing: object, affordable: boolean|null}[]}
  */
 export function screenListings(listings, answers, countiesForCity) {
   const budget = monthlyBudget(answers.income);
-  const wanted =
-    answers.bedrooms == null || answers.bedrooms === 'any'
-      ? null
-      : Number(answers.bedrooms);
+  const floor = (v) => (v == null || v === 'any' ? null : Number(v));
+  const minBeds = floor(answers.bedrooms);
+  const minBaths = floor(answers.bathrooms);
+  const maxRent = answers.maxRent != null ? Number(answers.maxRent) : null;
+  const wantedCounties =
+    Array.isArray(answers.counties) && answers.counties.length
+      ? answers.counties
+      : answers.county
+        ? [answers.county]
+        : [];
+
+  const inWantedCounty = (county) => wantedCounties.some((c) => sameCounty(county, c));
 
   const results = [];
   for (const listing of listings) {
     if (listing.state && answers.state && !sameState(listing.state, answers.state)) continue;
-    if (listing.county && answers.county && !sameCounty(listing.county, answers.county)) continue;
+    if (listing.county && wantedCounties.length && !inWantedCounty(listing.county)) continue;
 
     // No county on the record: resolve it from the city where we can. A city
     // the map doesn't know stays in the results rather than vanishing.
-    if (!listing.county && listing.city && answers.county && countiesForCity) {
+    if (!listing.county && listing.city && wantedCounties.length && countiesForCity) {
       const counties = countiesForCity(listing.city, listing.state || answers.state);
-      if (counties && !counties.some((c) => sameCounty(c, answers.county))) continue;
+      if (counties && !counties.some(inWantedCounty)) continue;
     }
 
-    if (wanted != null && listing.bedrooms != null) {
-      // "4+" means at least four; the smaller sizes are exact — someone who
-      // asked for a studio isn't served by being shown three-bedroom houses.
-      const fits = wanted >= 4 ? listing.bedrooms >= 4 : listing.bedrooms === wanted;
-      if (!fits) continue;
-    }
+    if (minBeds != null && listing.bedrooms != null && listing.bedrooms < minBeds) continue;
+    if (minBaths != null && listing.bathrooms != null && listing.bathrooms < minBaths) continue;
+    if (maxRent != null && listing.rent != null && listing.rent > maxRent) continue;
 
     results.push({
       listing,

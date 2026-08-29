@@ -42,14 +42,22 @@ function questionSteps() {
 
 const answers = {
   state: null, // county names repeat across states; both are needed
+  // The local area: one or more counties. `county`/`areaId` mirror the first
+  // pick so older code paths, saved sessions, and legacy share links keep
+  // working.
+  counties: [],
+  areaIds: [],
   county: null,
-  areaId: null, // income_areas row backing the chosen county
+  areaId: null,
   statewideAreaId: null, // where that state's SMI limits live
   help: [], // any of: rental | staying | buying | utility
   situation: null,
-  bedrooms: null, // 'any' | '0'..'4' ('4' = 4+) — asked only with rental
+  bedrooms: null, // 'any' | '0'..'4' — a FLOOR (at least N), not exact
+  bathrooms: null, // 'any' | '1'..'3' — also a floor
+  maxRent: null, // hard ceiling on listing rent; null = no limit
   householdSize: 1,
-  income: null, // null means "not provided"
+  income: null, // ALWAYS annual gross; null means "not provided"
+  incomePeriod: 'year', // how the person is typing it: 'year' | 'month'
   circumstances: {},
 };
 
@@ -57,10 +65,10 @@ let stepIndex = 0;
 let programs = null; // cached after first fetch
 let fetchError = null;
 
-// Published income limits for the selected county plus the statewide SMI set,
-// keyed `${standard}|${tier}|${size}`. Refetched when the county changes.
+// Published income limits for the local-area counties plus the statewide SMI
+// set, keyed `${standard}|${tier}|${size}`. Refetched when the area changes.
 let limits = new Map();
-let limitsAreaId = null;
+let limitsKey = null;
 
 // Standards whose tiers are exact multiples of one base (SMI, poverty
 // guidelines). Scaling to an unpublished tier is arithmetic for these and an
@@ -158,20 +166,28 @@ async function fetchPrograms() {
 }
 
 /**
- * Loads published limits for one county plus the statewide SMI table.
+ * Loads published limits for the local-area counties plus the statewide SMI
+ * table.
  *
  * v_current_income_limits already drops expired rows and expands published
- * brackets (USDA's "1-4 person") into one row per size. Several effective dates
- * can still be current at once, so the newest wins.
+ * brackets (USDA's "1-4 person") into one row per size. Several effective
+ * dates can still be current at once, so the newest wins per area.
+ *
+ * When the local area spans counties whose limits differ, the MOST GENEROUS
+ * figure wins for each (standard, tier, size): the matcher can't tell which
+ * county a given program will test against, and under the house rule a
+ * too-generous limit only ever turns an exclusion into a worth-checking
+ * phone call, never the reverse.
  */
-async function fetchLimits(areaId, statewideAreaId) {
-  if (limitsAreaId === areaId) return;
+async function fetchLimits(areaIds, statewideAreaId) {
+  const ids = (Array.isArray(areaIds) ? areaIds : [areaIds]).filter(Boolean);
+  const key = ids.join(',');
+  if (!ids.length || limitsKey === key) return;
 
-  // The county's own limits plus that state's statewide SMI table — Oregon
-  // programs test against Oregon's SMI, Minnesota's against Minnesota's.
+  const areas = [...ids, statewideAreaId, 'US-48'].map(encodeURIComponent).join(',');
   const query =
-    'v_current_income_limits?select=standard_id,tier_pct,household_size,amount,effective_date' +
-    `&or=(area_id.eq.${areaId},area_id.eq.${statewideAreaId},area_id.eq.US-48)`;
+    'v_current_income_limits?select=area_id,standard_id,tier_pct,household_size,amount,effective_date' +
+    `&area_id=in.(${areas})`;
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -180,18 +196,29 @@ async function fetchLimits(areaId, statewideAreaId) {
   });
   if (!response.ok) throw new Error(`Income limits: ${response.status}`);
 
+  // Newest row per (area, standard, tier, size)…
   const newest = new Map();
-  const chosen = new Map();
+  const perArea = new Map();
   for (const row of await response.json()) {
-    const key = `${row.standard_id}|${Number(row.tier_pct)}|${row.household_size}`;
-    if (!newest.has(key) || row.effective_date > newest.get(key)) {
-      newest.set(key, row.effective_date);
-      chosen.set(key, Number(row.amount));
+    const rowKey = `${row.area_id}|${row.standard_id}|${Number(row.tier_pct)}|${row.household_size}`;
+    if (!newest.has(rowKey) || row.effective_date > newest.get(rowKey)) {
+      newest.set(rowKey, row.effective_date);
+      perArea.set(rowKey, {
+        key: `${row.standard_id}|${Number(row.tier_pct)}|${row.household_size}`,
+        amount: Number(row.amount),
+      });
+    }
+  }
+  // …then the highest across areas per (standard, tier, size).
+  const chosen = new Map();
+  for (const { key: limitKey, amount } of perArea.values()) {
+    if (!chosen.has(limitKey) || amount > chosen.get(limitKey)) {
+      chosen.set(limitKey, amount);
     }
   }
 
   limits = chosen;
-  limitsAreaId = areaId;
+  limitsKey = key;
 }
 
 /**
@@ -288,12 +315,17 @@ function restart() {
   answers.county = null;
   answers.state = null;
   answers.areaId = null;
+  answers.counties = [];
+  answers.areaIds = [];
   answers.statewideAreaId = null;
   answers.help = [];
   answers.situation = null;
   answers.bedrooms = null;
+  answers.bathrooms = null;
+  answers.maxRent = null;
   answers.householdSize = 1;
   answers.income = null;
+  answers.incomePeriod = 'year';
   answers.circumstances = {};
 
   $$('input[type="radio"], input[type="checkbox"]').forEach((input) => {
@@ -306,6 +338,10 @@ function restart() {
   $('#household-size').value = '1';
   $('#income').value = '';
   $('#income-feedback').textContent = '';
+  $('#max-rent').value = '';
+  const yearRadio = $('input[name="income-period"][value="year"]');
+  if (yearRadio) yearRadio.checked = true;
+  $('#income-suffix').textContent = 'per year';
   plan = [];
   savePlan();
   syncChoiceSelection();
@@ -319,7 +355,7 @@ function restart() {
 function refreshContinueButtons() {
   const gates = {
     state: answers.state,
-    county: answers.county,
+    county: answers.counties.length,
     help: answers.help.length,
     situation: answers.situation,
   };
@@ -339,9 +375,11 @@ function buildStateChoices() {
     const input = el('input', { type: 'radio', name: 'state', value: state.code });
     input.addEventListener('change', () => {
       if (answers.state !== state.code) {
-        // Counties are state-specific, so a changed state invalidates the pick.
+        // Counties are state-specific, so a changed state invalidates the picks.
         answers.county = null;
         answers.areaId = null;
+        answers.counties = [];
+        answers.areaIds = [];
       }
       answers.state = state.code;
       answers.statewideAreaId = state.statewideAreaId;
@@ -386,23 +424,32 @@ function buildCountyChoices() {
     return;
   }
 
-  // A dozen-plus radio tiles is a lot of scanning on a phone; a short list
+  // A dozen-plus tiles is a lot of scanning on a phone; a short list
   // doesn't need the extra control.
   filter.hidden = state.counties.length <= 8;
 
-  for (const { name, areaId } of state.counties) {
-    const input = el('input', { type: 'radio', name: 'county', value: name });
-    input.checked = answers.county === name;
+  // Checkboxes, not radios: the local area can span several counties.
+  for (const { name } of state.counties) {
+    const input = el('input', { type: 'checkbox', name: 'county', value: name });
+    input.checked = answers.counties.includes(name);
     input.addEventListener('change', () => {
-      answers.county = name;
-      answers.areaId = areaId;
+      const picked = new Set($$('#county-choices input:checked').map((i) => i.value));
+      const chosen = state.counties.filter((c) => picked.has(c.name));
+      answers.counties = chosen.map((c) => c.name);
+      answers.areaIds = chosen.map((c) => c.areaId);
+      answers.county = answers.counties[0] || null;
+      answers.areaId = answers.areaIds[0] || null;
       refreshContinueButtons();
       // Warm the limits while they answer the next questions, so the income
       // step can show real thresholds the moment it opens.
-      fetchLimits(areaId, state.statewideAreaId).then(updateIncomeFeedback).catch(() => {});
+      if (answers.areaIds.length) {
+        fetchLimits(answers.areaIds, state.statewideAreaId)
+          .then(updateIncomeFeedback)
+          .catch(() => {});
+      }
     });
     container.append(
-      el('label', { class: 'choice' }, [
+      el('label', { class: 'choice choice--check' }, [
         input,
         el('span', { class: 'choice__body' }, [
           el('span', { class: 'choice__title', text: name }),
@@ -466,11 +513,22 @@ function wireHelpChoices() {
   });
 }
 
-function wireBedroomChoices() {
+function wireRentalPrefs() {
   $$('#bedrooms-choices input[type="radio"]').forEach((input) => {
     input.addEventListener('change', () => {
       answers.bedrooms = input.value; // 'any' or '0'..'4' — kept as strings
     });
+  });
+  $$('#bathrooms-choices input[type="radio"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      answers.bathrooms = input.value; // 'any' or '1'..'3'
+    });
+  });
+  const maxRent = $('#max-rent');
+  maxRent.addEventListener('input', () => {
+    const digits = maxRent.value.replace(/[^\d]/g, '');
+    maxRent.value = digits ? currency.format(Number(digits)) : '';
+    answers.maxRent = digits ? Number(digits) : null;
   });
 }
 
@@ -498,25 +556,33 @@ function updateIncomeFeedback() {
   const size = answers.householdSize;
   const at80 = limitLookup('HUD-MFI', 80, size);
   const at50 = limitLookup('HUD-MFI', 50, size);
+  const areaLabel =
+    answers.counties.length > 1 ? 'your area' : `${answers.county} County`;
+  // When they're typing a monthly figure, confirm the annual number the
+  // programs will actually measure against.
+  const annualNote =
+    answers.incomePeriod === 'month' && answers.income != null
+      ? `That's about ${money(answers.income)} a year. `
+      : '';
 
   if (answers.income == null) {
     feedback.textContent = at80
-      ? `Most housing programs in ${answers.county} County serve households of ${size} earning under ${money(at80)}.`
+      ? `Most housing programs in ${areaLabel} serve households of ${size} earning under ${money(at80)}.`
       : '';
     return;
   }
 
   if (!at80 || !at50) {
-    feedback.textContent = '';
+    feedback.textContent = annualNote;
     return;
   }
 
   if (answers.income <= at50) {
-    feedback.textContent = `That's within reach of most programs here, including those limited to ${money(at50)} for a household of ${size}.`;
+    feedback.textContent = `${annualNote}That's within reach of most programs here, including those limited to ${money(at50)} for a household of ${size}.`;
   } else if (answers.income <= at80) {
-    feedback.textContent = `That's under the ${money(at80)} limit most housing programs use for a household of ${size}.`;
+    feedback.textContent = `${annualNote}That's under the ${money(at80)} limit most housing programs use for a household of ${size}.`;
   } else {
-    feedback.textContent = `That's above the usual ${money(at80)} limit for a household of ${size}, but close numbers are worth checking — programs measure income their own way — and you'll still see what may fit.`;
+    feedback.textContent = `${annualNote}That's above the usual ${money(at80)} limit for a household of ${size}, but close numbers are worth checking — programs measure income their own way — and you'll still see what may fit.`;
   }
 }
 
@@ -524,12 +590,27 @@ function wireIncomeStep() {
   const input = $('#income');
   const skip = $('#income-skip');
 
-  input.addEventListener('input', () => {
+  // answers.income is ALWAYS the annual figure; the period toggle only
+  // changes how the typed number is read.
+  const readIncome = () => {
     const digits = input.value.replace(/[^\d]/g, '');
     input.value = digits ? currency.format(Number(digits)) : '';
-    answers.income = digits ? Number(digits) : null;
+    const entered = digits ? Number(digits) : null;
+    answers.income =
+      entered == null ? null : answers.incomePeriod === 'month' ? entered * 12 : entered;
     if (digits) skip.checked = false;
     updateIncomeFeedback();
+  };
+
+  input.addEventListener('input', readIncome);
+
+  $$('input[name="income-period"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      answers.incomePeriod = radio.value;
+      $('#income-suffix').textContent = radio.value === 'month' ? 'per month' : 'per year';
+      input.placeholder = radio.value === 'month' ? '2,900' : '35,000';
+      readIncome();
+    });
   });
 
   skip.addEventListener('change', () => {
@@ -578,7 +659,9 @@ document.addEventListener('change', (event) => {
 // keyboard arrow-through so a screen-reader or keyboard user exploring the
 // options isn't yanked forward mid-list; Back stays for corrections.
 // The help step is multi-select now, so it keeps its Continue button.
-const AUTO_ADVANCE_STEPS = new Set(['state', 'county', 'situation', 'bedrooms']);
+// County is a multi-select now and the rental-preferences step holds several
+// inputs, so both keep a Continue button instead of advancing on selection.
+const AUTO_ADVANCE_STEPS = new Set(['state', 'situation']);
 let advanceTimer = null;
 document.addEventListener('change', (event) => {
   const step = event.target.closest('.step')?.dataset.step;
@@ -618,13 +701,15 @@ function encodeShareHash() {
     '#a=' +
     [
       answers.state,
-      answers.county,
+      answers.counties.join('+'),
       answers.help.join('+'),
       answers.situation || 'x',
       answers.householdSize,
       answers.income ?? 'x',
       circs.join('+') || 'x',
       answers.bedrooms ?? 'x',
+      answers.maxRent ?? 'x',
+      answers.bathrooms ?? 'x',
     ]
       .map(encodeURIComponent)
       .join('/')
@@ -632,16 +717,23 @@ function encodeShareHash() {
 }
 
 const BEDROOM_VALUES = ['any', '0', '1', '2', '3', '4'];
+const BATHROOM_VALUES = ['any', '1', '2', '3'];
 
 function decodeShareHash(hash) {
   const match = /^#a=(.+)$/.exec(hash || '');
   if (!match) return null;
   const parts = match[1].split('/').map(decodeURIComponent);
-  // 7 parts is a link minted before the bedrooms question existed.
-  if (parts.length !== 7 && parts.length !== 8) return null;
-  const [state, county, helpRaw, situationRaw, size, income, circs, bedroomsRaw] = parts;
+  // Links have grown over time: 7 parts predates the bedrooms question,
+  // 8 predates max rent and bathrooms. All still decode.
+  if (parts.length < 7 || parts.length > 10) return null;
+  const [state, countyRaw, helpRaw, situationRaw, size, income, circs, bedroomsRaw, maxRentRaw, bathroomsRaw] = parts;
   const config = STATES.find((s) => s.code === state);
-  const countyRow = config?.counties.find((c) => c.name === county);
+  // The county slot may name several local-area counties.
+  const countyRows = countyRaw
+    .split('+')
+    .map((name) => config?.counties.find((c) => c.name === name))
+    .filter(Boolean);
+  const countyRow = countyRows[0];
   const help = helpRaw
     .split('+')
     .map((h) => LEGACY_HELP[h] || h)
@@ -652,7 +744,9 @@ function decodeShareHash(hash) {
   if (!['renting', 'homeowner'].includes(situation)) situation = null;
   return {
     state,
-    county,
+    counties: countyRows.map((c) => c.name),
+    areaIds: countyRows.map((c) => c.areaId),
+    county: countyRow.name,
     areaId: countyRow.areaId,
     statewideAreaId: config.statewideAreaId,
     help,
@@ -660,6 +754,12 @@ function decodeShareHash(hash) {
     bedrooms:
       bedroomsRaw && bedroomsRaw !== 'x' && BEDROOM_VALUES.includes(bedroomsRaw)
         ? bedroomsRaw
+        : null,
+    maxRent:
+      maxRentRaw && maxRentRaw !== 'x' && Number(maxRentRaw) > 0 ? Number(maxRentRaw) : null,
+    bathrooms:
+      bathroomsRaw && bathroomsRaw !== 'x' && BATHROOM_VALUES.includes(bathroomsRaw)
+        ? bathroomsRaw
         : null,
     householdSize: Math.min(12, Math.max(1, Number(size) || 1)),
     income: income === 'x' ? null : Number(income) || null,
@@ -676,13 +776,22 @@ function hydrateUi() {
   };
   check('#state-choices input', answers.state);
   if (answers.state) buildCountyChoices();
-  check('#county-choices input', answers.county);
+  for (const name of answers.counties) check('#county-choices input', name);
   for (const need of answers.help) check('#help-choices input', need);
   buildSituationChoices();
   check('#situation-choices input', answers.situation);
   if (answers.bedrooms != null) check('#bedrooms-choices input', String(answers.bedrooms));
+  if (answers.bathrooms != null) check('#bathrooms-choices input', String(answers.bathrooms));
+  if (answers.maxRent != null) $('#max-rent').value = currency.format(answers.maxRent);
   $('#household-size').value = String(answers.householdSize);
-  if (answers.income != null) $('#income').value = currency.format(answers.income);
+  check('input[name="income-period"]', answers.incomePeriod || 'year');
+  $('#income-suffix').textContent = answers.incomePeriod === 'month' ? 'per month' : 'per year';
+  if (answers.income != null) {
+    // Display in the period they were typing in; the stored figure is annual.
+    const shown =
+      answers.incomePeriod === 'month' ? Math.round(answers.income / 12) : answers.income;
+    $('#income').value = currency.format(shown);
+  }
   for (const [key, value] of Object.entries(answers.circumstances || {})) {
     if (value) check('#circumstance-choices input', key);
   }
@@ -690,8 +799,8 @@ function hydrateUi() {
   syncHouseholdUi();
   syncCircumstanceVisibility();
   refreshContinueButtons();
-  if (answers.areaId) {
-    fetchLimits(answers.areaId, answers.statewideAreaId).then(updateIncomeFeedback).catch(() => {});
+  if (answers.areaIds.length) {
+    fetchLimits(answers.areaIds, answers.statewideAreaId).then(updateIncomeFeedback).catch(() => {});
   }
 }
 
@@ -897,7 +1006,7 @@ let listingsError = null;
 let listingsKey = null; // per state|county, so path changes don't refetch
 
 async function loadListings() {
-  const key = `${answers.state}|${answers.county}`;
+  const key = `${answers.state}|${answers.counties.join('+')}`;
   if (listingsKey === key) return;
 
   listings = null;
@@ -1067,10 +1176,14 @@ function buildListingsSection() {
   );
 
   if (!matches.length) {
+    const areaLabel =
+      answers.counties.length > 1
+        ? `${answers.counties.join(' / ')} counties`
+        : `${answers.county} County`;
     frag.append(
       el('div', { class: 'listings-note' }, [
         el('span', {
-          text: `No current listings matched in ${answers.county} County. Listings turn over quickly — worth checking back.`,
+          text: `No current listings matched in ${areaLabel}. Listings turn over quickly — worth checking back, or try loosening your max rent or size.`,
         }),
       ]),
     );
@@ -1462,15 +1575,30 @@ function renderNotice({ icon, title, body, actionLabel, onAction }) {
 // that jump straight back to that question, answers intact — a two-tap
 // correction instead of Start over.
 function answerChips() {
-  const chips = [[`${answers.county} County, ${answers.state}`, 'county']];
+  const areaLabel =
+    answers.counties.length > 1
+      ? `${answers.counties.join(', ')} counties, ${answers.state}`
+      : `${answers.county} County, ${answers.state}`;
+  const chips = [[areaLabel, 'county']];
 
   const helpLabels = {
-    rental: 'Finding a rental',
+    rental: 'Finding a home',
     staying: 'Staying housed',
-    buying: 'Buying a home',
+    buying: 'Buying a house',
     utility: 'Utility bill',
   };
   chips.push([answers.help.map((h) => helpLabels[h] || h).join(' · '), 'help']);
+
+  // The rental search preferences, when any were set.
+  if (answers.help.includes('rental')) {
+    const bits = [];
+    if (answers.bedrooms && answers.bedrooms !== 'any') {
+      bits.push(answers.bedrooms === '0' ? 'Studio+' : `${answers.bedrooms}+ bd`);
+    }
+    if (answers.bathrooms && answers.bathrooms !== 'any') bits.push(`${answers.bathrooms}+ ba`);
+    if (answers.maxRent != null) bits.push(`≤ $${currency.format(answers.maxRent)}/mo`);
+    if (bits.length) chips.push([bits.join(' · '), 'bedrooms']);
+  }
 
   const situationLabels = {
     renting: 'Renting',
@@ -1523,9 +1651,9 @@ async function renderResults() {
   // a slow connection or a failed warm-up. If it still fails, every lookup
   // returns null and income limits become "worth checking" notes rather than
   // exclusions — nobody is filtered out on data we don't have.
-  if (!fetchError && answers.areaId) {
+  if (!fetchError && answers.areaIds.length) {
     try {
-      await fetchLimits(answers.areaId, answers.statewideAreaId);
+      await fetchLimits(answers.areaIds, answers.statewideAreaId);
     } catch {
       /* fall through with whatever limits we have */
     }
@@ -1661,7 +1789,9 @@ async function renderResults() {
       }
       return frag;
     };
-    if (sections.length === 1) {
+    // A lone program section skips its label — unless the rentals section is
+    // above it, where unlabeled program cards would read as more rentals.
+    if (sections.length === 1 && !listingsPromise) {
       host.append(sectionBlock(sections[0].items, true));
     } else {
       sections.forEach((s, si) => {
@@ -1710,7 +1840,7 @@ function init() {
   buildStateChoices();
   $('#county-filter').addEventListener('input', filterCountyChoices);
   wireHelpChoices();
-  wireBedroomChoices();
+  wireRentalPrefs();
   wireIncomeStep();
   wireCircumstances();
 
@@ -1765,6 +1895,13 @@ function init() {
           answers.situation = null;
         }
         if (!['renting', 'homeowner'].includes(answers.situation)) answers.situation = null;
+        // Sessions saved before the multi-county local area and the income
+        // period toggle.
+        if (!Array.isArray(answers.counties) || !answers.counties.length) {
+          answers.counties = answers.county ? [answers.county] : [];
+          answers.areaIds = answers.areaId ? [answers.areaId] : [];
+        }
+        if (answers.incomePeriod !== 'month') answers.incomePeriod = 'year';
         hydrateUi();
         if (saved.step && saved.step !== 'intro') resumeStep = saved.step;
       }

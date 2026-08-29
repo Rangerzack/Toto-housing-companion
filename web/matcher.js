@@ -227,14 +227,27 @@ export function evaluateProgram(program, answers, lookup, proportional) {
     .filter((c) => !c.state_code || c.state_code === answers.state)
     .map((c) => c.county);
 
+  // The local area can name several counties; serving any of them keeps the
+  // program in. (answers.county remains as a single-county fallback for old
+  // saved sessions and share links.)
+  const wantedCounties =
+    Array.isArray(answers.counties) && answers.counties.length
+      ? answers.counties
+      : answers.county
+        ? [answers.county]
+        : [];
   const servesCounty =
-    inState.includes(answers.county) || inState.includes('Statewide');
+    wantedCounties.some((c) => inState.includes(c)) || inState.includes('Statewide');
   const countyUnspecified = inState.includes('Unspecified');
+  const areaLabel =
+    wantedCounties.length > 1
+      ? `${wantedCounties.join(' or ')} counties`
+      : `${wantedCounties[0]} County`;
   if (!servesCounty && !countyUnspecified) {
-    return { verdict: 'excluded', checks, reason: `Does not serve ${answers.county} County` };
+    return { verdict: 'excluded', checks, reason: `Does not serve ${areaLabel}` };
   }
   if (!servesCounty && countyUnspecified) {
-    checks.push(`Service area isn't clearly documented — confirm they cover ${answers.county} County.`);
+    checks.push(`Service area isn't clearly documented — confirm they cover ${areaLabel}.`);
   }
 
   // --- Kind of help (hard, where the category is classifiable) ----------

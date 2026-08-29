@@ -135,12 +135,13 @@
         </div>
       </section>
 
-      <!-- 2. County ------------------------------------------------------ -->
+      <!-- 2. Local area (one or more counties) ----------------------------- -->
       <section class="step" data-step="county" tabindex="-1">
-        <h2 class="step__title">Which county do you live in?</h2>
+        <h2 class="step__title">What's your local area?</h2>
         <p class="step__hint">
-          If you're not currently housed, choose the county where you're staying
-          or where you'd like to find housing.
+          Choose every county that works for you — programs and rentals often
+          cross county lines. If you're not currently housed, pick the
+          counties where you're staying or would like to live.
         </p>
         <input
           type="search"
@@ -152,11 +153,11 @@
           aria-label="Filter counties"
           hidden
         />
-        <div class="choices choices--grid" role="radiogroup" aria-labelledby="county-label" id="county-choices"></div>
-        <span id="county-label" class="visually-hidden">County</span>
-        <p class="step__auto">Picking an answer moves you on — use Back to change it.</p>
+        <div class="choices choices--grid" role="group" aria-labelledby="county-label" id="county-choices"></div>
+        <span id="county-label" class="visually-hidden">Local area counties</span>
         <div class="step__actions">
           <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
         </div>
       </section>
 
@@ -168,7 +169,7 @@
           <label class="choice choice--check">
             <input type="checkbox" name="help" value="rental" />
             <span class="choice__body">
-              <span class="choice__title">Finding a rental</span>
+              <span class="choice__title">Finding a home</span>
               <span class="choice__desc">A place to rent, or help affording one</span>
             </span>
           </label>
@@ -182,7 +183,7 @@
           <label class="choice choice--check">
             <input type="checkbox" name="help" value="buying" />
             <span class="choice__body">
-              <span class="choice__title">Buying a home</span>
+              <span class="choice__title">Buying a house</span>
               <span class="choice__desc">Down payment help, first-time buyer programs, homebuyer classes</span>
             </span>
           </label>
@@ -213,55 +214,52 @@
         </div>
       </section>
 
-      <!-- 4b. Bedrooms (asked only when finding a rental) ------------------- -->
+      <!-- 4b. Rental preferences (asked only when finding a home) ----------- -->
       <section class="step" data-step="bedrooms" tabindex="-1">
-        <h2 class="step__title">What size place are you looking for?</h2>
+        <h2 class="step__title">About the place you're looking for</h2>
         <p class="step__hint">
-          We'll show available rentals that fit. Pick "Any size" to see
-          everything — places without a listed size always show.
+          All of this is optional. Bedrooms and bathrooms are minimums, not
+          exact sizes — if a studio works for you, a 1-bedroom in budget works
+          too, so your max rent does the narrowing.
         </p>
-        <div class="choices choices--grid" role="radiogroup" aria-labelledby="bedrooms-label" id="bedrooms-choices">
-          <label class="choice">
-            <input type="radio" name="bedrooms" value="any" />
-            <span class="choice__body">
-              <span class="choice__title">Any size</span>
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="bedrooms" value="0" />
-            <span class="choice__body">
-              <span class="choice__title">Studio</span>
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="bedrooms" value="1" />
-            <span class="choice__body">
-              <span class="choice__title">1 bedroom</span>
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="bedrooms" value="2" />
-            <span class="choice__body">
-              <span class="choice__title">2 bedrooms</span>
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="bedrooms" value="3" />
-            <span class="choice__body">
-              <span class="choice__title">3 bedrooms</span>
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="bedrooms" value="4" />
-            <span class="choice__body">
-              <span class="choice__title">4+ bedrooms</span>
-            </span>
-          </label>
+
+        <p class="choices__group">Most I can pay in rent</p>
+        <div class="money money--prefs">
+          <span class="money__symbol" aria-hidden="true">$</span>
+          <input
+            type="text"
+            id="max-rent"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="No limit"
+            aria-label="Maximum monthly rent"
+          />
+          <span class="money__suffix">per month</span>
         </div>
-        <span id="bedrooms-label" class="visually-hidden">Bedrooms</span>
-        <p class="step__auto">Picking an answer moves you on — use Back to change it.</p>
+
+        <p class="choices__group">Bedrooms (at least)</p>
+        <div class="choices choices--grid choices--pills" role="radiogroup" aria-labelledby="bedrooms-label" id="bedrooms-choices">
+          <label class="choice"><input type="radio" name="bedrooms" value="any" /><span class="choice__body"><span class="choice__title">Any</span></span></label>
+          <label class="choice"><input type="radio" name="bedrooms" value="0" /><span class="choice__body"><span class="choice__title">Studio +</span></span></label>
+          <label class="choice"><input type="radio" name="bedrooms" value="1" /><span class="choice__body"><span class="choice__title">1 +</span></span></label>
+          <label class="choice"><input type="radio" name="bedrooms" value="2" /><span class="choice__body"><span class="choice__title">2 +</span></span></label>
+          <label class="choice"><input type="radio" name="bedrooms" value="3" /><span class="choice__body"><span class="choice__title">3 +</span></span></label>
+          <label class="choice"><input type="radio" name="bedrooms" value="4" /><span class="choice__body"><span class="choice__title">4 +</span></span></label>
+        </div>
+        <span id="bedrooms-label" class="visually-hidden">Minimum bedrooms</span>
+
+        <p class="choices__group">Bathrooms (at least)</p>
+        <div class="choices choices--grid choices--pills" role="radiogroup" aria-labelledby="bathrooms-label" id="bathrooms-choices">
+          <label class="choice"><input type="radio" name="bathrooms" value="any" /><span class="choice__body"><span class="choice__title">Any</span></span></label>
+          <label class="choice"><input type="radio" name="bathrooms" value="1" /><span class="choice__body"><span class="choice__title">1 +</span></span></label>
+          <label class="choice"><input type="radio" name="bathrooms" value="2" /><span class="choice__body"><span class="choice__title">2 +</span></span></label>
+          <label class="choice"><input type="radio" name="bathrooms" value="3" /><span class="choice__body"><span class="choice__title">3 +</span></span></label>
+        </div>
+        <span id="bathrooms-label" class="visually-hidden">Minimum bathrooms</span>
+
         <div class="step__actions">
           <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next">Continue</button>
         </div>
       </section>
 
@@ -296,11 +294,23 @@
 
       <!-- 4. Income ------------------------------------------------------ -->
       <section class="step" data-step="income" tabindex="-1">
-        <h2 class="step__title">Roughly what does your household earn in a year?</h2>
+        <h2 class="step__title">Roughly what does your household earn?</h2>
         <p class="step__hint">
-          Before taxes, adding up everyone's income. An estimate is fine — most
-          programs set limits based on this.
+          Add up everyone's <strong>gross income</strong> — that's the amount
+          before taxes or anything else is taken out, the "gross pay" line on
+          a pay stub. Programs set their limits on this number. A close guess
+          is completely fine.
         </p>
+        <div class="period-toggle" role="radiogroup" aria-label="Income period">
+          <label class="period-toggle__opt">
+            <input type="radio" name="income-period" value="year" checked />
+            <span>Per year</span>
+          </label>
+          <label class="period-toggle__opt">
+            <input type="radio" name="income-period" value="month" />
+            <span>Per month</span>
+          </label>
+        </div>
         <div class="money">
           <span class="money__symbol" aria-hidden="true">$</span>
           <input
@@ -311,7 +321,7 @@
             placeholder="35,000"
             aria-describedby="income-feedback"
           />
-          <span class="money__suffix">per year</span>
+          <span class="money__suffix" id="income-suffix">per year</span>
         </div>
         <p class="feedback" id="income-feedback" role="status" aria-live="polite"></p>
         <label class="checkbox checkbox--standalone">
