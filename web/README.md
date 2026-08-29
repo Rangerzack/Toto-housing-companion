@@ -1,7 +1,8 @@
 # Toto Housing Companion — screener frontend
 
-A guided five-question screener that matches someone to housing, utility, and
-homebuying programs from the Supabase database in this repo.
+A guided screener that matches someone to housing, utility, and homebuying
+programs from the Supabase database in this repo — or, for someone looking to
+rent, searches available rental listings from a configurable housing data API.
 
 No build step, no dependencies, no framework — plain ES modules, so you can
 edit a file and refresh the page.
@@ -35,7 +36,8 @@ edit a file and refresh the page.
 | `styles.css` | Design system — light/dark, responsive, print styles           |
 | `app.js`     | Wizard navigation, Supabase fetch, results rendering           |
 | `matcher.js` | Eligibility matching engine (no DOM — testable on its own)     |
-| `config.js`  | Connection settings, county list, AMI reference table          |
+| `housing.js` | Rental-listing search: fetch, normalize, filter (no DOM)       |
+| `config.js`  | Connection settings, county list, housing API endpoint         |
 | `serve.ps1`  | Dependency-free local static server                            |
 
 ## How matching works
@@ -67,6 +69,38 @@ Two details worth knowing:
 - Income limits get a 10% grace band. The AMI table is an estimate and real
   HUD limits vary by county, so someone just over the line still sees the
   program, flagged rather than dropped.
+
+## The rental search ("Help finding a place")
+
+Someone who answers *Finding a place to live* → *I'm looking to rent* is asked
+one more question: do they want **help paying for rent** or **help finding a
+place**? Paying continues into the program screener above. Finding runs the
+housing search instead: it asks what size place they need, skips the
+program-specific circumstance checkboxes, and shows actual rental listings for
+their county — cheapest first, each flagged against the common
+30%-of-gross-income affordability guideline when an income was given. The
+results always offer a one-click switch to the rent-assistance programs, since
+the two kinds of help usually go together.
+
+Listings come from the API configured in `config.js`:
+
+```js
+export const HOUSING_API_URL = 'https://api.example.org/listings?state={state}&county={county}';
+export const HOUSING_API_HEADERS = { 'X-Api-Key': '...' }; // if your API needs one
+```
+
+`{state}` and `{county}` are filled in from the person's answers; a URL
+without placeholders is fetched as-is and filtered client-side. `housing.js`
+unwraps common response envelopes (`{listings: [...]}`, `{data: {...}}`, a
+bare array) and maps common field names (`rent`/`price`/`monthly_rent`,
+`beds`/`bedrooms`, and so on) onto one internal shape — if your API's names
+aren't recognized, add them to `FIELD_ALIASES` at the top of `housing.js`.
+Until a URL is configured, the search path shows a "not connected yet" notice
+and offers the program screener instead; nothing else is affected.
+
+The same no-false-exclusion principle as the matcher applies: a listing
+missing its county, size, or rent is never dropped for it — unknown rent
+sorts last and reads "Not listed — ask".
 
 ## Before this goes in front of real people
 

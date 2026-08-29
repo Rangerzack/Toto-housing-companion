@@ -12,6 +12,30 @@ export const SUPABASE_ANON_KEY = 'sb_publishable_uWoahvwMH3VYZ7n2egHi8Q_AJBUSZjQ
 export const FORMS_BUCKET = 'intake-forms';
 
 // ---------------------------------------------------------------------------
+// Housing search API
+// ---------------------------------------------------------------------------
+// The rental-search path ("Help finding a place") reads available listings
+// from this endpoint via housing.js. Until a real URL is pasted in, that path
+// shows a "not connected yet" notice instead of results — the program
+// screener is unaffected.
+//
+// `{state}` and `{county}` in the URL are replaced with the person's answers
+// (e.g. 'https://api.example.org/listings?state={state}&county={county}').
+// An endpoint without placeholders is fetched as-is; results are narrowed to
+// the chosen county client-side either way, so both styles of API work.
+//
+// The response can be a bare JSON array or wrapped ({listings: [...]},
+// {data: {...}}, etc.) — housing.js unwraps the common envelopes and maps
+// common field names automatically. If your API's field names don't map,
+// extend FIELD_ALIASES in housing.js.
+export const HOUSING_API_URL = 'PASTE_YOUR_HOUSING_API_URL_HERE';
+
+// Sent with every listings request. Add whatever your API needs, e.g.
+// { 'X-Api-Key': '...' } or { Authorization: 'Bearer ...' }. Remember this
+// file ships to the browser — only put keys here that are safe to be public.
+export const HOUSING_API_HEADERS = {};
+
+// ---------------------------------------------------------------------------
 // Service areas
 // ---------------------------------------------------------------------------
 // County names are not unique across states: Oregon and Minnesota both have a

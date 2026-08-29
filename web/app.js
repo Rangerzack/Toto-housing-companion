@@ -3,17 +3,36 @@ import {
   SUPABASE_ANON_KEY,
   FORMS_BUCKET,
   STATES,
+  HOUSING_API_URL,
+  HOUSING_API_HEADERS,
 } from './config.js?v=__BUILD__';
 import { screenPrograms } from './matcher.js?v=__BUILD__';
+import {
+  fetchListings,
+  screenListings,
+  monthlyBudget,
+  bedroomsLabel,
+} from './housing.js?v=__BUILD__';
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
 const STEPS = [
-  'intro', 'state', 'county', 'help', 'situation',
-  'household', 'income', 'circumstances', 'results',
+  'intro', 'state', 'county', 'help', 'situation', 'rent-goal',
+  'household', 'bedrooms', 'income', 'circumstances', 'results',
 ];
+
+// The screener forks for someone looking to rent: "help paying for rent"
+// continues into the program matcher, "help finding a place" runs the
+// housing search (housing.js) against the listings API instead.
+function isHousingSearch() {
+  return (
+    answers.help === 'finding' &&
+    answers.situation === 'renting' &&
+    answers.rentGoal === 'search'
+  );
+}
 
 // Someone asking about a utility bill is not asked whether they rent or own —
 // utility programs serve both, so the question would be friction for a person
@@ -23,6 +42,12 @@ function questionSteps() {
   return STEPS.filter((s) => {
     if (s === 'intro' || s === 'results') return false;
     if (s === 'situation') return answers.help !== 'utility';
+    // Only renters are asked to choose between paying and finding.
+    if (s === 'rent-goal') return answers.help === 'finding' && answers.situation === 'renting';
+    // Bedrooms only matter when searching listings; the circumstance
+    // checkboxes only matter when screening programs.
+    if (s === 'bedrooms') return isHousingSearch();
+    if (s === 'circumstances') return !isHousingSearch();
     return true;
   });
 }
@@ -34,6 +59,8 @@ const answers = {
   statewideAreaId: null, // where that state's SMI limits live
   help: null, // finding | staying | utility
   situation: null,
+  rentGoal: null, // pay | search — only asked when finding + renting
+  bedrooms: null, // 'any' | 0..4 (4 means 4+) — only asked when searching
   householdSize: 1,
   income: null, // null means "not provided"
   circumstances: {},
@@ -42,6 +69,12 @@ const answers = {
 let stepIndex = 0;
 let programs = null; // cached after first fetch
 let fetchError = null;
+
+// Listings from the housing API, cached per state|county so switching paths
+// or changing answers doesn't refetch needlessly.
+let listings = null;
+let listingsError = null;
+let listingsKey = null;
 
 // Published income limits for the selected county plus the statewide SMI set,
 // keyed `${standard}|${tier}|${size}`. Refetched when the county changes.
@@ -68,7 +101,9 @@ function el(tag, props = {}, children = []) {
     else node.setAttribute(key, value === true ? '' : value);
   }
   for (const child of [].concat(children)) {
-    if (child == null || child === false) continue;
+    // Skips every falsy child, not just null/false: `count && el(...)`
+    // evaluates to 0 when the count is zero, and appending 0 renders "0".
+    if (!child) continue;
     node.append(typeof child === 'string' ? document.createTextNode(child) : child);
   }
   return node;
@@ -178,6 +213,27 @@ async function fetchLimits(areaId, statewideAreaId) {
   limitsAreaId = areaId;
 }
 
+// Loads rental listings for the chosen county, remembering an error so the
+// results view can render it (with a retry) rather than throwing.
+async function loadListings() {
+  const key = `${answers.state}|${answers.county}`;
+  if (listingsKey === key) return;
+
+  listings = null;
+  listingsError = null;
+  try {
+    listings = await fetchListings({
+      url: HOUSING_API_URL,
+      headers: HOUSING_API_HEADERS,
+      state: answers.state,
+      county: answers.county,
+    });
+  } catch (error) {
+    listingsError = error;
+  }
+  listingsKey = key;
+}
+
 /**
  * Passed to the matcher; null means nothing is published for that combination.
  *
@@ -236,6 +292,7 @@ function showStep(name) {
   section.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
+  if (name === 'income') syncIncomeHint();
   if (name === 'results') renderResults();
 }
 
@@ -257,6 +314,8 @@ function restart() {
   answers.statewideAreaId = null;
   answers.help = null;
   answers.situation = null;
+  answers.rentGoal = null;
+  answers.bedrooms = null;
   answers.householdSize = 1;
   answers.income = null;
   answers.circumstances = {};
@@ -282,6 +341,8 @@ function refreshContinueButtons() {
     county: answers.county,
     help: answers.help,
     situation: answers.situation,
+    'rent-goal': answers.rentGoal,
+    bedrooms: answers.bedrooms != null,
   };
   for (const [step, answered] of Object.entries(gates)) {
     const btn = $(`.step[data-step="${step}"] [data-action="next"]`);
@@ -388,6 +449,9 @@ function buildSituationChoices() {
     const input = el('input', { type: 'radio', name: 'situation', value });
     input.checked = answers.situation === value;
     input.addEventListener('change', () => {
+      // The pay-or-search fork only makes sense for a renter; changing the
+      // situation invalidates it.
+      if (answers.situation !== value) setRentGoal(null);
       answers.situation = value;
       syncCircumstanceVisibility();
       refreshContinueButtons();
@@ -407,12 +471,44 @@ function buildSituationChoices() {
 function wireHelpChoices() {
   $$('#help-choices input[type="radio"]').forEach((input) => {
     input.addEventListener('change', () => {
-      if (answers.help !== input.value) answers.situation = null;
+      if (answers.help !== input.value) {
+        answers.situation = null;
+        setRentGoal(null);
+      }
       answers.help = input.value;
       // Utility programs serve renters and owners alike, so that path skips
       // the tenure question and nothing needs to stay selected.
       if (answers.help === 'utility') answers.situation = 'utility';
       buildSituationChoices();
+      refreshContinueButtons();
+    });
+  });
+}
+
+// Kept in one place because the fork is set from two directions: the radio
+// buttons on the rent-goal step, and the "see programs instead" switch on the
+// housing results. Both the answer and the radio state must agree, or coming
+// Back from results would show a selection that no longer matches.
+function setRentGoal(value) {
+  answers.rentGoal = value;
+  $$('input[name="rent-goal"]').forEach((input) => {
+    input.checked = input.value === value;
+  });
+}
+
+function wireRentGoalChoices() {
+  $$('#rent-goal-choices input[type="radio"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      answers.rentGoal = input.value;
+      refreshContinueButtons();
+    });
+  });
+}
+
+function wireBedroomChoices() {
+  $$('#bedrooms-choices input[type="radio"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      answers.bedrooms = input.value; // 'any' or '0'..'4' — kept as strings
       refreshContinueButtons();
     });
   });
@@ -435,11 +531,36 @@ function setHouseholdSize(next) {
 const currency = new Intl.NumberFormat('en-US');
 const money = (amount) => `$${currency.format(Math.round(amount))}`;
 
+// The income question serves both paths, but means different things on each:
+// program limits on one, a rent budget on the other. The hint swaps when the
+// step opens so nobody is told about "program limits" while hunting for a
+// listing.
+const INCOME_HINTS = {
+  programs:
+    'Before taxes, adding up everyone’s income. An estimate is fine — most programs set limits based on this.',
+  search:
+    'Before taxes, adding up everyone’s income. An estimate is fine — we use it to flag listings that fit the common 30%-of-income rent guideline.',
+};
+
+function syncIncomeHint() {
+  $('#income-hint').textContent = isHousingSearch()
+    ? INCOME_HINTS.search
+    : INCOME_HINTS.programs;
+}
+
 // Real published thresholds beat a percentage nobody can act on: "under
 // $70,650" is checkable, "80% of AMI" is not.
 function updateIncomeFeedback() {
   const feedback = $('#income-feedback');
   const size = answers.householdSize;
+
+  if (isHousingSearch()) {
+    const budget = monthlyBudget(answers.income);
+    feedback.textContent = budget
+      ? `Rent up to about ${money(budget)}/month fits the common 30%-of-income guideline. You'll still see every listing.`
+      : '';
+    return;
+  }
   const at80 = limitLookup('HUD-MFI', 80, size);
   const at50 = limitLookup('HUD-MFI', 50, size);
 
@@ -656,6 +777,19 @@ function renderNotice({ icon, title, body, actionLabel, onAction }) {
 function answerChips() {
   const chips = [`${answers.county} County, ${answers.state}`];
 
+  if (isHousingSearch()) {
+    chips.push('Finding a rental');
+    chips.push(
+      answers.bedrooms === 'any' ? 'Any size' : bedroomsLabel(Number(answers.bedrooms)),
+    );
+    chips.push(
+      `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
+    );
+    const budget = monthlyBudget(answers.income);
+    chips.push(budget ? `~${money(budget)}/mo budget` : 'Income not given');
+    return chips;
+  }
+
   const helpLabels = {
     finding: 'Finding a place',
     staying: 'Staying housed',
@@ -679,7 +813,236 @@ function answerChips() {
   return chips;
 }
 
+function renderListingCard({ listing, affordable }) {
+  const card = el('li', { class: 'result' });
+
+  // Affordability is a flag, never a filter — same principle as the program
+  // matcher. Rent above the guideline still shows, marked so the person can
+  // decide for themselves.
+  const badge =
+    affordable === true
+      ? el('span', { class: 'badge badge--likely', text: '✓ Fits your budget' })
+      : affordable === false
+        ? el('span', { class: 'badge badge--possible', text: 'Above 30% guideline' })
+        : null;
+
+  card.append(
+    el('div', { class: 'result__top' }, [
+      el('div', {}, [
+        el('h3', { class: 'result__name', text: listing.name }),
+        listing.address &&
+          listing.address !== listing.name &&
+          el('p', { class: 'result__admin', text: listing.address }),
+      ]),
+      badge,
+    ]),
+  );
+
+  const place = [listing.city, listing.county && `${listing.county} County`]
+    .filter(Boolean)
+    .join(', ');
+  const tags = [
+    bedroomsLabel(listing.bedrooms),
+    listing.bathrooms != null && `${listing.bathrooms} bath`,
+    listing.type,
+    place || null,
+    listing.subsidized && 'Income-restricted / subsidized',
+  ].filter(Boolean);
+  if (tags.length) {
+    card.append(
+      el(
+        'div',
+        { class: 'result__meta' },
+        tags.map((t) => el('span', { class: 'tag', text: t })),
+      ),
+    );
+  }
+
+  card.append(
+    el('div', { class: 'result__benefit' }, [
+      el('span', { text: 'Rent: ' }),
+      el('strong', {
+        text: listing.rent != null ? `${money(listing.rent)}/month` : 'Not listed — ask',
+      }),
+    ]),
+  );
+
+  if (listing.availability) {
+    card.append(
+      el('p', { class: 'result__summary', text: `Availability: ${listing.availability}` }),
+    );
+  }
+
+  const contactBits = [];
+  const phone = contactLink({
+    value: listing.phone,
+    pattern: PHONE_RE,
+    scheme: 'tel',
+    sanitize: (v) => v.replace(/[^\d+]/g, ''),
+  });
+  if (phone) contactBits.push(phone);
+  const email = contactLink({ value: listing.email, pattern: EMAIL_RE, scheme: 'mailto' });
+  if (email) contactBits.push(email);
+  if (contactBits.length) {
+    card.append(el('div', { class: 'result__contact' }, contactBits));
+  }
+
+  if (listing.url) {
+    card.append(
+      el('div', { class: 'result__actions' }, [
+        el('a', {
+          class: 'btn btn--primary btn--sm',
+          href: listing.url,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          text: 'View listing',
+        }),
+      ]),
+    );
+  }
+
+  return card;
+}
+
+// Flips the fork to the program screener and re-renders in place. The person
+// lands on rent-assistance results without re-answering anything — the
+// screener already has every answer that path needs.
+function switchToPrograms() {
+  setRentGoal('pay');
+  renderResults();
+}
+
+async function renderHousingResults() {
+  const host = $('#results-state');
+  host.replaceChildren(
+    el('div', { class: 'skeleton' }, [
+      el('div', { class: 'skeleton__card' }),
+      el('div', { class: 'skeleton__card' }),
+      el('div', { class: 'skeleton__card' }),
+    ]),
+  );
+
+  await loadListings();
+  host.replaceChildren();
+
+  if (listingsError) {
+    const isMissingApi = listingsError.message === 'MISSING_HOUSING_API';
+    host.append(
+      renderNotice({
+        icon: isMissingApi ? '🔑' : '⚠️',
+        title: isMissingApi
+          ? 'Housing search not connected yet'
+          : "Couldn't load rental listings",
+        body: isMissingApi
+          ? 'Add the housing data API URL to web/config.js (HOUSING_API_URL), then reload this page. You can still check rent assistance programs below.'
+          : `${listingsError.message}. Check your connection and try again — or check rent assistance programs below.`,
+        actionLabel: isMissingApi ? 'See rent assistance programs' : 'Try again',
+        onAction: isMissingApi
+          ? switchToPrograms
+          : () => {
+              listingsKey = null;
+              renderResults();
+            },
+      }),
+    );
+    if (!isMissingApi) {
+      host.append(
+        el('div', { class: 'step__actions' }, [
+          el('button', {
+            type: 'button',
+            class: 'btn btn--ghost',
+            text: 'See rent assistance programs instead',
+            onclick: switchToPrograms,
+          }),
+        ]),
+      );
+    }
+    return;
+  }
+
+  const matches = screenListings(listings, answers);
+  const affordableCount = matches.filter((m) => m.affordable === true).length;
+
+  host.append(
+    el('div', { class: 'results__header' }, [
+      el('h2', {
+        class: 'results__count',
+        text: matches.length
+          ? `${matches.length} rental${matches.length === 1 ? '' : 's'} in ${answers.county} County`
+          : `No rentals found in ${answers.county} County`,
+      }),
+      matches.length &&
+        el('p', {
+          class: 'results__summary',
+          text:
+            (affordableCount
+              ? `${affordableCount} fit${affordableCount === 1 ? 's' : ''} the 30%-of-income guideline for your household. `
+              : '') +
+            'Listed cheapest first. Availability changes fast — call before visiting.',
+        }),
+      el(
+        'div',
+        { class: 'results__chips' },
+        answerChips().map((c) => el('span', { class: 'chip', text: c })),
+      ),
+    ]),
+  );
+
+  if (!matches.length) {
+    host.append(
+      renderNotice({
+        icon: '🔍',
+        title: 'Nothing matched right now',
+        body:
+          'Listings turn over quickly, so it is worth checking back. You can also try a different size or county — or see rent assistance programs, which can open up places that would otherwise be out of reach.',
+        actionLabel: 'See rent assistance programs',
+        onAction: switchToPrograms,
+      }),
+    );
+  } else {
+    host.append(
+      el(
+        'ul',
+        { class: 'results__list' },
+        matches.map(renderListingCard),
+      ),
+    );
+  }
+
+  host.append(
+    el('div', { class: 'step__actions' }, [
+      matches.length &&
+        el('button', {
+          type: 'button',
+          class: 'btn btn--ghost',
+          text: 'Also see rent assistance programs',
+          onclick: switchToPrograms,
+        }),
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost',
+        text: 'Change my answers',
+        onclick: () => showStep('bedrooms'),
+      }),
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost',
+        text: 'Print or save',
+        onclick: () => window.print(),
+      }),
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost',
+        text: 'Start over',
+        onclick: restart,
+      }),
+    ]),
+  );
+}
+
 async function renderResults() {
+  if (isHousingSearch()) return renderHousingResults();
+
   const host = $('#results-state');
   host.replaceChildren();
 
@@ -807,6 +1170,8 @@ async function renderResults() {
 function init() {
   buildStateChoices();
   wireHelpChoices();
+  wireRentGoalChoices();
+  wireBedroomChoices();
   wireIncomeStep();
   wireCircumstances();
 

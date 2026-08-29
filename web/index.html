@@ -87,9 +87,10 @@
       <section class="step step--intro is-active" data-step="intro" tabindex="-1">
         <h1 class="intro__title">Find housing help you may qualify for</h1>
         <p class="intro__lead">
-          Answer five short questions about your household. We'll show you rent
-          assistance, utility help, and homebuying programs in your area
-          that look like a fit — along with who to contact.
+          Answer a few short questions about your household. We'll show you
+          rent assistance, utility help, homebuying programs — or available
+          rentals — in your area that look like a fit, along with who to
+          contact.
         </p>
         <ul class="intro__points">
           <li>
@@ -196,6 +197,38 @@
         </div>
       </section>
 
+      <!-- 4b. Rent fork: pay for it, or find it ---------------------------- -->
+      <!-- Only shown to someone who said they're looking to rent. It decides
+           whether the screener runs the program matcher or the housing
+           search, so the two paths never blur together in the results. -->
+      <section class="step" data-step="rent-goal" tabindex="-1">
+        <h2 class="step__title">What would help most right now?</h2>
+        <p class="step__hint">
+          Pick one — you can always come back and check the other.
+        </p>
+        <div class="choices" role="radiogroup" aria-labelledby="rent-goal-label" id="rent-goal-choices">
+          <label class="choice">
+            <input type="radio" name="rent-goal" value="pay" />
+            <span class="choice__body">
+              <span class="choice__title">Help paying for rent</span>
+              <span class="choice__desc">Rent assistance, deposits, and voucher programs you may qualify for</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="rent-goal" value="search" />
+            <span class="choice__body">
+              <span class="choice__title">Help finding a place</span>
+              <span class="choice__desc">Search available rentals in your area that fit your household and budget</span>
+            </span>
+          </label>
+        </div>
+        <span id="rent-goal-label" class="visually-hidden">Kind of rental help</span>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
+        </div>
+      </section>
+
       <!-- 3. Household size ---------------------------------------------- -->
       <section class="step" data-step="household" tabindex="-1">
         <h2 class="step__title">How many people live in your household?</h2>
@@ -225,10 +258,62 @@
         </div>
       </section>
 
+      <!-- 3b. Bedrooms (housing search path only) -------------------------- -->
+      <section class="step" data-step="bedrooms" tabindex="-1">
+        <h2 class="step__title">What size place are you looking for?</h2>
+        <p class="step__hint">
+          Pick what would work best. Listings without a listed size still show
+          up whatever you choose.
+        </p>
+        <div class="choices choices--grid" role="radiogroup" aria-labelledby="bedrooms-label" id="bedrooms-choices">
+          <label class="choice">
+            <input type="radio" name="bedrooms" value="any" />
+            <span class="choice__body">
+              <span class="choice__title">Any size</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="bedrooms" value="0" />
+            <span class="choice__body">
+              <span class="choice__title">Studio</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="bedrooms" value="1" />
+            <span class="choice__body">
+              <span class="choice__title">1 bedroom</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="bedrooms" value="2" />
+            <span class="choice__body">
+              <span class="choice__title">2 bedrooms</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="bedrooms" value="3" />
+            <span class="choice__body">
+              <span class="choice__title">3 bedrooms</span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="bedrooms" value="4" />
+            <span class="choice__body">
+              <span class="choice__title">4+ bedrooms</span>
+            </span>
+          </label>
+        </div>
+        <span id="bedrooms-label" class="visually-hidden">Bedrooms</span>
+        <div class="step__actions">
+          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
+        </div>
+      </section>
+
       <!-- 4. Income ------------------------------------------------------ -->
       <section class="step" data-step="income" tabindex="-1">
         <h2 class="step__title">Roughly what does your household earn in a year?</h2>
-        <p class="step__hint">
+        <p class="step__hint" id="income-hint">
           Before taxes, adding up everyone's income. An estimate is fine — most
           programs set limits based on this.
         </p>
