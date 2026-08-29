@@ -82,16 +82,53 @@ Deno.serve(async (request) => {
     );
   }
 
-  // Pass the body and status through as-is. Listings change often but not by
-  // the minute; a short shared cache absorbs a burst of screeners without
-  // hammering the upstream API's quota.
-  const body = await upstream.text();
+  let body = await upstream.text();
+
+  // A page-capped API (Range Lab caps JSON at 100 rows) would silently drop
+  // everything past the first page while the frontend narrows client-side —
+  // "no rentals found" with rentals sitting on page two. When the response
+  // carries the {data, meta.total} pagination shape, follow it, up to a cap
+  // that stays well inside the per-minute quota. Anything else passes
+  // through untouched.
+  if (upstream.ok) {
+    try {
+      const parsed = JSON.parse(body);
+      if (
+        parsed &&
+        Array.isArray(parsed.data) &&
+        typeof parsed?.meta?.total === 'number' &&
+        parsed.data.length < parsed.meta.total
+      ) {
+        const MAX_ROWS = 500;
+        const MAX_EXTRA_PAGES = 5;
+        const sep = target.includes('?') ? '&' : '?';
+        let offset = (parsed.meta.offset ?? 0) + parsed.data.length;
+        for (let page = 0; page < MAX_EXTRA_PAGES; page++) {
+          if (parsed.data.length >= Math.min(parsed.meta.total, MAX_ROWS)) break;
+          const next = await fetch(`${target}${sep}offset=${offset}`, { headers });
+          if (!next.ok) break;
+          const nextPage = await next.json();
+          if (!Array.isArray(nextPage?.data) || nextPage.data.length === 0) break;
+          parsed.data.push(...nextPage.data);
+          offset += nextPage.data.length;
+        }
+        body = JSON.stringify(parsed);
+      }
+    } catch {
+      /* not JSON or an unexpected shape — pass through as-is */
+    }
+  }
+
+  // Listings change often but not by the minute; a short cache absorbs a
+  // burst of screeners without hammering the upstream API's quota. Errors
+  // must never be cached — that would defeat the UI's "Try again".
+  const cache = upstream.ok ? { 'Cache-Control': 'public, max-age=300' } : {};
   return new Response(body, {
     status: upstream.status,
     headers: {
       ...CORS_HEADERS,
       'Content-Type': upstream.headers.get('Content-Type') ?? 'application/json',
-      'Cache-Control': 'public, max-age=300',
+      ...cache,
     },
   });
 });

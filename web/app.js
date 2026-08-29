@@ -297,7 +297,13 @@ function showStep(name) {
   section.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (name === 'income') syncIncomeHint();
+  if (name === 'income') {
+    // Both the hint and the feedback sentence are path-specific; recompute
+    // them so switching between the program and search paths never leaves
+    // the other path's wording behind.
+    syncIncomeHint();
+    updateIncomeFeedback();
+  }
   if (name === 'results') renderResults();
 }
 
@@ -595,7 +601,9 @@ function updateIncomeFeedback() {
 
   if (isHousingSearch()) {
     const budget = monthlyBudget(answers.income);
-    feedback.textContent = budget
+    // budget > 0, not truthiness: a person with no income can honestly type
+    // 0, and "rent up to $0" would help nobody.
+    feedback.textContent = budget != null && budget > 0
       ? `Rent up to about ${money(budget)}/month fits the common 30%-of-income guideline. You'll still see every listing.`
       : '';
     return;
@@ -826,9 +834,12 @@ function answerChips() {
     chips.push({
       text: `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
     });
+    // != null, not truthiness — an income of $0 was given, and calling it
+    // "not given" while every listing gets flagged over-budget contradicts
+    // itself.
     const budget = monthlyBudget(answers.income);
     chips.push(
-      budget
+      budget != null
         ? { text: `~${money(budget)}/mo budget`, mono: true }
         : { text: 'Income not given' },
     );
@@ -985,7 +996,13 @@ function switchToPrograms() {
   renderResults();
 }
 
-async function renderHousingResults() {
+// Both renderers await network calls, and the person can change answers or
+// flip paths while one is in flight. Every render claims a fresh sequence
+// number and abandons itself the moment a newer render starts, so a slow
+// fetch can never paint stale results over current ones.
+let renderSeq = 0;
+
+async function renderHousingResults(seq) {
   const host = $('#results-state');
   host.replaceChildren(
     el('div', { class: 'skeleton' }, [
@@ -996,6 +1013,7 @@ async function renderHousingResults() {
   );
 
   await loadListings();
+  if (seq !== renderSeq) return;
   host.replaceChildren();
 
   if (listingsError) {
@@ -1114,7 +1132,8 @@ async function renderHousingResults() {
 }
 
 async function renderResults() {
-  if (isHousingSearch()) return renderHousingResults();
+  const seq = ++renderSeq;
+  if (isHousingSearch()) return renderHousingResults(seq);
 
   const host = $('#results-state');
   host.replaceChildren();
@@ -1132,6 +1151,7 @@ async function renderResults() {
     } catch (error) {
       fetchError = error;
     }
+    if (seq !== renderSeq) return;
     host.replaceChildren();
   }
 
@@ -1145,6 +1165,7 @@ async function renderResults() {
     } catch {
       /* fall through with whatever limits we have */
     }
+    if (seq !== renderSeq) return;
   }
 
   if (fetchError) {
@@ -1261,10 +1282,12 @@ function init() {
     setHouseholdSize(Number(e.target.value)),
   );
 
-  // Enter advances, as long as the step's Continue is enabled.
+  // Enter advances, as long as the step's Continue is enabled. The county
+  // filter is exempt: Enter is the natural act in a search box, and
+  // advancing mid-filter would carry the previously selected county along.
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') return;
-    if (event.target.matches('a, button')) return;
+    if (event.target.matches('a, button, #county-filter')) return;
     const btn = $(`.step[data-step="${currentStep()}"] [data-action="next"]`);
     if (btn && !btn.disabled) {
       event.preventDefault();

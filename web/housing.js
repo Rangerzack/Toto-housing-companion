@@ -172,10 +172,14 @@ export function monthlyBudget(annualIncome) {
 
 const STATE_NAMES = { oregon: 'OR', minnesota: 'MN' };
 
+// Exclude only on a state we can definitely read as different. A value in a
+// format we can't parse ("Ore.", "Oregon (OR)") is unknown, and unknown
+// keeps the listing in — same principle as everywhere else in this module.
 function sameState(listingState, code) {
   const raw = String(listingState).trim();
-  if (raw.length === 2) return raw.toUpperCase() === code;
-  return STATE_NAMES[raw.toLowerCase()] === code;
+  if (/^[A-Za-z]{2}$/.test(raw)) return raw.toUpperCase() === code;
+  const mapped = STATE_NAMES[raw.toLowerCase()];
+  return mapped ? mapped === code : true;
 }
 
 function sameCounty(listingCounty, county) {

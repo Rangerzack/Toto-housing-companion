@@ -109,7 +109,9 @@ endpoint as function secrets and proxies the request. Setting it up once:
    The listings source is Range Lab's Housing Data API
    (`GET /api/v1/properties`, `x-api-key` auth — the function's default
    `X-Api-Key` header matches, headers being case-insensitive). `{state}`
-   is filled in from the person's answers. The API filters by city rather
+   is filled in from the person's answers. `limit=100` is the API's JSON
+   page cap, not the total: the function follows the response's
+   `meta.total` and fetches up to 500 rows across pages before answering. The API filters by city rather
    than county and its records carry no county, so county narrowing happens
    client-side through the `CITY_COUNTIES` map in `config.js` — a city
    missing from that map is shown rather than hidden, so extend the map as
