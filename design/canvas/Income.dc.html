@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Manrope, "Segoe UI", Roboto, Arial, sans-serif; }
+    a { color: #e0004d; } a:hover { color: #c00042; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 844px; background: #ffffff; color: #000000; font-size: 17px; line-height: 1.6; display: flex; flex-direction: column;">
+  <div style="border-bottom: 1px solid #e9e9e9; background: #ffffff; padding: 0 20px; min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 11px;">
+      <span style="display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #ff0055; color: #ffffff; flex-shrink: 0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9.5 21v-6h5v6"></path></svg>
+      </span>
+      <span style="display: flex; flex-direction: column; line-height: 1.2;">
+        <strong style="font-size: 16px; letter-spacing: -0.01em;">Toto Housing Companion</strong>
+        <small style="font-size: 13px; color: #727272;">Oregon &amp; Minnesota</small>
+      </span>
+    </div>
+    <button style="display: inline-flex; align-items: center; justify-content: center; padding: 8px 14.4px; min-height: 36px; border: 1.5px solid #d2d2d2; border-radius: 50px; font-family: inherit; font-weight: 500; font-size: 14px; cursor: pointer; background: transparent; color: #333333; white-space: nowrap;">Start over</button>
+  </div>
+  <div style="padding: 32px 20px 64px; flex: 1;">
+    <div style="margin: 0 0 8px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 13px; color: #727272;">
+      <span>Question 6 of 7</span>
+      <span>86%</span>
+    </div>
+    <div style="height: 6px; border-radius: 999px; background: #fafafa; overflow: hidden; margin-bottom: 40px;">
+      <div style="height: 100%; width: 86%; border-radius: 999px; background: #e0004d;"></div>
+    </div>
+    <h2 style="font-size: 24px; line-height: 1.25; letter-spacing: -0.02em; margin: 0 0 10px; font-weight: 700;">Roughly what does your household earn in a year?</h2>
+    <p style="margin: 0 0 28px; color: #333333;">Before taxes, adding up everyone's income. An estimate is fine — most programs set limits based on this.</p>
+    <div style="display: flex; align-items: center; gap: 6.4px; background: #ffffff; border: 1.5px solid #e0004d; border-radius: 14px; padding: 13.6px 18.4px; box-shadow: 0 0 0 3px rgba(255, 0, 85, 0.3);">
+      <span style="font-size: 24px; color: #727272;">$</span>
+      <span style="flex: 1; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 22.4px; font-weight: 500; color: #000000;">28,000</span>
+      <span style="font-size: 14px; color: #727272; white-space: nowrap;">per year</span>
+    </div>
+    <p style="margin: 13.6px 0 0; font-size: 15px; color: #e0004d;">That's within reach of most programs here, including those limited to $39,250 for a household of 2.</p>
+    <label style="display: inline-flex; align-items: center; gap: 9.6px; cursor: pointer; color: #333333; margin-top: 20px;">
+      <span style="width: 18.4px; height: 18.4px; border: 2px solid #d2d2d2; border-radius: 5px; background: #ffffff; flex-shrink: 0;"></span>
+      <span>I'm not sure — show me everything</span>
+    </label>
+    <div style="display: flex; gap: 12px; margin-top: 32px;">
+      <button style="display: inline-flex; align-items: center; justify-content: center; padding: 12.8px 22.4px; min-height: 48px; border: 1.5px solid #d2d2d2; border-radius: 50px; font-family: inherit; font-weight: 500; font-size: 16px; cursor: pointer; background: transparent; color: #333333;">Back</button>
+      <button style="display: inline-flex; align-items: center; justify-content: center; padding: 12.8px 22.4px; min-height: 48px; border: 1.5px solid transparent; border-radius: 50px; font-family: inherit; font-weight: 500; font-size: 16px; cursor: pointer; background: #e0004d; color: #ffffff;">Continue</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
