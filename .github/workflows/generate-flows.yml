@@ -1,0 +1,55 @@
+name: Regenerate screening flows
+
+# Rebuilds web/flows/index.html and docs/flows.json from the live database
+# and commits the result when it changed. Runs on its own (manual) or as the
+# last step of a data load. Reads through the public key, so no secret is
+# needed — but it commits to master, so it is only allowed to run there.
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  flows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse to run outside master
+        if: github.ref_name != 'master'
+        run: |
+          echo "This workflow commits generated pages to master and must run from master."
+          echo "Selected branch: ${{ github.ref_name }}"
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Generate the flows page and JSON
+        shell: pwsh
+        run: ./scripts/gen_flows.ps1
+
+      - name: Commit if anything changed
+        id: commit
+        run: |
+          git add web/flows/index.html docs/flows.json
+          if git diff --cached --quiet; then
+            echo "No change to the flows page."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "Regenerate screening flows from the live database"
+          git push origin HEAD:master
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # A push made with GITHUB_TOKEN does not trigger other workflows, so the
+      # Pages deploy has to be asked for explicitly.
+      - name: Redeploy the site
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref master

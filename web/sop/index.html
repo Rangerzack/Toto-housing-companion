@@ -498,7 +498,7 @@
             <li>The standard and tier live in <code>program_income_rules</code>, derived from each program's own text at load time. They are <strong>data, not logic</strong>.</li>
             <li>A missing tier means <strong>no income test</strong>, not a default.</li>
             <li>A missing limit returns <code>NULL</code>, and the program stays in results with a “worth checking” note.</li>
-            <li>Being over a limit on <strong>gross</strong> income flags rather than excludes, because programs test income <em>after</em> deductions. Only clearly-over incomes are filtered.</li>
+            <li>Being over a limit on <strong>gross</strong> income flags rather than excludes — a typed figure is an estimate, and programs measure income their own way (some count only the most recent month). Only incomes more than 10% over the limit are filtered.</li>
             <li>Household sizes 1–8 are published; 9–12 extrapolate by HUD's rule — add 8% of the 4-person limit per extra person. Exact for proportional standards, an estimate for the rest, and an estimate never excludes anyone.</li>
             <li>Scaling to an unstored tier is exact for <span class="std-tag">HHS-FPG</span> <span class="std-tag">HUD-MTSP</span> <span class="std-tag">HUD-MTSP-HERA</span> <span class="std-tag">OR-SMI</span> <span class="std-tag">MN-SMI</span> <span class="std-tag">OHCS-MIRL</span> <span class="std-tag">OHCS-THGF</span>, and an estimate for the rest.</li>
           </ul>

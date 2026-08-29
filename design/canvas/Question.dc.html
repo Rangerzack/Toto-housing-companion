@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Manrope, "Segoe UI", Roboto, Arial, sans-serif; }
+    a { color: #e0004d; } a:hover { color: #c00042; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 844px; background: #ffffff; color: #000000; font-size: 17px; line-height: 1.6; display: flex; flex-direction: column;">
+  <div style="border-bottom: 1px solid #e9e9e9; background: #ffffff; padding: 0 20px; min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 11px;">
+      <span style="display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #ff0055; color: #ffffff; flex-shrink: 0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9.5 21v-6h5v6"></path></svg>
+      </span>
+      <span style="display: flex; flex-direction: column; line-height: 1.2;">
+        <strong style="font-size: 16px; letter-spacing: -0.01em;">Toto Housing Companion</strong>
+        <small style="font-size: 13px; color: #727272;">Oregon &amp; Minnesota</small>
+      </span>
+    </div>
+    <button style="display: inline-flex; align-items: center; justify-content: center; padding: 8px 14.4px; min-height: 36px; border: 1.5px solid #d2d2d2; border-radius: 50px; font-family: inherit; font-weight: 500; font-size: 14px; cursor: pointer; background: transparent; color: #333333; white-space: nowrap;">Start over</button>
+  </div>
+  <div style="padding: 32px 20px 64px; flex: 1;">
+    <div style="margin: 0 0 8px; display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 13px; color: #727272;">
+      <span>Question 3 of 7</span>
+      <span>43%</span>
+    </div>
+    <div style="height: 6px; border-radius: 999px; background: #fafafa; overflow: hidden; margin-bottom: 40px;">
+      <div style="height: 100%; width: 43%; border-radius: 999px; background: #e0004d;"></div>
+    </div>
+    <h2 style="font-size: 24px; line-height: 1.25; letter-spacing: -0.02em; margin: 0 0 10px; font-weight: 700;">What do you need help with?</h2>
+    <p style="margin: 0 0 28px; color: #333333;">Choose everything that applies — you can pick more than one.</p>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <label style="display: flex; align-items: flex-start; gap: 14.4px; padding: 16.8px 18.4px; background: #fff0f4; border: 1.5px solid #e0004d; border-radius: 14px; cursor: pointer;">
+        <span style="display: grid; place-items: center; flex-shrink: 0; width: 21.6px; height: 21.6px; margin-top: 2px; border: 2px solid #e0004d; border-radius: 6px; background: #e0004d; color: #ffffff; font-size: 14px; font-weight: 700;">✓</span>
+        <span style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-weight: 550; line-height: 1.35;">Finding a rental</span>
+          <span style="font-size: 14px; color: #333333; line-height: 1.45;">A place to rent, or help affording one</span>
+        </span>
+      </label>
+      <label style="display: flex; align-items: flex-start; gap: 14.4px; padding: 16.8px 18.4px; background: #ffffff; border: 1.5px solid #e9e9e9; border-radius: 14px; cursor: pointer;">
+        <span style="flex-shrink: 0; width: 21.6px; height: 21.6px; margin-top: 2px; border: 2px solid #d2d2d2; border-radius: 6px; background: #ffffff;"></span>
+        <span style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-weight: 550; line-height: 1.35;">Staying in my home</span>
+          <span style="font-size: 14px; color: #333333; line-height: 1.45;">Behind on rent or mortgage, facing eviction, or needing repairs</span>
+        </span>
+      </label>
+      <label style="display: flex; align-items: flex-start; gap: 14.4px; padding: 16.8px 18.4px; background: #ffffff; border: 1.5px solid #e9e9e9; border-radius: 14px; cursor: pointer;">
+        <span style="flex-shrink: 0; width: 21.6px; height: 21.6px; margin-top: 2px; border: 2px solid #d2d2d2; border-radius: 6px; background: #ffffff;"></span>
+        <span style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-weight: 550; line-height: 1.35;">Buying a home</span>
+          <span style="font-size: 14px; color: #333333; line-height: 1.45;">Down payment help, first-time buyer programs, homebuyer classes</span>
+        </span>
+      </label>
+      <label style="display: flex; align-items: flex-start; gap: 14.4px; padding: 16.8px 18.4px; background: #fff0f4; border: 1.5px solid #e0004d; border-radius: 14px; cursor: pointer;">
+        <span style="display: grid; place-items: center; flex-shrink: 0; width: 21.6px; height: 21.6px; margin-top: 2px; border: 2px solid #e0004d; border-radius: 6px; background: #e0004d; color: #ffffff; font-size: 14px; font-weight: 700;">✓</span>
+        <span style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-weight: 550; line-height: 1.35;">Paying a utility bill</span>
+          <span style="font-size: 14px; color: #333333; line-height: 1.45;">Heat, electricity, gas, or water — including a shutoff notice</span>
+        </span>
+      </label>
+    </div>
+    <div style="display: flex; gap: 12px; margin-top: 28px;">
+      <button style="display: inline-flex; align-items: center; justify-content: center; padding: 12.8px 22.4px; min-height: 48px; border: 1.5px solid #d2d2d2; border-radius: 50px; font-family: inherit; font-weight: 500; font-size: 16px; cursor: pointer; background: transparent; color: #333333;">Back</button>
+      <button style="display: inline-flex; align-items: center; justify-content: center; padding: 12.8px 22.4px; min-height: 48px; border: none; border-radius: 50px; font-family: inherit; font-weight: 500; font-size: 16px; cursor: pointer; background: #e0004d; color: #ffffff; flex: 1;">Continue</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

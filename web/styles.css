@@ -35,7 +35,9 @@
      at a glance, which it cannot do in the accent hue. */
   --likely: #1a7a4c;
   --likely-tint: #e9f5ee;
-  --possible: #a3620a;
+  /* Darkened from #a3620a: the "Possible match" badge at small sizes
+     measured 4.43:1 on the tint, just under AA's 4.5. */
+  --possible: #8f5608;
   --possible-tint: #fdf3e3;
 
   --radius-sm: 6px;
@@ -98,13 +100,6 @@
 *::before,
 *::after {
   box-sizing: border-box;
-}
-
-/* The hidden attribute must always win: several components (.btn, .choice)
-   set their own display, which would otherwise override the UA's
-   [hidden] { display: none } and leave "hidden" elements visible. */
-[hidden] {
-  display: none !important;
 }
 
 html {
@@ -341,103 +336,76 @@ main:has(.step--results.is-active) {
   flex-wrap: wrap;
 }
 
-/* --- Landing (the first question is the home page) ------------------- */
+/* --- Intro ---------------------------------------------------------- */
 
-.step--landing {
-  padding-top: 3.25rem;
-  text-align: center;
+.step--intro {
+  padding-top: 3.5rem;
 }
 
-.step--landing .step__title {
-  font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.6rem);
-  line-height: 1.12;
+.intro__title {
+  font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.75rem);
+  line-height: 1.1;
   letter-spacing: -0.03em;
-  margin-bottom: 0.6rem;
+  margin: 0 0 1rem;
+  text-wrap: balance;
 }
 
-.step--landing .step__hint {
-  margin-bottom: 2rem;
+.intro__lead {
+  font-size: 1.125rem;
+  color: var(--ink-soft);
+  margin: 0 0 2rem;
+  max-width: 34rem;
+  text-wrap: pretty;
 }
 
-.step--landing .choices {
-  max-width: 36rem;
-  margin: 0 auto;
-  text-align: left;
+.intro__points {
+  list-style: none;
+  margin: 0 0 2.25rem;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
 }
-
-/* The icon tile plays the control's part here; the radio dot would make
-   the row read as a form instead of a front door. */
-.step--landing .choice {
+.intro__points li {
+  display: flex;
   align-items: center;
+  gap: 0.85rem;
+  color: var(--ink-soft);
 }
-.step--landing .choice::before {
-  display: none;
-}
-
-.choice__tile {
+.intro__icon {
   display: grid;
   place-items: center;
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 12px;
-  background: var(--primary-tint);
-  color: var(--primary);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  font-size: 0.9rem;
   flex-shrink: 0;
 }
-.choice__tile svg {
-  width: 1.3rem;
-  height: 1.3rem;
-}
 
-.choice__chevron {
-  display: inline-flex;
-  margin-left: auto;
-  color: var(--ink-faint);
-  flex-shrink: 0;
-}
-.choice__chevron svg {
-  width: 1.05rem;
-  height: 1.05rem;
-}
-
-.step__actions--landing {
-  justify-content: center;
-  margin-top: 1.5rem;
-}
-
-.landing-trust {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.4rem 1.9rem;
-  margin: 2.25rem 0 0;
-  font-size: 0.875rem;
-  color: var(--ink-faint);
-}
-
-.landing-note {
-  margin: 1.9rem auto 0;
-  max-width: 34rem;
+.intro__note {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
   font-size: 0.9375rem;
   color: var(--ink-faint);
 }
 
-/* A quiet pointer for caseworkers and partners — it never competes with
-   the three doors above. */
-.landing-data {
-  margin: 0.6rem auto 0;
+/* A quiet pointer for caseworkers and partners. Sits under the note so it
+   never competes with "Get started", which is the only thing an applicant
+   should be looking at on this screen. */
+.intro__data {
+  margin-top: 0.75rem;
   font-size: 0.9375rem;
   color: var(--ink-faint);
 }
-/* No nowrap here: these links run long ("See every income and rent
-   limit →") and must wrap on narrow phones rather than widen the page. */
-.landing-data a,
+.intro__data a,
 .site-footer p a {
   color: var(--primary);
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
 }
-.landing-data a:hover,
+.intro__data a:hover,
 .site-footer p a:hover {
   text-decoration: underline;
 }
@@ -449,31 +417,10 @@ main:has(.step--results.is-active) {
   gap: 0.75rem;
 }
 
-/* Filter box above long county lists (shown only when a state has more
-   than eight). Styled like the other text inputs, sized for a thumb. */
-.county-filter {
-  width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 0.9rem;
-  padding: 0.8rem 1.1rem;
-  min-height: 3rem;
-  border: 1.5px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: 1rem;
-}
-.county-filter:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-ring);
-}
-.county-filter::placeholder {
-  color: var(--ink-faint);
-}
 .choices--grid {
-  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  /* 9rem lets a 375px phone fit two columns of counties instead of a
+     twelve-row list. */
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
 }
 
 /* Region heading above each county group. "Douglas" exists in both states, so
@@ -541,18 +488,25 @@ main:has(.step--results.is-active) {
   border-radius: 6px;
 }
 
-.choice:has(input:checked) {
+/* Selection paints through BOTH a :has() rule and a JS-mirrored class:
+   browsers were observed caching the :has() non-match for these cards and
+   never repainting when the input flips (Chrome 151, live site). The class
+   is what guarantees a person sees their choice. */
+.choice:has(input:checked),
+.choice.is-selected {
   border-color: var(--primary);
   background: var(--primary-tint);
 }
 
-.choice:has(input:checked)::before {
+.choice:has(input:checked)::before,
+.choice.is-selected::before {
   border-color: var(--primary);
   background: var(--primary);
   box-shadow: inset 0 0 0 4px var(--surface);
 }
 
-.choice--check:has(input:checked)::before {
+.choice--check:has(input:checked)::before,
+.choice--check.is-selected::before {
   box-shadow: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
   background-size: 0.95rem;
@@ -839,12 +793,6 @@ main:has(.step--results.is-active) {
   color: var(--ink-soft);
 }
 
-/* Dollar chips take the data face, like every figure on the site. */
-.chip--data {
-  font-family: var(--font-data);
-  font-size: 0.78rem;
-}
-
 /* Results are scanned rather than read in order, so they lay out as a grid
    that steps up to four across on a wide screen. The question steps stay in
    the narrow reading column; only this step widens (see main:has below). */
@@ -852,7 +800,9 @@ main:has(.step--results.is-active) {
   display: grid;
   gap: 1rem;
   grid-template-columns: 1fr;
-  align-items: start;
+  /* Cards stretch to their row, so every row reads as one even band.
+     Details open in the program dialog, never in place. */
+  align-items: stretch;
   list-style: none;
   padding: 0;
   margin: 0;
@@ -874,6 +824,11 @@ main:has(.step--results.is-active) {
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s, transform 0.2s;
+  cursor: pointer;
+  /* Column layout so the actions row can pin to the bottom edge of
+     row-stretched cards. */
+  display: flex;
+  flex-direction: column;
   /* Cards sit side by side, so a long program name or a bare URL must wrap
      rather than force the column wider than its share of the grid. */
   min-width: 0;
@@ -912,7 +867,7 @@ main:has(.step--results.is-active) {
   gap: 0.35rem;
   padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 650;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -949,18 +904,29 @@ main:has(.step--results.is-active) {
   text-wrap: pretty;
 }
 
+/* Stacked, not a baseline row: benefit texts run long ("$1,400 max / $200
+   min, size varies by household…") and must wrap inside a grid column. */
 .result__benefit {
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
   padding: 0.85rem 1rem;
   background: var(--surface-sunken);
   border-radius: var(--radius-sm);
   margin: 1rem 0;
   font-size: 0.9375rem;
 }
+.result__benefit > span {
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
 .result__benefit strong {
   color: var(--ink);
+  font-weight: 600;
 }
 
 .checks {
@@ -987,157 +953,35 @@ main:has(.step--results.is-active) {
   margin-top: 0.3rem;
 }
 
-/* --- Rental listing cards (photo-forward) --------------------------- */
-
-.result--listing {
+.result__contact {
   display: flex;
-  flex-direction: column;
-  padding: 0;
-  overflow: hidden;
-}
-
-.result__media {
-  position: relative;
-  height: 160px;
-  background: var(--surface-sunken);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.result__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.result__media-placeholder {
-  width: 44px;
-  height: 44px;
-  color: var(--border-strong);
-}
-.result__media-placeholder svg {
-  width: 100%;
-  height: 100%;
-}
-/* The badge floats over the photo, so it trades its verdict tint for a
-   solid surface — tints go transparent against an arbitrary image. */
-.result__media .badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgba(31, 28, 25, 0.12);
-}
-
-.result__body {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  padding: 1rem 1.25rem 1.25rem;
-}
-
-.result__headline {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-.result__headline .result__name {
-  font-size: 1.125rem;
-}
-
-/* Rent in the data face, like every dollar figure on the site. */
-.result__rent {
-  font-family: var(--font-data);
-  font-size: 1.1875rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-.result__rent small {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--ink-faint);
-}
-.result__rent--unknown {
-  font-size: 0.875rem;
-  color: var(--ink-faint);
-}
-
-.result--listing .result__admin {
-  font-size: 0.875rem;
-}
-
-.result__facts {
-  margin: 0.35rem 0 0.9rem;
-  font-size: 0.875rem;
-  color: var(--ink-soft);
-}
-
-.result__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-top: auto;
-  padding-top: 0.9rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
   border-top: 1px solid var(--border);
+  font-size: 0.9375rem;
 }
-/* A listing with no phone still puts its one button where every other
-   card's is. */
-.result__foot .btn {
-  margin-left: auto;
-}
-.result__foot a:not(.btn) {
+.result__contact a {
   display: inline-flex;
   align-items: center;
-  min-height: 2.25rem;
+  min-height: 2.75rem; /* comfortable tap target on a phone */
   color: var(--primary);
-  font-size: 0.875rem;
-  font-weight: 550;
   text-decoration: none;
+  font-weight: 550;
 }
-.result__foot a:not(.btn):hover {
+.result__contact a:hover {
   text-decoration: underline;
 }
-.result__foot-note {
-  font-size: 0.8125rem;
+.result__contact span {
   color: var(--ink-faint);
 }
 
-/* Program cards share the listing cards' footer language. Their content
-   above varies a lot (summary, benefit, checks), so the footer takes a
-   fixed gap rather than the listing card's pinned-to-bottom auto margin. */
-/* Benefits are sentences, not figures — let the label flow with the text
-   instead of pinning it into a skinny flex column. */
-.result--program .result__benefit {
-  display: block;
-}
-
-.result__foot--program {
-  flex-wrap: wrap;
-  row-gap: 0.6rem;
-  margin-top: 0.9rem;
-}
-
-.result__foot-contact {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.result__foot-contact .result__foot-note {
-  margin-top: 0.1rem;
-}
-
-.result__foot-actions {
+.result__actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-.result__foot-actions .btn {
-  margin-left: 0;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
 }
 
 /* --- Empty / error / loading ---------------------------------------- */
@@ -1227,10 +1071,7 @@ main:has(.step--results.is-active) {
   .site-footer,
   .testing-banner,
   .progress,
-  /* Buttons are dead weight on paper; the phone numbers still print. */
-  .result__foot-actions,
-  .result__foot .btn,
-  .step__actions,
+  .result__actions,
   .results__chips {
     display: none !important;
   }
@@ -1251,4 +1092,305 @@ main:has(.step--results.is-active) {
   .wrap {
     max-width: none;
   }
+}
+
+/* --- What happens next: intake steps folded into a result card ---------- */
+
+.result__next {
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+.result__next summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--primary);
+  list-style-position: inside;
+}
+.result__next summary:hover { text-decoration: underline; }
+.result__next dl {
+  margin: 0.6rem 0 0;
+  display: grid;
+  gap: 0.15rem 0;
+}
+.result__next dt {
+  font-family: var(--font-data);
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 0.45rem;
+}
+.result__next dt:first-child { margin-top: 0; }
+.result__next dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+/* --- Housing plan ----------------------------------------------------- */
+
+.plan-toggle--on {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-tint);
+}
+
+.plan-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: 30;
+}
+.plan-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  max-width: var(--wrap-results);
+}
+.plan-bar__count {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.plan__header { padding: 2.5rem 0 0; }
+.plan__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.25rem 0 2rem;
+}
+.plan__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.plan-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+.plan-item__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.plan-item__steps { margin: 1rem 0 0; }
+.plan-item__steps dt {
+  font-family: var(--font-data);
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 0.45rem;
+}
+.plan-item__steps dt:first-child { margin-top: 0; }
+.plan-item__steps dd {
+  margin: 0;
+  font-size: 0.9063rem;
+  color: var(--ink-soft);
+}
+
+@media print {
+  .plan-bar,
+  .plan__actions,
+  .plan-item__remove {
+    display: none !important;
+  }
+  .plan-item {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}
+
+/* --- Grouped, foldable results; auto-advance hint; editable chips ------ */
+
+.step__auto {
+  margin: 1rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.results__group {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 1.75rem 0 0.75rem;
+}
+.results__group--likely { color: var(--likely); }
+.results__group--possible { color: var(--possible); }
+
+.result--lead { border-top: 3px solid var(--primary); }
+
+/* "Built for you" tags — why this program ranked first. Inside a card's
+   head they take the full width; in the dialog they sit under the title. */
+.result__fit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+.result__head > .result__fit {
+  flex-basis: 100%;
+  margin-top: 0;
+}
+.tag--fit {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Collapsed cards never truncate — names, tags, and caveats wrap in full,
+   and rows stay even because cards stretch to their grid row. */
+
+/* Show-more sits under its section's grid, centred. */
+.results__more {
+  display: block;
+  margin: 0.9rem auto 0;
+}
+
+.result__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  /* Lets the full-width benefit block wrap onto its own line below. */
+  flex-wrap: wrap;
+}
+/* flex-basis 0 keeps the name column sharing the row with the badge —
+   only the benefit block (flex-basis 100%) is allowed to wrap below. */
+.result__headmain { min-width: 0; flex: 1 1 0; }
+.result__headside {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+.result__caveats {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--possible);
+}
+/* Dialog detail layout: facts left, action rail right (stacked on
+   small screens). The rail is a panel holding next steps, contact, and
+   the buttons — the standard expanded-listing pattern. */
+.result__aside {
+  margin-top: 1.1rem;
+  padding: 1rem 1.15rem;
+  background: var(--surface-sunken);
+  border-radius: 10px;
+}
+.result__aside > :first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.result__summary { max-width: 70ch; }
+@media (min-width: 48rem) {
+  .pdialog .result__body.has-aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 0 2rem;
+    align-items: start;
+  }
+  .pdialog .result__body.has-aside .result__aside { margin-top: 0.35rem; }
+}
+
+/* --- Program detail dialog -------------------------------------------- */
+dialog.pdialog {
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 1.5rem 1.6rem;
+  width: min(56rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+dialog.pdialog::backdrop { background: rgba(15, 12, 10, 0.55); }
+.pdialog__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+.pdialog__close {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+}
+.pdialog__close:hover { color: var(--ink); background: var(--surface-sunken); }
+.pdialog .plan-toggle { margin-top: 0.7rem; }
+.pdialog .result__body { margin-top: 1.1rem; }
+
+/* The full "What you may get" block on the collapsed card; the open body
+   carries its own copy, so this one hides then. */
+.result__gets {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  background: var(--surface-sunken);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.result__gets-label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.result__body { margin-top: 0.35rem; }
+
+.chip--edit {
+  cursor: pointer;
+  font-family: inherit;
+}
+.chip--edit:hover {
+  border-color: var(--border-strong);
+  color: var(--ink);
+}
+
+/* The copy-link button sits under the answer chips in the results header. */
+.results__share { margin: -1.25rem 0 2rem; }
+@media print { .results__share { display: none !important; } }
+
+/* The pin button lives in the collapsed card header. */
+.result__cardactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 0.9rem;
 }

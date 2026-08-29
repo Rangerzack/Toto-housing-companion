@@ -20,11 +20,12 @@
 // while a false inclusion costs them a phone call.
 
 // How far over a published limit someone's GROSS income can be before the
-// program is ruled out. Programs test ADJUSTED income — gross minus deductions
-// for dependents, childcare, and medical or disability expenses — so a gross
-// figure modestly over the line often still qualifies. Anything inside the
-// margin is surfaced as a prompt instead of an exclusion.
-const OVER_LIMIT_MARGIN = 1.2;
+// program is ruled out. The figure typed into the wizard is a rough annual
+// estimate, and programs measure income their own way — some count only the
+// most recent month (Minnesota's EAP), some count different household
+// members, and HUD programs apply deductions when setting the rent share.
+// A figure modestly over the line is therefore a prompt, not an exclusion.
+const OVER_LIMIT_MARGIN = 1.1;
 
 const money = (amount) =>
   `$${Math.round(amount).toLocaleString('en-US')}`;
@@ -39,13 +40,23 @@ const NO_REQUIREMENT_PATTERNS = [
 
 const REQUIREMENT_PATTERNS = [/^\s*yes\b/i, /\bmust\b/i, /\brequired?\b/i];
 
+// "QUALIFYING: 65 years of age or older" / "62 or older QUALIFIES" — one of
+// several routes into the program, any single one of which is enough. These
+// are not requirements: someone who qualifies through disability must not be
+// demoted for leaving the veteran box unticked. All of a program's qualifying
+// rules are pooled and satisfied together by any one matching circumstance.
+// (The deliberately narrow pattern skips prose like "households qualify
+// without FSS participation", which is an exemption note, not a route.)
+const QUALIFYING_PATTERN = /^\s*qualifying\b|\bqualifies\b/i;
+
 /**
  * Reads a prose rule field.
- * @returns {'required'|'not-required'|'unknown'}
+ * @returns {'required'|'not-required'|'qualifying'|'unknown'}
  */
 export function readRule(text) {
   const value = (text || '').trim();
   if (NO_REQUIREMENT_PATTERNS.some((re) => re.test(value))) return 'not-required';
+  if (QUALIFYING_PATTERN.test(value)) return 'qualifying';
   if (REQUIREMENT_PATTERNS.some((re) => re.test(value))) return 'required';
   return value ? 'unknown' : 'not-required';
 }
@@ -128,21 +139,26 @@ const HELP_PATTERNS = {
  * referral desks — are never filtered out. An unclassifiable category is
  * missing information, and missing information does not exclude anyone.
  */
-function matchesHelpType(category, help) {
-  if (help === 'staying') return true;
+function matchesHelpType(category, needs) {
+  if (!needs || !needs.length) return true;
 
   const text = category || '';
   const isUtility = HELP_PATTERNS.utility.test(text);
   const isHousing = HELP_PATTERNS.housing.test(text);
   if (!isUtility && !isHousing) return true;
 
-  return help === 'utility' ? isUtility : isHousing;
+  // "Staying in my home" spans housing AND utilities — a shutoff notice is
+  // one of the things that costs people their housing. A program matching
+  // ANY picked need stays in.
+  if (isUtility && (needs.includes('utility') || needs.includes('staying'))) return true;
+  if (isHousing && (needs.includes('rental') || needs.includes('staying') || needs.includes('buying'))) return true;
+  return false;
 }
 
-function matchesTenure(eligibleTenure, situation) {
-  // Utility programs serve renters and owners alike, so that path never asks
-  // about tenure and must never be filtered on it.
-  if (situation === 'utility') return 'match';
+function matchesTenure(eligibleTenure, situations) {
+  // Utility- or healthcare-only visits imply no situation at all, so nothing
+  // is filtered on tenure.
+  if (!situations || !situations.length) return 'match';
 
   const raw = (eligibleTenure || '').toLowerCase();
   if (!raw.trim()) return 'unknown';
@@ -156,21 +172,32 @@ function matchesTenure(eligibleTenure, situation) {
   const isBuyer = /prospective homeowner|first-time/.test(raw);
   const isUnhoused = /homeless|unstably housed|transitional|unhoused/.test(raw);
 
-  switch (situation) {
-    case 'renting':
-      return isRenter ? 'match' : 'no-match';
-    case 'homeowner':
-      return isOwner ? 'match' : 'no-match';
-    case 'buying':
-      return isBuyer ? 'match' : 'no-match';
-    case 'unhoused':
-      // Rent-support programs routinely move people from unhoused into a
-      // tenancy, so they stay in play rather than being filtered out.
-      if (isUnhoused) return 'match';
-      return isRenter ? 'unknown' : 'no-match';
-    default:
-      return 'unknown';
+  // A program matching ANY of the person's situations stays in.
+  let best = 'no-match';
+  for (const situation of situations) {
+    let verdict = 'unknown';
+    switch (situation) {
+      case 'renting':
+        verdict = isRenter ? 'match' : 'no-match';
+        break;
+      case 'homeowner':
+        verdict = isOwner ? 'match' : 'no-match';
+        break;
+      case 'buying':
+        verdict = isBuyer ? 'match' : 'no-match';
+        break;
+      case 'unhoused':
+        // Rent-support programs routinely move people from unhoused into a
+        // tenancy, so they stay in play rather than being filtered out.
+        verdict = isUnhoused ? 'match' : isRenter ? 'unknown' : 'no-match';
+        break;
+      default:
+        verdict = 'unknown';
+    }
+    if (verdict === 'match') return 'match';
+    if (verdict === 'unknown') best = 'unknown';
   }
+  return best;
 }
 
 // Circumstances the person can tell us about, paired with the prose column
@@ -211,18 +238,45 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   }
 
   // --- Kind of help (hard, where the category is classifiable) ----------
-  if (answers.help && !matchesHelpType(program.category, answers.help)) {
+  const needs = Array.isArray(answers.help) ? answers.help : answers.help ? [answers.help] : [];
+  if (needs.length && !matchesHelpType(program.category, needs)) {
     return {
       verdict: 'excluded',
       checks,
-      reason: answers.help === 'utility'
-        ? 'Not a utility assistance program'
-        : 'Helps with utility bills rather than finding housing',
+      reason: 'Helps with a different kind of need than the ones you picked',
     };
   }
 
   // --- Housing situation (hard, where documented) -----------------------
-  const tenure = matchesTenure(eligibility.eligible_tenure, answers.situation);
+  // Every picked need implies its situations: seeking a rental implies
+  // renting, buying implies a prospective buyer, and "staying in my home"
+  // carries the rent-or-own answer.
+  const situations = [];
+  if (needs.includes('rental')) situations.push('renting');
+  if (needs.includes('buying')) situations.push('buying');
+  if (needs.includes('staying') && answers.situation) situations.push(answers.situation);
+  // The not-stably-housed box only ever widens tenure matching, so it is
+  // skipped when the list is empty — an empty list (utility-only visits)
+  // already matches everything.
+  const unhoused = Boolean(answers.circumstances?.unhoused);
+  if (unhoused && situations.length) situations.push('unhoused');
+  const tenure = matchesTenure(eligibility.eligible_tenure, situations);
+
+  // Which of the person's confirmed circumstances this program is built
+  // around — used to rank targeted programs (veteran services for a
+  // veteran) above generic ones, and shown as a tag on the card.
+  //
+  // Homeless-serving is documented inconsistently: Maslow says it in
+  // eligible_tenure ("unstably housed"), Rogue Retreat only in its crisis
+  // rule ("already experiencing homelessness"), Hope House only in the
+  // program name — so all three columns are read.
+  const fit = [];
+  const unhousedEvidence = [eligibility.eligible_tenure, eligibility.crisis_required, program.program_name]
+    .join(' ')
+    .toLowerCase();
+  if (unhoused && /homeless|unstably housed|transitional|unhoused|shelter/.test(unhousedEvidence)) {
+    fit.push('unhoused');
+  }
   if (tenure === 'no-match') {
     return { verdict: 'excluded', checks, reason: 'Serves a different housing situation' };
   }
@@ -260,11 +314,11 @@ export function evaluateProgram(program, answers, lookup, proportional) {
     } else if (answers.income > limit.amount * OVER_LIMIT_MARGIN) {
       return { verdict: 'excluded', checks, reason: 'Household income is above the program limit' };
     } else if (answers.income > limit.amount) {
-      // Programs count ADJUSTED income — gross minus deductions for
-      // dependents, childcare, and medical or disability expenses — which is
-      // always lower than the gross figure someone types in here. Being over
-      // on gross is genuinely not a decision, so it is a prompt, not a cut.
-      checks.push(`Your income is above the published limit of ${money(limit.amount)}, but programs count income after deductions for dependents and medical costs — still worth applying.`);
+      // The annual figure typed here is an estimate, and programs measure
+      // income their own way — different windows, different members counted.
+      // Being modestly over on that basis is not a decision, so it is a
+      // prompt, not a cut.
+      checks.push(`Your income is a little above the published limit of ${money(limit.amount)}, but programs measure income their own way — some count only your most recent month — so it's still worth applying.`);
     }
   }
 
@@ -290,17 +344,37 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   // squarely meant for them.
   const circumstances = {
     ...(answers.circumstances || {}),
-    crisis: Boolean(answers.circumstances?.crisis) || answers.situation === 'unhoused',
+    crisis: Boolean(answers.circumstances?.crisis) || unhoused,
     // Someone who came here to pay a utility bill has a utility bill. Making
     // them tick the box as well produced a caveat on almost every Minnesota
     // result, since 28 of its 34 programs gate on the account.
     utilityAccount:
-      Boolean(answers.circumstances?.utilityAccount) || answers.help === 'utility',
+      Boolean(answers.circumstances?.utilityAccount) || needs.includes('utility'),
   };
+
+  // Any-of qualifying paths are pooled across all of a program's rules:
+  // matching ANY one path satisfies the whole group, and only when none
+  // matches does the program get a single combined note.
+  const qualifyingUnmet = [];
+  let qualifyingMet = false;
 
   for (const { key, field, label } of CIRCUMSTANCE_RULES) {
     const state = readRule(eligibility[field]);
     const personHasIt = Boolean(circumstances[key]);
+
+    // A program that gates on something this household actually has is a
+    // targeted program, not just a non-conflict. The utility account is
+    // excluded: it is implied on every utility visit, so it separates
+    // nothing and is not a population.
+    if (personHasIt && key !== 'utilityAccount' && (state === 'required' || state === 'qualifying')) {
+      fit.push(key);
+    }
+
+    if (state === 'qualifying') {
+      if (personHasIt) qualifyingMet = true;
+      else qualifyingUnmet.push(label);
+      continue;
+    }
 
     // An unticked box is NOT a "no". The person may not have read that far,
     // may be unsure, or may not have thought it applied — and the question
@@ -320,9 +394,18 @@ export function evaluateProgram(program, answers, lookup, proportional) {
     }
   }
 
+  if (!qualifyingMet && qualifyingUnmet.length) {
+    checks.push(
+      qualifyingUnmet.length === 1
+        ? `Qualifies through ${qualifyingUnmet[0]} — confirm this applies to your household.`
+        : `Qualifies through any one of: ${qualifyingUnmet.join('; ')} — matching a single one is enough.`,
+    );
+  }
+
   return {
     verdict: checks.length ? 'possible' : 'likely',
     checks,
+    fit,
     reason: null,
   };
 }
@@ -352,6 +435,12 @@ export function screenPrograms(programs, answers, lookup, proportional) {
 
   const verdictOrder = { likely: 0, possible: 1 };
   results.sort((a, b) => {
+    // Programs built for who this household is come first — a veteran sees
+    // veteran services at the top, even ahead of generic programs with
+    // fewer open questions. The card's tag says why it ranked there.
+    const byFit = (b.fit?.length || 0) - (a.fit?.length || 0);
+    if (byFit) return byFit;
+
     const byVerdict = verdictOrder[a.verdict] - verdictOrder[b.verdict];
     if (byVerdict) return byVerdict;
 

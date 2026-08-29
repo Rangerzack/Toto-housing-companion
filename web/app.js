@@ -3,40 +3,17 @@ import {
   SUPABASE_ANON_KEY,
   FORMS_BUCKET,
   STATES,
-  HOUSING_API_URL,
-  HOUSING_API_HEADERS,
-  CITY_COUNTIES,
 } from './config.js?v=__BUILD__';
 import { screenPrograms } from './matcher.js?v=__BUILD__';
-import {
-  fetchListings,
-  screenListings,
-  monthlyBudget,
-  bedroomsLabel,
-} from './housing.js?v=__BUILD__';
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
-// There is no intro screen: the first question IS the home page. The order
-// runs what you need → where you are → about your household, so the very
-// first tap already moves someone toward their answer.
 const STEPS = [
-  'help', 'situation', 'rent-goal', 'state', 'county',
-  'household', 'bedrooms', 'income', 'circumstances', 'results',
+  'intro', 'state', 'county', 'help', 'situation',
+  'household', 'income', 'circumstances', 'results',
 ];
-
-// The screener forks for someone looking to rent: "help paying for rent"
-// continues into the program matcher, "help finding a place" runs the
-// housing search (housing.js) against the listings API instead.
-function isHousingSearch() {
-  return (
-    answers.help === 'finding' &&
-    answers.situation === 'renting' &&
-    answers.rentGoal === 'search'
-  );
-}
 
 // Someone asking about a utility bill is not asked whether they rent or own —
 // utility programs serve both, so the question would be friction for a person
@@ -44,14 +21,10 @@ function isHousingSearch() {
 // so the visible set is computed rather than fixed.
 function questionSteps() {
   return STEPS.filter((s) => {
-    if (s === 'results') return false;
-    if (s === 'situation') return answers.help !== 'utility';
-    // Only renters are asked to choose between paying and finding.
-    if (s === 'rent-goal') return answers.help === 'finding' && answers.situation === 'renting';
-    // Bedrooms only matter when searching listings; the circumstance
-    // checkboxes only matter when screening programs.
-    if (s === 'bedrooms') return isHousingSearch();
-    if (s === 'circumstances') return !isHousingSearch();
+    if (s === 'intro' || s === 'results') return false;
+    // Rent-or-own only matters for "staying in my home" — the other needs
+    // imply their situations on their own.
+    if (s === 'situation') return answers.help.includes('staying');
     return true;
   });
 }
@@ -61,10 +34,8 @@ const answers = {
   county: null,
   areaId: null, // income_areas row backing the chosen county
   statewideAreaId: null, // where that state's SMI limits live
-  help: null, // finding | staying | utility
+  help: [], // any of: rental | staying | buying | utility
   situation: null,
-  rentGoal: null, // pay | search — only asked when finding + renting
-  bedrooms: null, // 'any' | 0..4 (4 means 4+) — only asked when searching
   householdSize: 1,
   income: null, // null means "not provided"
   circumstances: {},
@@ -73,12 +44,6 @@ const answers = {
 let stepIndex = 0;
 let programs = null; // cached after first fetch
 let fetchError = null;
-
-// Listings from the housing API, cached per state|county so switching paths
-// or changing answers doesn't refetch needlessly.
-let listings = null;
-let listingsError = null;
-let listingsKey = null;
 
 // Published income limits for the selected county plus the statewide SMI set,
 // keyed `${standard}|${tier}|${size}`. Refetched when the county changes.
@@ -105,9 +70,7 @@ function el(tag, props = {}, children = []) {
     else node.setAttribute(key, value === true ? '' : value);
   }
   for (const child of [].concat(children)) {
-    // Skips every falsy child, not just null/false: `count && el(...)`
-    // evaluates to 0 when the count is zero, and appending 0 renders "0".
-    if (!child) continue;
+    if (child == null || child === false) continue;
     node.append(typeof child === 'string' ? document.createTextNode(child) : child);
   }
   return node;
@@ -217,27 +180,6 @@ async function fetchLimits(areaId, statewideAreaId) {
   limitsAreaId = areaId;
 }
 
-// Loads rental listings for the chosen county, remembering an error so the
-// results view can render it (with a retry) rather than throwing.
-async function loadListings() {
-  const key = `${answers.state}|${answers.county}`;
-  if (listingsKey === key) return;
-
-  listings = null;
-  listingsError = null;
-  try {
-    listings = await fetchListings({
-      url: HOUSING_API_URL,
-      headers: HOUSING_API_HEADERS,
-      state: answers.state,
-      county: answers.county,
-    });
-  } catch (error) {
-    listingsError = error;
-  }
-  listingsKey = key;
-}
-
 /**
  * Passed to the matcher; null means nothing is published for that combination.
  *
@@ -271,7 +213,8 @@ function currentStep() {
   return STEPS[stepIndex];
 }
 
-function showStep(name) {
+function showStep(name, { fromHistory = false } = {}) {
+  document.getElementById('program-dialog')?.close();
   stepIndex = STEPS.indexOf(name);
 
   $$('.step').forEach((section) => {
@@ -281,8 +224,7 @@ function showStep(name) {
   const steps = questionSteps();
   const isQuestion = steps.includes(name);
   $('#progress').hidden = !isQuestion;
-  // The first question is the landing — "start over" means nothing there.
-  $('#restart-top').hidden = name === 'help';
+  $('#restart-top').hidden = name === 'intro';
 
   if (isQuestion) {
     const position = steps.indexOf(name) + 1;
@@ -297,19 +239,29 @@ function showStep(name) {
   section.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (name === 'income') {
-    // Both the hint and the feedback sentence are path-specific; recompute
-    // them so switching between the program and search paths never leaves
-    // the other path's wording behind.
-    syncIncomeHint();
-    updateIncomeFeedback();
+  // Each step is a history entry, so the browser's Back button walks the
+  // wizard; the results entry carries the shareable answers hash.
+  if (!fromHistory) {
+    const url =
+      name === 'results' && answers.county
+        ? location.pathname + location.search + encodeShareHash()
+        : location.pathname + location.search;
+    if (historyReady) history.pushState({ step: name }, '', url);
+    else {
+      history.replaceState({ step: name }, '', url);
+      historyReady = true;
+    }
   }
+  saveAnswers(name);
+
   if (name === 'results') renderResults();
+  if (name === 'plan') renderPlan();
+  updatePlanUi();
 }
 
 // Walks STEPS in the given direction, skipping any step not currently asked.
 function move(direction) {
-  const skipped = STEPS.filter((s) => !questionSteps().includes(s) && s !== 'results');
+  const skipped = STEPS.filter((s) => !questionSteps().includes(s) && s !== 'intro' && s !== 'results');
   let i = stepIndex + direction;
   while (i > 0 && i < STEPS.length - 1 && skipped.includes(STEPS[i])) i += direction;
   if (i >= 0 && i < STEPS.length) showStep(STEPS[i]);
@@ -323,10 +275,8 @@ function restart() {
   answers.state = null;
   answers.areaId = null;
   answers.statewideAreaId = null;
-  answers.help = null;
+  answers.help = [];
   answers.situation = null;
-  answers.rentGoal = null;
-  answers.bedrooms = null;
   answers.householdSize = 1;
   answers.income = null;
   answers.circumstances = {};
@@ -335,16 +285,17 @@ function restart() {
     input.checked = false;
   });
   $('#county-choices').replaceChildren();
-  $('#county-filter').hidden = true;
-  $('#county-filter').value = '';
   $('#situation-choices').replaceChildren();
   $('#household-size').value = '1';
   $('#income').value = '';
   $('#income-feedback').textContent = '';
+  plan = [];
+  savePlan();
+  syncChoiceSelection();
   syncHouseholdUi();
   syncCircumstanceVisibility();
   refreshContinueButtons();
-  showStep('help');
+  showStep('intro');
 }
 
 // A step's Continue button stays disabled until that step has an answer.
@@ -352,10 +303,8 @@ function refreshContinueButtons() {
   const gates = {
     state: answers.state,
     county: answers.county,
-    help: answers.help,
+    help: answers.help.length,
     situation: answers.situation,
-    'rent-goal': answers.rentGoal,
-    bedrooms: answers.bedrooms != null,
   };
   for (const [step, answered] of Object.entries(gates)) {
     const btn = $(`.step[data-step="${step}"] [data-action="next"]`);
@@ -394,16 +343,6 @@ function buildStateChoices() {
   }
 }
 
-// Hides county options that don't match the filter text. Filtering never
-// clears a selection — a chosen county stays chosen even when typed past.
-function filterCountyChoices() {
-  const query = $('#county-filter').value.trim().toLowerCase();
-  $$('#county-choices .choice').forEach((label) => {
-    const name = label.textContent.trim().toLowerCase();
-    label.hidden = Boolean(query) && !name.includes(query);
-  });
-}
-
 // Rebuilt whenever the state changes. Only that state's counties are offered,
 // which is what removes the old ambiguity — "Douglas" now means exactly one
 // county, because the state was already established.
@@ -411,18 +350,8 @@ function buildCountyChoices() {
   const container = $('#county-choices');
   container.replaceChildren();
 
-  const filter = $('#county-filter');
-  filter.value = '';
-
   const state = STATES.find((s) => s.code === answers.state);
-  if (!state) {
-    filter.hidden = true;
-    return;
-  }
-
-  // A dozen-plus radio tiles is a lot of scanning on a phone; a short list
-  // doesn't need the extra control.
-  filter.hidden = state.counties.length <= 8;
+  if (!state) return;
 
   for (const { name, areaId } of state.counties) {
     const input = el('input', { type: 'radio', name: 'county', value: name });
@@ -449,28 +378,17 @@ function buildCountyChoices() {
 // The tenure follow-up depends on what kind of help was asked for. Someone
 // looking for a place needs different options from someone trying to keep the
 // home they have, and asking one generic question served both badly.
-const SITUATION_SETS = {
-  finding: {
-    title: 'Which of these fits you best?',
-    hint: 'This decides whether we show rentals or homebuying help.',
-    options: [
-      ['renting', "I'm looking to rent", 'A place to rent, or help affording one'],
-      ['buying', "I'm hoping to buy a home", 'Down payment help, savings-match programs, first-time buyer loans'],
-      ['unhoused', "I don't have stable housing right now", 'Staying in a shelter, a vehicle, outside, or temporarily with others'],
-    ],
-  },
-  staying: {
-    title: 'Do you rent or own your home?',
-    hint: 'Programs differ depending on which, so this narrows things considerably.',
-    options: [
-      ['renting', 'I rent', 'Including if you are behind on rent or facing eviction'],
-      ['homeowner', 'I own my home', 'Including mortgage trouble and home repairs'],
-    ],
-  },
+const STAYING_SITUATION = {
+  title: 'Do you rent or own your home?',
+  hint: 'Programs differ depending on which, so this narrows things considerably.',
+  options: [
+    ['renting', 'I rent', 'Including if you are behind on rent or facing eviction'],
+    ['homeowner', 'I own my home', 'Including mortgage trouble and home repairs'],
+  ],
 };
 
 function buildSituationChoices() {
-  const set = SITUATION_SETS[answers.help];
+  const set = answers.help.includes('staying') ? STAYING_SITUATION : null;
   const container = $('#situation-choices');
   container.replaceChildren();
   if (!set) return;
@@ -482,9 +400,6 @@ function buildSituationChoices() {
     const input = el('input', { type: 'radio', name: 'situation', value });
     input.checked = answers.situation === value;
     input.addEventListener('change', () => {
-      // The pay-or-search fork only makes sense for a renter; changing the
-      // situation invalidates it.
-      if (answers.situation !== value) setRentGoal(null);
       answers.situation = value;
       syncCircumstanceVisibility();
       refreshContinueButtons();
@@ -502,58 +417,12 @@ function buildSituationChoices() {
 }
 
 function wireHelpChoices() {
-  $$('#help-choices input[type="radio"]').forEach((input) => {
+  $$('#help-choices input[type="checkbox"]').forEach((input) => {
     input.addEventListener('change', () => {
-      if (answers.help !== input.value) {
-        answers.situation = null;
-        setRentGoal(null);
-      }
-      answers.help = input.value;
-      // Utility programs serve renters and owners alike, so that path skips
-      // the tenure question and nothing needs to stay selected.
-      if (answers.help === 'utility') answers.situation = 'utility';
+      answers.help = $$('#help-choices input:checked').map((i) => i.value);
+      if (!answers.help.includes('staying')) answers.situation = null;
       buildSituationChoices();
-      refreshContinueButtons();
-    });
-
-    // A pointer tap on the landing advances on its own; the short delay lets
-    // the selection register visually first. The listener sits on the LABEL:
-    // keyboard selection fires its click on the input (with detail 0, as
-    // does the label-forwarded copy), so those users are never yanked
-    // forward mid-review — they press Continue when ready.
-    input.closest('label').addEventListener('click', (event) => {
-      if (event.detail === 0) return;
-      setTimeout(() => {
-        if (currentStep() === 'help' && answers.help) goNext();
-      }, 180);
-    });
-  });
-}
-
-// Kept in one place because the fork is set from two directions: the radio
-// buttons on the rent-goal step, and the "see programs instead" switch on the
-// housing results. Both the answer and the radio state must agree, or coming
-// Back from results would show a selection that no longer matches.
-function setRentGoal(value) {
-  answers.rentGoal = value;
-  $$('input[name="rent-goal"]').forEach((input) => {
-    input.checked = input.value === value;
-  });
-}
-
-function wireRentGoalChoices() {
-  $$('#rent-goal-choices input[type="radio"]').forEach((input) => {
-    input.addEventListener('change', () => {
-      answers.rentGoal = input.value;
-      refreshContinueButtons();
-    });
-  });
-}
-
-function wireBedroomChoices() {
-  $$('#bedrooms-choices input[type="radio"]').forEach((input) => {
-    input.addEventListener('change', () => {
-      answers.bedrooms = input.value; // 'any' or '0'..'4' — kept as strings
+      syncCircumstanceVisibility();
       refreshContinueButtons();
     });
   });
@@ -576,38 +445,11 @@ function setHouseholdSize(next) {
 const currency = new Intl.NumberFormat('en-US');
 const money = (amount) => `$${currency.format(Math.round(amount))}`;
 
-// The income question serves both paths, but means different things on each:
-// program limits on one, a rent budget on the other. The hint swaps when the
-// step opens so nobody is told about "program limits" while hunting for a
-// listing.
-const INCOME_HINTS = {
-  programs:
-    'Before taxes, adding up everyone’s income. An estimate is fine — most programs set limits based on this.',
-  search:
-    'Before taxes, adding up everyone’s income. An estimate is fine — we use it to flag listings that fit the common 30%-of-income rent guideline.',
-};
-
-function syncIncomeHint() {
-  $('#income-hint').textContent = isHousingSearch()
-    ? INCOME_HINTS.search
-    : INCOME_HINTS.programs;
-}
-
 // Real published thresholds beat a percentage nobody can act on: "under
 // $70,650" is checkable, "80% of AMI" is not.
 function updateIncomeFeedback() {
   const feedback = $('#income-feedback');
   const size = answers.householdSize;
-
-  if (isHousingSearch()) {
-    const budget = monthlyBudget(answers.income);
-    // budget > 0, not truthiness: a person with no income can honestly type
-    // 0, and "rent up to $0" would help nobody.
-    feedback.textContent = budget != null && budget > 0
-      ? `Rent up to about ${money(budget)}/month fits the common 30%-of-income guideline. You'll still see every listing.`
-      : '';
-    return;
-  }
   const at80 = limitLookup('HUD-MFI', 80, size);
   const at50 = limitLookup('HUD-MFI', 50, size);
 
@@ -628,7 +470,7 @@ function updateIncomeFeedback() {
   } else if (answers.income <= at80) {
     feedback.textContent = `That's under the ${money(at80)} limit most housing programs use for a household of ${size}.`;
   } else {
-    feedback.textContent = `That's above the usual ${money(at80)} limit for a household of ${size}, but programs count income after deductions — you'll still see what may fit.`;
+    feedback.textContent = `That's above the usual ${money(at80)} limit for a household of ${size}, but close numbers are worth checking — programs measure income their own way — and you'll still see what may fit.`;
   }
 }
 
@@ -664,8 +506,327 @@ function wireCircumstances() {
 // The first-time-buyer checkbox is only relevant to buyers; hiding it
 // elsewhere keeps the circumstances list short.
 function syncCircumstanceVisibility() {
-  $('#ftb-choice').hidden = answers.situation !== 'buying';
+  $('#ftb-choice').hidden = !answers.help.includes('buying');
 }
+
+// Selection is mirrored to a class the moment any choice input changes.
+// The stylesheet's :has(input:checked) rule SHOULD do this alone, but
+// browsers were observed caching the non-matching state for these cards and
+// never repainting on the flip (Chrome 151, against the live site) — which
+// left people tapping answers with no visible response. The class is the
+// guarantee; :has() stays as the declarative fallback.
+function syncChoiceSelection() {
+  $$('.choice input').forEach((input) => {
+    input.closest('.choice').classList.toggle('is-selected', input.checked);
+  });
+}
+document.addEventListener('change', (event) => {
+  if (event.target instanceof HTMLInputElement && event.target.closest('.choice')) {
+    syncChoiceSelection();
+  }
+});
+
+// Single-choice steps advance on their own: picking the answer IS the
+// submission, and the pause lets the selection paint before the step moves
+// (the measured journey drops from ~15 taps to ~9). The timer debounces
+// keyboard arrow-through so a screen-reader or keyboard user exploring the
+// options isn't yanked forward mid-list; Back stays for corrections.
+// The help step is multi-select now, so it keeps its Continue button.
+const AUTO_ADVANCE_STEPS = new Set(['state', 'county', 'situation']);
+let advanceTimer = null;
+document.addEventListener('change', (event) => {
+  const step = event.target.closest('.step')?.dataset.step;
+  if (!AUTO_ADVANCE_STEPS.has(step) || event.target.type !== 'radio') return;
+  clearTimeout(advanceTimer);
+  advanceTimer = setTimeout(() => {
+    if (currentStep() === step) goNext();
+  }, 450);
+});
+
+// ---------------------------------------------------------------------------
+// Keeping answers through refresh, Back, and shared links
+// ---------------------------------------------------------------------------
+// Three promises: the browser's Back button walks the wizard instead of
+// leaving it; a refresh resumes where the person was; and the results page
+// gets a URL that can be bookmarked or texted to a caseworker. Everything
+// stays on the device — the hash and sessionStorage are the only stores.
+
+const ANSWERS_KEY = 'toto-answers';
+let historyReady = false;
+
+function saveAnswers(step) {
+  try {
+    sessionStorage.setItem(ANSWERS_KEY, JSON.stringify({ answers, step }));
+  } catch {
+    /* private browsing */
+  }
+}
+
+const HELP_VALUES = ['rental', 'staying', 'buying', 'utility'];
+// Links minted before the multi-select help step keep working.
+const LEGACY_HELP = { finding: 'rental' };
+
+function encodeShareHash() {
+  const circs = Object.keys(answers.circumstances).filter((k) => answers.circumstances[k]);
+  return (
+    '#a=' +
+    [
+      answers.state,
+      answers.county,
+      answers.help.join('+'),
+      answers.situation || 'x',
+      answers.householdSize,
+      answers.income ?? 'x',
+      circs.join('+') || 'x',
+    ]
+      .map(encodeURIComponent)
+      .join('/')
+  );
+}
+
+function decodeShareHash(hash) {
+  const match = /^#a=(.+)$/.exec(hash || '');
+  if (!match) return null;
+  const parts = match[1].split('/').map(decodeURIComponent);
+  if (parts.length !== 7) return null;
+  const [state, county, helpRaw, situationRaw, size, income, circs] = parts;
+  const config = STATES.find((s) => s.code === state);
+  const countyRow = config?.counties.find((c) => c.name === county);
+  const help = helpRaw
+    .split('+')
+    .map((h) => LEGACY_HELP[h] || h)
+    .filter((h) => HELP_VALUES.includes(h));
+  if (!config || !countyRow || !help.length) return null;
+  let situation = situationRaw === 'x' ? null : situationRaw;
+  if (situation === 'buying' && !help.includes('buying')) help.push('buying');
+  if (!['renting', 'homeowner'].includes(situation)) situation = null;
+  return {
+    state,
+    county,
+    areaId: countyRow.areaId,
+    statewideAreaId: config.statewideAreaId,
+    help,
+    situation,
+    householdSize: Math.min(12, Math.max(1, Number(size) || 1)),
+    income: income === 'x' ? null : Number(income) || null,
+    circumstances:
+      circs === 'x' ? {} : Object.fromEntries(circs.split('+').map((k) => [k, true])),
+  };
+}
+
+// Rebuilds every input from `answers` after a restore.
+function hydrateUi() {
+  const check = (selector, value) => {
+    const input = $$(selector).find((i) => i.value === value);
+    if (input) input.checked = true;
+  };
+  check('#state-choices input', answers.state);
+  if (answers.state) buildCountyChoices();
+  check('#county-choices input', answers.county);
+  for (const need of answers.help) check('#help-choices input', need);
+  buildSituationChoices();
+  check('#situation-choices input', answers.situation);
+  $('#household-size').value = String(answers.householdSize);
+  if (answers.income != null) $('#income').value = currency.format(answers.income);
+  for (const [key, value] of Object.entries(answers.circumstances || {})) {
+    if (value) check('#circumstance-choices input', key);
+  }
+  syncChoiceSelection();
+  syncHouseholdUi();
+  syncCircumstanceVisibility();
+  refreshContinueButtons();
+  if (answers.areaId) {
+    fetchLimits(answers.areaId, answers.statewideAreaId).then(updateIncomeFeedback).catch(() => {});
+  }
+}
+
+window.addEventListener('popstate', (event) => {
+  const step = event.state?.step;
+  const known = STEPS.includes(step) || step === 'plan';
+  showStep(known ? step : 'intro', { fromHistory: true });
+});
+
+// ---------------------------------------------------------------------------
+// Housing plan
+// ---------------------------------------------------------------------------
+// Programs pinned from the results into the short list someone will actually
+// work: every intake step expanded, contacts inline, printable. It lives in
+// this browser tab only (sessionStorage) — like every other answer here,
+// nothing leaves the device.
+
+const PLAN_KEY = 'toto-plan';
+let plan = [];
+try {
+  plan = JSON.parse(sessionStorage.getItem(PLAN_KEY) || '[]');
+  if (!Array.isArray(plan)) plan = [];
+} catch {
+  plan = [];
+}
+
+function savePlan() {
+  try {
+    sessionStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+  } catch {
+    /* private browsing: the plan still works for this page view */
+  }
+}
+
+const inPlan = (id) => plan.includes(id);
+
+function togglePlan(id) {
+  plan = inPlan(id) ? plan.filter((p) => p !== id) : [...plan, id];
+  savePlan();
+  updatePlanUi();
+}
+
+const planToggleLabel = (id) => (inPlan(id) ? '✓ In your plan' : '+ Add to plan');
+
+function updatePlanUi() {
+  $$('.plan-toggle').forEach((btn) => {
+    const chosen = inPlan(btn.dataset.program);
+    btn.textContent = planToggleLabel(btn.dataset.program);
+    btn.classList.toggle('plan-toggle--on', chosen);
+  });
+  const bar = $('#plan-bar');
+  if (bar) {
+    bar.hidden = plan.length === 0 || currentStep() !== 'results';
+    $('#plan-count').textContent =
+      `${plan.length} program${plan.length === 1 ? '' : 's'} in your plan`;
+  }
+}
+
+function renderPlan() {
+  const host = $('#plan-state');
+  host.replaceChildren();
+
+  const chosen = plan
+    .map((id) => (programs || []).find((p) => p.program_id === id))
+    .filter(Boolean);
+
+  if (!chosen.length) {
+    host.append(
+      renderNotice({
+        icon: '📋',
+        title: 'Your plan is empty',
+        body: 'Add programs from your results with the "+ Add to plan" button, and they collect here with every step you need to apply.',
+        actionLabel: 'Back to results',
+        onAction: () => showStep('results'),
+      }),
+    );
+    return;
+  }
+
+  host.append(
+    el('div', { class: 'plan__header' }, [
+      el('h2', { class: 'results__count', text: 'Your housing plan' }),
+      el('p', {
+        class: 'results__summary',
+        text: `${chosen.length} program${chosen.length === 1 ? '' : 's'} to work through, with every application step in one place. Print it, or save it as a PDF to bring to a caseworker.`,
+      }),
+      el('div', { class: 'plan__actions' }, [
+        el('button', {
+          type: 'button',
+          class: 'btn btn--primary',
+          text: 'Print or save as PDF',
+          onclick: () => window.print(),
+        }),
+        el('button', {
+          type: 'button',
+          class: 'btn btn--ghost',
+          text: 'Back to results',
+          onclick: () => showStep('results'),
+        }),
+      ]),
+    ]),
+  );
+
+  const list = el('ol', { class: 'plan__list' });
+  for (const program of chosen) {
+    const contacts = program.contacts || {};
+    const item = el('li', { class: 'plan-item' });
+
+    item.append(
+      el('div', { class: 'plan-item__top' }, [
+        el('div', {}, [
+          el('h3', { class: 'result__name', text: program.program_name }),
+          program.administrator &&
+            el('p', { class: 'result__admin', text: program.administrator }),
+        ]),
+        el('button', {
+          type: 'button',
+          class: 'btn btn--ghost btn--sm plan-item__remove',
+          text: 'Remove',
+          onclick: () => {
+            togglePlan(program.program_id);
+            renderPlan();
+          },
+        }),
+      ]),
+    );
+
+    const steps = [];
+    const openness = [program.application_status, program.application_window]
+      .filter(Boolean)
+      .join(' — ');
+    if (openness) steps.push(['Is it open?', openness]);
+    if (program.application_method) steps.push(['How to apply', program.application_method]);
+    if (program.required_documents) steps.push(['What to bring', program.required_documents]);
+    if (contacts.address) steps.push(['Where', contacts.address]);
+    if (contacts.intake_hours) steps.push(['Hours', contacts.intake_hours]);
+    if (steps.length) {
+      item.append(
+        el(
+          'dl',
+          { class: 'plan-item__steps' },
+          steps.flatMap(([term, value]) => [el('dt', { text: term }), el('dd', { text: value })]),
+        ),
+      );
+    }
+
+    const contactBits = [];
+    const phone = contactLink({
+      value: contacts.phone,
+      pattern: PHONE_RE,
+      scheme: 'tel',
+      sanitize: (v) => v.replace(/[^\d+]/g, ''),
+    });
+    if (phone) contactBits.push(phone);
+    const email = contactLink({ value: contacts.email, pattern: EMAIL_RE, scheme: 'mailto' });
+    if (email) contactBits.push(email);
+    if (contactBits.length) item.append(el('div', { class: 'result__contact' }, contactBits));
+
+    const links = [];
+    const formUrl = formUrlFor(program);
+    if (formUrl) {
+      links.push(
+        el('a', {
+          class: 'btn btn--primary btn--sm',
+          href: formUrl,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          text: 'Get the application form',
+        }),
+      );
+    }
+    if (program.source_url) {
+      links.push(
+        el('a', {
+          class: 'btn btn--ghost btn--sm',
+          href: program.source_url,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          text: 'Program details',
+        }),
+      );
+    }
+    if (links.length) item.append(el('div', { class: 'result__actions plan-item__links' }, links));
+
+    list.append(item);
+  }
+  host.append(list);
+}
+
+$('#plan-view')?.addEventListener('click', () => showStep('plan'));
 
 // ---------------------------------------------------------------------------
 // Results
@@ -696,42 +857,163 @@ function contactLink({ value, pattern, scheme, sanitize }) {
   return el('a', { href: `${scheme}:${target}`, text: value });
 }
 
-function renderResultCard({ program, verdict, checks }) {
+// Labels for the "built for you" tags on a result card — shown when a
+// program specifically serves a circumstance the person confirmed.
+const FIT_LABELS = {
+  veteran: 'For veterans',
+  senior: 'For seniors 60+',
+  disability: 'For people with disabilities',
+  children: 'For families with children',
+  crisis: 'For crisis situations',
+  firstTimeBuyer: 'For first-time buyers',
+  unhoused: 'For people without stable housing',
+};
+
+// Results group by what a program actually is, so rent help, homebuying
+// help, and utility help never interleave. Classification order matters:
+// hybrid categories (utility payment + housing stabilisation) count as
+// their primary thing, checked first.
+const RESULT_SECTIONS = [
+  { id: 'buy', label: 'Buying a home', test: /down payment|homebuyer|home ?ownership/i },
+  { id: 'repair', label: 'Home repair', test: /home repair|rehabilitation|weatheriz/i },
+  { id: 'utility', label: 'Utility bills', test: /utility|energy|heat|water|sewer|electric|gas/i },
+  { id: 'housing', label: 'Housing & rent help', test: /rent|housing|shelter|homeless|stabili|eviction/i },
+];
+
+function sectionOf(category) {
+  return RESULT_SECTIONS.find((s) => s.test.test(category || ''))?.id || 'other';
+}
+
+// Sections the person actually asked about come first.
+function sectionDisplayOrder() {
+  const wants = {
+    housing: answers.help.includes('rental') || answers.help.includes('staying'),
+    buy: answers.help.includes('buying'),
+    repair: answers.help.includes('staying'),
+    utility: answers.help.includes('utility') || answers.help.includes('staying'),
+    other: false,
+  };
+  return [
+    { id: 'housing', label: 'Housing & rent help' },
+    { id: 'buy', label: 'Buying a home' },
+    { id: 'repair', label: 'Home repair' },
+    { id: 'utility', label: 'Utility bills' },
+    { id: 'other', label: 'Other support' },
+  ]
+    .map((s, i) => ({ ...s, rank: (wants[s.id] ? 0 : 100) + i }))
+    .sort((a, b) => a.rank - b.rank);
+}
+
+function renderResultCard(match, { lead = false } = {}) {
+  const { program, verdict, checks, fit } = match;
+
+  // The card stays compact — name, who runs it, tags, benefit, caveat
+  // count. Details open in a focused dialog instead of expanding in
+  // place, so the grid never distorts.
+  const outer = el('li', { class: `result${lead ? ' result--lead' : ''}` });
+  outer.addEventListener('click', (event) => {
+    // Links and buttons inside the card do their own thing.
+    if (event.target.closest('a, button')) return;
+    openProgramDialog(match);
+  });
+
+  outer.append(
+    el('div', { class: 'result__head' }, [
+      el('div', { class: 'result__headmain' }, [
+        el('h3', { class: 'result__name', text: program.program_name }),
+        program.administrator &&
+          el('p', { class: 'result__admin', text: program.administrator }),
+        checks.length
+          ? el('p', {
+              class: 'result__caveats',
+              text: `${checks.length} thing${checks.length === 1 ? '' : 's'} worth checking`,
+            })
+          : null,
+      ]),
+      // The badge stands alone up here — a button beside it crushed the
+      // name column in narrow grid columns.
+      el('span', { class: 'result__headside' }, [
+        el('span', {
+          class: `badge badge--${verdict}`,
+          text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
+        }),
+      ]),
+      // Tags get the card's full width — a long one overflows the name
+      // column in a four-column grid.
+      fit && fit.length
+        ? el(
+            'div',
+            { class: 'result__fit' },
+            fit.map((k) => el('span', { class: 'tag tag--fit', text: FIT_LABELS[k] || k })),
+          )
+        : null,
+      // The full benefit stays visible on the collapsed card — what a
+      // program pays is half of deciding whether to open it. It wraps to
+      // its own full-width line under the head row, and hides when the
+      // open body shows its own copy.
+      program.max_benefit
+        ? el('p', { class: 'result__gets' }, [
+            el('span', { class: 'result__gets-label', text: 'May get:' }),
+            el('span', { text: program.max_benefit }),
+          ])
+        : null,
+    ]),
+    // Actions sit in their own row pinned to the card's bottom edge, so
+    // stretched cards in a row share one aligned button line.
+    el('div', { class: 'result__cardactions' }, [
+      el('button', {
+        type: 'button',
+        class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
+        'data-program': program.program_id,
+        text: planToggleLabel(program.program_id),
+        onclick: (event) => {
+          event.stopPropagation();
+          togglePlan(program.program_id);
+        },
+      }),
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost btn--sm',
+        text: 'See details',
+        onclick: () => openProgramDialog(match),
+      }),
+    ]),
+  );
+
+  return outer;
+}
+
+// The full program detail shown inside the dialog: facts in a readable
+// main column, everything actionable in an aside rail.
+function buildProgramDetail({ program, checks }) {
   const eligibility = program.eligibility || {};
   const contacts = program.contacts || {};
   const counties = (program.program_counties || [])
     .map((c) => c.county)
     .filter((c) => c !== 'Unspecified');
 
-  const card = el('li', { class: 'result result--program' });
+  const card = el('div', { class: 'result__body' });
+  const main = el('div', { class: 'result__main' });
+  const aside = el('div', { class: 'result__aside' });
+  card.append(main, aside);
 
-  card.append(
-    el('div', { class: 'result__top' }, [
-      el('div', {}, [
-        el('h3', { class: 'result__name', text: program.program_name }),
-        program.administrator &&
-          el('p', { class: 'result__admin', text: program.administrator }),
-      ]),
-      el('span', {
-        class: `badge badge--${verdict}`,
-        text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
-      }),
-    ]),
-  );
-
-  // One quiet facts line, same language as the listing cards — the boxed
-  // tag rows read as five separate things where two will do.
-  const facts = [program.category, counties.length ? counties.join(', ') : null].filter(Boolean);
-  if (facts.length) {
-    card.append(el('p', { class: 'result__facts', text: facts.join(' · ') }));
+  const tags = [program.category, counties.length ? counties.join(', ') : null].filter(Boolean);
+  if (tags.length) {
+    main.append(
+      el(
+        'div',
+        { class: 'result__meta' },
+        tags.map((t) => el('span', { class: 'tag', text: t })),
+      ),
+    );
   }
 
   if (eligibility.summary) {
-    card.append(el('p', { class: 'result__summary', text: eligibility.summary }));
+    main.append(el('p', { class: 'result__summary', text: eligibility.summary }));
   }
 
   if (program.max_benefit) {
-    card.append(
+    main.append(
       el('div', { class: 'result__benefit' }, [
         el('span', { text: 'What you may get: ' }),
         el('strong', { text: program.max_benefit }),
@@ -740,7 +1022,7 @@ function renderResultCard({ program, verdict, checks }) {
   }
 
   if (checks.length) {
-    card.append(
+    main.append(
       el('div', { class: 'checks' }, [
         el('p', { class: 'checks__title', text: 'Worth checking' }),
         el(
@@ -752,7 +1034,33 @@ function renderResultCard({ program, verdict, checks }) {
     );
   }
 
-  // Contact and actions share one footer, like the listing cards.
+  // What happens after a match: the program's own intake process, folded
+  // away so the card stays scannable. Everything here is already in the
+  // fetched embeds — no extra request.
+  const nextSteps = [];
+  const openness = [program.application_status, program.application_window]
+    .filter(Boolean)
+    .join(' — ');
+  if (openness) nextSteps.push(['Is it open?', openness]);
+  if (program.application_method) nextSteps.push(['How to apply', program.application_method]);
+  if (program.required_documents) nextSteps.push(['What to bring', program.required_documents]);
+  if (contacts.address) nextSteps.push(['Where', contacts.address]);
+  if (nextSteps.length) {
+    aside.append(
+      el('details', { class: 'result__next', open: true }, [
+        el('summary', { text: 'What happens next' }),
+        el(
+          'dl',
+          {},
+          nextSteps.flatMap(([term, value]) => [
+            el('dt', { text: term }),
+            el('dd', { text: value }),
+          ]),
+        ),
+      ]),
+    );
+  }
+
   const contactBits = [];
   const phone = contactLink({
     value: contacts.phone,
@@ -766,7 +1074,10 @@ function renderResultCard({ program, verdict, checks }) {
   if (email) contactBits.push(email);
 
   if (contacts.intake_hours) {
-    contactBits.push(el('span', { class: 'result__foot-note', text: contacts.intake_hours }));
+    contactBits.push(el('span', { text: contacts.intake_hours }));
+  }
+  if (contactBits.length) {
+    aside.append(el('div', { class: 'result__contact' }, contactBits));
   }
 
   const actions = [];
@@ -778,14 +1089,14 @@ function renderResultCard({ program, verdict, checks }) {
         href: formUrl,
         target: '_blank',
         rel: 'noopener noreferrer',
-        text: 'Get the form',
+        text: 'Get the application form',
       }),
     );
   }
   if (program.source_url) {
     actions.push(
       el('a', {
-        class: `btn btn--${formUrl ? 'ghost' : 'primary'} btn--sm`,
+        class: 'btn btn--ghost btn--sm',
         href: program.source_url,
         target: '_blank',
         rel: 'noopener noreferrer',
@@ -793,18 +1104,58 @@ function renderResultCard({ program, verdict, checks }) {
       }),
     );
   }
+  if (actions.length) aside.append(el('div', { class: 'result__actions' }, actions));
 
-  if (contactBits.length || actions.length) {
-    card.append(
-      el('div', { class: 'result__foot result__foot--program' }, [
-        contactBits.length && el('div', { class: 'result__foot-contact' }, contactBits),
-        actions.length && el('div', { class: 'result__foot-actions' }, actions),
-      ]),
-    );
-  }
+  if (aside.childElementCount) card.classList.add('has-aside');
+  else aside.remove();
 
   return card;
 }
+
+const programDialog = document.getElementById('program-dialog');
+
+function openProgramDialog(match) {
+  const { program, verdict, fit } = match;
+  const pieces = [
+    el('div', { class: 'pdialog__top' }, [
+      el('span', {
+        class: `badge badge--${verdict}`,
+        text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
+      }),
+      el('button', {
+        type: 'button',
+        class: 'pdialog__close',
+        'aria-label': 'Close',
+        text: '✕',
+        onclick: () => programDialog.close(),
+      }),
+    ]),
+    el('h3', { class: 'result__name', id: 'pdialog-title', text: program.program_name }),
+    program.administrator && el('p', { class: 'result__admin', text: program.administrator }),
+    fit && fit.length
+      ? el(
+          'div',
+          { class: 'result__fit' },
+          fit.map((k) => el('span', { class: 'tag tag--fit', text: FIT_LABELS[k] || k })),
+        )
+      : null,
+    el('button', {
+      type: 'button',
+      class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
+      'data-program': program.program_id,
+      text: planToggleLabel(program.program_id),
+      onclick: () => togglePlan(program.program_id),
+    }),
+    buildProgramDetail(match),
+  ].filter(Boolean);
+  programDialog.replaceChildren(...pieces);
+  programDialog.showModal();
+}
+
+// Tapping the dimmed backdrop closes the dialog; Esc works natively.
+programDialog?.addEventListener('click', (event) => {
+  if (event.target === programDialog) programDialog.close();
+});
 
 function renderNotice({ icon, title, body, actionLabel, onAction }) {
   return el('div', { class: 'notice' }, [
@@ -821,320 +1172,36 @@ function renderNotice({ icon, title, body, actionLabel, onAction }) {
   ]);
 }
 
-// Each chip is {text, mono} — dollar figures take the data face, like every
-// other number on the site.
+// Each chip carries the step it edits: on the results page they are buttons
+// that jump straight back to that question, answers intact — a two-tap
+// correction instead of Start over.
 function answerChips() {
-  const chips = [{ text: `${answers.county} County, ${answers.state}` }];
-
-  if (isHousingSearch()) {
-    chips.push({ text: 'Finding a rental' });
-    chips.push({
-      text: answers.bedrooms === 'any' ? 'Any size' : bedroomsLabel(Number(answers.bedrooms)),
-    });
-    chips.push({
-      text: `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
-    });
-    // != null, not truthiness — an income of $0 was given, and calling it
-    // "not given" while every listing gets flagged over-budget contradicts
-    // itself.
-    const budget = monthlyBudget(answers.income);
-    chips.push(
-      budget != null
-        ? { text: `~${money(budget)}/mo budget`, mono: true }
-        : { text: 'Income not given' },
-    );
-    return chips;
-  }
+  const chips = [[`${answers.county} County, ${answers.state}`, 'county']];
 
   const helpLabels = {
-    finding: 'Finding a place',
+    rental: 'Finding a rental',
     staying: 'Staying housed',
+    buying: 'Buying a home',
     utility: 'Utility bill',
   };
-  chips.push({ text: helpLabels[answers.help] });
+  chips.push([answers.help.map((h) => helpLabels[h] || h).join(' · '), 'help']);
 
   const situationLabels = {
     renting: 'Renting',
-    unhoused: 'Not stably housed',
     homeowner: 'Homeowner',
-    buying: 'Hoping to buy',
   };
-  if (situationLabels[answers.situation]) chips.push({ text: situationLabels[answers.situation] });
-  chips.push({
-    text: `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
-  });
-  if (answers.income != null) {
-    chips.push({ text: `$${currency.format(answers.income)}/yr`, mono: true });
-  } else {
-    chips.push({ text: 'Income not given' });
-  }
+  if (situationLabels[answers.situation]) chips.push([situationLabels[answers.situation], 'situation']);
+  chips.push([
+    `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
+    'household',
+  ]);
+  if (answers.income != null) chips.push([`$${currency.format(answers.income)}/yr`, 'income']);
+  else chips.push(['Income not given', 'income']);
 
   return chips;
 }
 
-function chipEl({ text, mono }) {
-  return el('span', { class: mono ? 'chip chip--data' : 'chip', text });
-}
-
-// Range Lab's listings carry a city but no county, and the screener asks for
-// a county — CITY_COUNTIES (config.js) bridges the two. Null for a city the
-// map doesn't know, which keeps the listing visible.
-function countiesForCity(city, stateCode) {
-  const byState = CITY_COUNTIES[String(stateCode || '').toUpperCase()];
-  return (byState && byState[String(city).trim().toLowerCase()]) || null;
-}
-
-// The stroke house from the site's own brand mark, drawn faint — the photo
-// placeholder for listings whose API record carries no image.
-const HOUSE_SVG =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-  '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>';
-
-// Photo-forward listing card: an image (or placeholder) on top with the
-// affordability badge overlaid, the rent beside the name, one quiet meta
-// line, and a contact/action footer.
-function renderListingCard({ listing, affordable }) {
-  const card = el('li', { class: 'result result--listing' });
-
-  // Affordability is a flag, never a filter — same principle as the program
-  // matcher. Rent above the guideline still shows, marked so the person can
-  // decide for themselves.
-  const badge =
-    affordable === true
-      ? el('span', { class: 'badge badge--likely', text: '✓ Fits your budget' })
-      : affordable === false
-        ? el('span', { class: 'badge badge--possible', text: 'Above 30% guideline' })
-        : null;
-
-  card.append(
-    el('div', { class: 'result__media' }, [
-      listing.photo
-        ? el('img', { src: listing.photo, alt: '', loading: 'lazy' })
-        : el('span', { class: 'result__media-placeholder', html: HOUSE_SVG }),
-      badge,
-    ]),
-  );
-
-  const body = el('div', { class: 'result__body' });
-
-  body.append(
-    el('div', { class: 'result__headline' }, [
-      el('h3', { class: 'result__name', text: listing.name }),
-      el('span', {
-        class: `result__rent${listing.rent == null ? ' result__rent--unknown' : ''}`,
-        html:
-          listing.rent != null
-            ? `${money(listing.rent)}<small>/mo</small>`
-            : 'Not listed',
-      }),
-    ]),
-  );
-
-  const place = [listing.city, listing.county && `${listing.county} County`]
-    .filter(Boolean)
-    .join(', ');
-  const addressLine = [
-    listing.address !== listing.name ? listing.address : null,
-    place || null,
-  ]
-    .filter(Boolean)
-    .join(', ');
-  if (addressLine) {
-    body.append(el('p', { class: 'result__admin', text: addressLine }));
-  }
-
-  // The API sends availability as a lowercase status word ("available");
-  // sentence-case it so the facts line reads like English.
-  const availability = listing.availability
-    ? String(listing.availability).charAt(0).toUpperCase() + String(listing.availability).slice(1)
-    : null;
-
-  const metaBits = [
-    bedroomsLabel(listing.bedrooms),
-    listing.bathrooms != null && `${listing.bathrooms} bath`,
-    listing.type,
-    availability,
-    listing.subsidized && 'Income-restricted',
-  ].filter(Boolean);
-  if (metaBits.length) {
-    body.append(el('p', { class: 'result__facts', text: metaBits.join(' · ') }));
-  }
-
-  const contact =
-    contactLink({
-      value: listing.phone,
-      pattern: PHONE_RE,
-      scheme: 'tel',
-      sanitize: (v) => v.replace(/[^\d+]/g, ''),
-    }) || contactLink({ value: listing.email, pattern: EMAIL_RE, scheme: 'mailto' });
-
-  const action = listing.url
-    ? el('a', {
-        class: 'btn btn--primary btn--sm',
-        href: listing.url,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        text: 'View listing',
-      })
-    : contact && listing.rent == null
-      ? el('span', { class: 'result__foot-note', text: 'Call to ask about rent' })
-      : null;
-
-  if (contact || action) {
-    body.append(el('div', { class: 'result__foot' }, [contact, action]));
-  }
-
-  card.append(body);
-  return card;
-}
-
-// Flips the fork to the program screener and re-renders in place. The person
-// lands on rent-assistance results without re-answering anything — the
-// screener already has every answer that path needs.
-function switchToPrograms() {
-  setRentGoal('pay');
-  renderResults();
-}
-
-// Both renderers await network calls, and the person can change answers or
-// flip paths while one is in flight. Every render claims a fresh sequence
-// number and abandons itself the moment a newer render starts, so a slow
-// fetch can never paint stale results over current ones.
-let renderSeq = 0;
-
-async function renderHousingResults(seq) {
-  const host = $('#results-state');
-  host.replaceChildren(
-    el('div', { class: 'skeleton' }, [
-      el('div', { class: 'skeleton__card' }),
-      el('div', { class: 'skeleton__card' }),
-      el('div', { class: 'skeleton__card' }),
-    ]),
-  );
-
-  await loadListings();
-  if (seq !== renderSeq) return;
-  host.replaceChildren();
-
-  if (listingsError) {
-    const isMissingApi = listingsError.message === 'MISSING_HOUSING_API';
-    host.append(
-      renderNotice({
-        icon: isMissingApi ? '🔑' : '⚠️',
-        title: isMissingApi
-          ? 'Housing search not connected yet'
-          : "Couldn't load rental listings",
-        body: isMissingApi
-          ? 'The housing search has no data source configured — see the rental-search section of web/README.md to set one up. You can still check rent assistance programs below.'
-          : `${listingsError.message}. Check your connection and try again — or check rent assistance programs below.`,
-        actionLabel: isMissingApi ? 'See rent assistance programs' : 'Try again',
-        onAction: isMissingApi
-          ? switchToPrograms
-          : () => {
-              listingsKey = null;
-              renderResults();
-            },
-      }),
-    );
-    if (!isMissingApi) {
-      host.append(
-        el('div', { class: 'step__actions' }, [
-          el('button', {
-            type: 'button',
-            class: 'btn btn--ghost',
-            text: 'See rent assistance programs instead',
-            onclick: switchToPrograms,
-          }),
-        ]),
-      );
-    }
-    return;
-  }
-
-  const matches = screenListings(listings, answers, countiesForCity);
-  const affordableCount = matches.filter((m) => m.affordable === true).length;
-
-  host.append(
-    el('div', { class: 'results__header' }, [
-      el('h2', {
-        class: 'results__count',
-        text: matches.length
-          ? `${matches.length} rental${matches.length === 1 ? '' : 's'} in ${answers.county} County`
-          : `No rentals found in ${answers.county} County`,
-      }),
-      matches.length &&
-        el('p', {
-          class: 'results__summary',
-          text:
-            (affordableCount
-              ? `${affordableCount} fit${affordableCount === 1 ? 's' : ''} the 30%-of-income guideline for your household. `
-              : '') +
-            'Listed cheapest first. Availability changes fast — call before visiting.',
-        }),
-      el(
-        'div',
-        { class: 'results__chips' },
-        answerChips().map(chipEl),
-      ),
-    ]),
-  );
-
-  if (!matches.length) {
-    host.append(
-      renderNotice({
-        icon: '🔍',
-        title: 'Nothing matched right now',
-        body:
-          'Listings turn over quickly, so it is worth checking back. You can also try a different size or county — or see rent assistance programs, which can open up places that would otherwise be out of reach.',
-        actionLabel: 'See rent assistance programs',
-        onAction: switchToPrograms,
-      }),
-    );
-  } else {
-    host.append(
-      el(
-        'ul',
-        { class: 'results__list' },
-        matches.map(renderListingCard),
-      ),
-    );
-  }
-
-  host.append(
-    el('div', { class: 'step__actions' }, [
-      matches.length &&
-        el('button', {
-          type: 'button',
-          class: 'btn btn--ghost',
-          text: 'Also see rent assistance programs',
-          onclick: switchToPrograms,
-        }),
-      el('button', {
-        type: 'button',
-        class: 'btn btn--ghost',
-        text: 'Change my answers',
-        onclick: () => showStep('bedrooms'),
-      }),
-      el('button', {
-        type: 'button',
-        class: 'btn btn--ghost',
-        text: 'Print or save',
-        onclick: () => window.print(),
-      }),
-      el('button', {
-        type: 'button',
-        class: 'btn btn--ghost',
-        text: 'Start over',
-        onclick: restart,
-      }),
-    ]),
-  );
-}
-
 async function renderResults() {
-  const seq = ++renderSeq;
-  if (isHousingSearch()) return renderHousingResults(seq);
-
   const host = $('#results-state');
   host.replaceChildren();
 
@@ -1151,7 +1218,6 @@ async function renderResults() {
     } catch (error) {
       fetchError = error;
     }
-    if (seq !== renderSeq) return;
     host.replaceChildren();
   }
 
@@ -1165,7 +1231,6 @@ async function renderResults() {
     } catch {
       /* fall through with whatever limits we have */
     }
-    if (seq !== renderSeq) return;
   }
 
   if (fetchError) {
@@ -1190,25 +1255,54 @@ async function renderResults() {
   const matches = screenPrograms(programs, answers, limitLookup, proportionalStandards);
   const likely = matches.filter((m) => m.verdict === 'likely').length;
 
+  const possible = matches.length - likely;
+  const countText = !matches.length
+    ? 'No clear matches in this county'
+    : likely && possible
+      ? `${likely} strong fit${likely === 1 ? '' : 's'}, ${possible} more worth a call`
+      : likely
+        ? `${likely} strong fit${likely === 1 ? '' : 's'} for your situation`
+        : `${matches.length} program${matches.length === 1 ? '' : 's'} worth a call`;
+
   const header = el('div', { class: 'results__header' }, [
-    el('h2', {
-      class: 'results__count',
-      text: matches.length
-        ? `${matches.length} program${matches.length === 1 ? '' : 's'} may fit your situation`
-        : 'No clear matches in this county',
-    }),
+    el('h2', { class: 'results__count', text: countText }),
     matches.length &&
       el('p', {
         class: 'results__summary',
         text: likely
-          ? `${likely} look${likely === 1 ? 's' : ''} like a strong fit based on what you told us. Programs are listed best-match first.`
+          ? 'Tap any program to see its details and next steps — the best matches are listed first.'
           : 'These are worth a call — each has a requirement we couldn\'t confirm from your answers.',
       }),
     el(
       'div',
       { class: 'results__chips' },
-      answerChips().map(chipEl),
+      answerChips().map(([label, step]) =>
+        el('button', {
+          type: 'button',
+          class: 'chip chip--edit',
+          text: label,
+          title: 'Change this answer',
+          onclick: () => showStep(step),
+        }),
+      ),
     ),
+    matches.length &&
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost btn--sm results__share',
+        text: 'Copy link to these results',
+        onclick: async (event) => {
+          try {
+            await navigator.clipboard.writeText(location.href);
+            event.target.textContent = 'Link copied ✓';
+            setTimeout(() => {
+              event.target.textContent = 'Copy link to these results';
+            }, 2000);
+          } catch {
+            /* clipboard denied: the URL in the address bar is the same link */
+          }
+        },
+      }),
   ]);
   host.append(header);
 
@@ -1224,13 +1318,52 @@ async function renderResults() {
       }),
     );
   } else {
-    host.append(
-      el(
+    // Results render as one labelled section per program type — rent help
+    // never interleaves with homebuying or utility help. Sections the
+    // person asked about come first, and inside each the matcher's order
+    // holds (targeted-fit programs, then strong fits). The top program of
+    // the first section opens; everything else is a row that opens on tap.
+    const sections = sectionDisplayOrder()
+      .map((s) => ({ ...s, items: matches.filter((m) => sectionOf(m.program.category) === s.id) }))
+      .filter((s) => s.items.length);
+    // Each section shows its best four; the rest sit behind a Show-more
+    // button so a long list stays a guide rather than a directory.
+    const VISIBLE_PER_SECTION = 4;
+    const sectionBlock = (items, leadFirst) => {
+      const frag = document.createDocumentFragment();
+      const list = el(
         'ul',
         { class: 'results__list' },
-        matches.map(renderResultCard),
-      ),
-    );
+        items.slice(0, VISIBLE_PER_SECTION).map((m, i) =>
+          renderResultCard(m, { lead: leadFirst && i === 0 }),
+        ),
+      );
+      frag.append(list);
+      const rest = items.slice(VISIBLE_PER_SECTION);
+      if (rest.length) {
+        const btn = el('button', {
+          type: 'button',
+          class: 'btn btn--ghost btn--sm results__more',
+          text: `Show ${rest.length} more`,
+          onclick: () => {
+            rest.forEach((m) => list.append(renderResultCard(m, {})));
+            btn.remove();
+          },
+        });
+        frag.append(btn);
+      }
+      return frag;
+    };
+    if (sections.length === 1) {
+      host.append(sectionBlock(sections[0].items, true));
+    } else {
+      sections.forEach((s, si) => {
+        host.append(
+          el('p', { class: 'results__group', text: `${s.label} (${s.items.length})` }),
+          sectionBlock(s.items, si === 0),
+        );
+      });
+    }
   }
 
   host.append(
@@ -1245,7 +1378,12 @@ async function renderResults() {
         type: 'button',
         class: 'btn btn--ghost',
         text: 'Print or save',
-        onclick: () => window.print(),
+        onclick: () => {
+          // The printout is a full referral sheet, so folded-away
+          // programs come out from behind their Show-more buttons first.
+          $$('.results__more').forEach((b) => b.click());
+          window.print();
+        },
       }),
       el('button', {
         type: 'button',
@@ -1263,10 +1401,7 @@ async function renderResults() {
 
 function init() {
   buildStateChoices();
-  $('#county-filter').addEventListener('input', filterCountyChoices);
   wireHelpChoices();
-  wireRentGoalChoices();
-  wireBedroomChoices();
   wireIncomeStep();
   wireCircumstances();
 
@@ -1282,12 +1417,10 @@ function init() {
     setHouseholdSize(Number(e.target.value)),
   );
 
-  // Enter advances, as long as the step's Continue is enabled. The county
-  // filter is exempt: Enter is the natural act in a search box, and
-  // advancing mid-filter would carry the previously selected county along.
+  // Enter advances, as long as the step's Continue is enabled.
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') return;
-    if (event.target.matches('a, button, #county-filter')) return;
+    if (event.target.matches('a, button')) return;
     const btn = $(`.step[data-step="${currentStep()}"] [data-action="next"]`);
     if (btn && !btn.disabled) {
       event.preventDefault();
@@ -1297,9 +1430,40 @@ function init() {
 
   setHouseholdSize(1);
   refreshContinueButtons();
-  showStep('help');
 
-  // Warm the cache while the person answers, so results feel instant.
+  // A shared results link beats a saved session; a saved session beats
+  // starting over.
+  const shared = decodeShareHash(location.hash);
+  let resumeStep = null;
+  if (shared) {
+    Object.assign(answers, shared);
+    hydrateUi();
+    resumeStep = 'results';
+  } else {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(ANSWERS_KEY) || 'null');
+      if (saved && saved.answers && saved.answers.state) {
+        Object.assign(answers, saved.answers);
+        // Sessions saved before the multi-select help step.
+        if (typeof answers.help === 'string') {
+          answers.help = answers.help === 'finding' ? ['rental'] : [answers.help];
+        }
+        if (!Array.isArray(answers.help)) answers.help = [];
+        if (answers.situation === 'buying') {
+          if (!answers.help.includes('buying')) answers.help.push('buying');
+          answers.situation = null;
+        }
+        if (!['renting', 'homeowner'].includes(answers.situation)) answers.situation = null;
+        hydrateUi();
+        if (saved.step && saved.step !== 'intro') resumeStep = saved.step;
+      }
+    } catch {
+      /* a corrupt save just means starting fresh */
+    }
+  }
+  showStep(resumeStep || 'intro');
+
+  // Warm the cache while the person reads the intro, so results feel instant.
   fetchPrograms()
     .then((rows) => {
       programs = rows;

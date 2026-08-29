@@ -1,8 +1,7 @@
 # Toto Housing Companion — screener frontend
 
-A guided screener that matches someone to housing, utility, and homebuying
-programs from the Supabase database in this repo — or, for someone looking to
-rent, searches available rental listings from a configurable housing data API.
+A guided five-question screener that matches someone to housing, utility, and
+homebuying programs from the Supabase database in this repo.
 
 No build step, no dependencies, no framework — plain ES modules, so you can
 edit a file and refresh the page.
@@ -36,8 +35,7 @@ edit a file and refresh the page.
 | `styles.css` | Design system — light/dark, responsive, print styles           |
 | `app.js`     | Wizard navigation, Supabase fetch, results rendering           |
 | `matcher.js` | Eligibility matching engine (no DOM — testable on its own)     |
-| `housing.js` | Rental-listing search: fetch, normalize, filter (no DOM)       |
-| `config.js`  | Connection settings, county list, housing API endpoint         |
+| `config.js`  | Connection settings, county list, AMI reference table          |
 | `serve.ps1`  | Dependency-free local static server                            |
 
 ## How matching works
@@ -69,70 +67,6 @@ Two details worth knowing:
 - Income limits get a 10% grace band. The AMI table is an estimate and real
   HUD limits vary by county, so someone just over the line still sees the
   program, flagged rather than dropped.
-
-## The rental search ("Help finding a place")
-
-Someone who answers *Finding a place to live* → *I'm looking to rent* is asked
-one more question: do they want **help paying for rent** or **help finding a
-place**? Paying continues into the program screener above. Finding runs the
-housing search instead: it asks what size place they need, skips the
-program-specific circumstance checkboxes, and shows actual rental listings for
-their county — cheapest first, each flagged against the common
-30%-of-gross-income affordability guideline when an income was given. The
-results always offer a one-click switch to the rent-assistance programs, since
-the two kinds of help usually go together.
-
-Listings come from a housing data API whose key must stay private, and
-`config.js` ships to every visitor's browser — so the browser never calls
-that API directly. It calls the `housing-search` Supabase edge function
-(`supabase/functions/housing-search/`), which holds the key and the real
-endpoint as function secrets and proxies the request. Setting it up once:
-
-1. **Deploy the function.** Add a repo secret named `SUPABASE_ACCESS_TOKEN`
-   (from <https://supabase.com/dashboard/account/tokens>) and run the
-   *Deploy Supabase edge functions* workflow — it also auto-runs on pushes
-   that touch `supabase/functions/`. Or deploy from your machine:
-
-   ```bash
-   supabase functions deploy housing-search --project-ref vhhcicawkhokncnhzboe --no-verify-jwt
-   ```
-
-2. **Set the function's secrets** — in the Supabase dashboard under
-   *Edge Functions → Secrets*, or:
-
-   ```bash
-   supabase secrets set --project-ref vhhcicawkhokncnhzboe \
-     HOUSING_API_URL='https://basecamp.rangelab.io/api/v1/properties?state={state}&limit=100' \
-     HOUSING_API_KEY='rl_live_...'
-   ```
-
-   The listings source is Range Lab's Housing Data API
-   (`GET /api/v1/properties`, `x-api-key` auth — the function's default
-   `X-Api-Key` header matches, headers being case-insensitive). `{state}`
-   is filled in from the person's answers. `limit=100` is the API's JSON
-   page cap, not the total: the function follows the response's
-   `meta.total` and fetches up to 500 rows across pages before answering. The API filters by city rather
-   than county and its records carry no county, so county narrowing happens
-   client-side through the `CITY_COUNTIES` map in `config.js` — a city
-   missing from that map is shown rather than hidden, so extend the map as
-   unmapped towns show up in real listings. For a different API later,
-   `{county}` is also available as a placeholder, and
-   `HOUSING_API_KEY_HEADER` overrides the auth header name
-   (`Authorization` gets a `Bearer ` prefix automatically).
-
-Until the function is deployed and configured, the search path shows a
-notice explaining what's missing and offers the program screener instead;
-nothing else is affected.
-
-`housing.js` unwraps common response envelopes (`{listings: [...]}`,
-`{data: {...}}`, a bare array) and maps common field names
-(`rent`/`price`/`monthly_rent`, `beds`/`bedrooms`, and so on) onto one
-internal shape — if your API's names aren't recognized, add them to
-`FIELD_ALIASES` at the top of `housing.js`.
-
-The same no-false-exclusion principle as the matcher applies: a listing
-missing its county, size, or rent is never dropped for it — unknown rent
-sorts last and reads "Not listed — ask".
 
 ## Before this goes in front of real people
 

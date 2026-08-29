@@ -259,6 +259,15 @@ INACTIVE_PATTERNS = [
     # alive, which is why the test is "ended" rather than "closed".
     (re.compile(r'\bended\b|closed permanently|no longer', re.I), 'Program ended'),
     (re.compile(r'not a (funding|payment) program', re.I), 'Not a funding program'),
+    # The 2026-08 master matrix adds directory rows — utility providers,
+    # state systems and coalitions, city records, charity profiles — whose
+    # categories say so in as many words (note the British spelling the
+    # researchers use: "programme"). They are reference material, not
+    # something a person can apply to from a results card.
+    (re.compile(r'not an? (?:direct )?assistance program(?:me)?', re.I),
+     'Reference entry, not an assistance program'),
+    (re.compile(r'organi[sz]ation profile', re.I),
+     'Organisation profile, not a program'),
     (re.compile(r'does not cover utilities', re.I), 'Does not cover utilities'),
     (re.compile(r'referral and navigation|navigation and counselling', re.I),
      'Referral or navigation only'),
