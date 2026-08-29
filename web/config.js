@@ -14,26 +14,23 @@ export const FORMS_BUCKET = 'intake-forms';
 // ---------------------------------------------------------------------------
 // Housing search API
 // ---------------------------------------------------------------------------
-// The rental-search path ("Help finding a place") reads available listings
-// from this endpoint via housing.js. Until a real URL is pasted in, that path
-// shows a "not connected yet" notice instead of results — the program
-// screener is unaffected.
+// The rental-search path ("Help finding a place") reads listings via the
+// housing-search edge function (supabase/functions/housing-search), never
+// from the housing data API directly: this file ships to every browser, so
+// the API's private key cannot live here. The function holds the key and the
+// real endpoint as Supabase secrets and proxies the request — see the
+// "rental search" section of web/README.md for the one-time setup.
 //
-// `{state}` and `{county}` in the URL are replaced with the person's answers
-// (e.g. 'https://api.example.org/listings?state={state}&county={county}').
-// An endpoint without placeholders is fetched as-is; results are narrowed to
-// the chosen county client-side either way, so both styles of API work.
-//
-// The response can be a bare JSON array or wrapped ({listings: [...]},
-// {data: {...}}, etc.) — housing.js unwraps the common envelopes and maps
-// common field names automatically. If your API's field names don't map,
-// extend FIELD_ALIASES in housing.js.
-export const HOUSING_API_URL = 'PASTE_YOUR_HOUSING_API_URL_HERE';
+// `{state}` and `{county}` are replaced with the person's answers before the
+// request is made; the function forwards them to the real API the same way.
+export const HOUSING_API_URL =
+  `${SUPABASE_URL}/functions/v1/housing-search?state={state}&county={county}`;
 
-// Sent with every listings request. Add whatever your API needs, e.g.
-// { 'X-Api-Key': '...' } or { Authorization: 'Bearer ...' }. Remember this
-// file ships to the browser — only put keys here that are safe to be public.
-export const HOUSING_API_HEADERS = {};
+// The public anon key, same as every other Supabase call this app makes.
+export const HOUSING_API_HEADERS = {
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+};
 
 // ---------------------------------------------------------------------------
 // Service areas

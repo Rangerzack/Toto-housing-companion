@@ -82,21 +82,44 @@ their county — cheapest first, each flagged against the common
 results always offer a one-click switch to the rent-assistance programs, since
 the two kinds of help usually go together.
 
-Listings come from the API configured in `config.js`:
+Listings come from a housing data API whose key must stay private, and
+`config.js` ships to every visitor's browser — so the browser never calls
+that API directly. It calls the `housing-search` Supabase edge function
+(`supabase/functions/housing-search/`), which holds the key and the real
+endpoint as function secrets and proxies the request. Setting it up once:
 
-```js
-export const HOUSING_API_URL = 'https://api.example.org/listings?state={state}&county={county}';
-export const HOUSING_API_HEADERS = { 'X-Api-Key': '...' }; // if your API needs one
-```
+1. **Deploy the function.** Add a repo secret named `SUPABASE_ACCESS_TOKEN`
+   (from <https://supabase.com/dashboard/account/tokens>) and run the
+   *Deploy Supabase edge functions* workflow — it also auto-runs on pushes
+   that touch `supabase/functions/`. Or deploy from your machine:
 
-`{state}` and `{county}` are filled in from the person's answers; a URL
-without placeholders is fetched as-is and filtered client-side. `housing.js`
-unwraps common response envelopes (`{listings: [...]}`, `{data: {...}}`, a
-bare array) and maps common field names (`rent`/`price`/`monthly_rent`,
-`beds`/`bedrooms`, and so on) onto one internal shape — if your API's names
-aren't recognized, add them to `FIELD_ALIASES` at the top of `housing.js`.
-Until a URL is configured, the search path shows a "not connected yet" notice
-and offers the program screener instead; nothing else is affected.
+   ```bash
+   supabase functions deploy housing-search --project-ref vhhcicawkhokncnhzboe --no-verify-jwt
+   ```
+
+2. **Set the function's secrets** — in the Supabase dashboard under
+   *Edge Functions → Secrets*, or:
+
+   ```bash
+   supabase secrets set --project-ref vhhcicawkhokncnhzboe \
+     HOUSING_API_URL='https://api.example.org/listings?state={state}&county={county}' \
+     HOUSING_API_KEY='the-private-key'
+   ```
+
+   `{state}` and `{county}` are filled in from the person's answers; a URL
+   without placeholders is fetched as-is and filtered client-side. The key is
+   sent in an `X-Api-Key` header by default; set `HOUSING_API_KEY_HEADER` to
+   change that (`Authorization` gets a `Bearer ` prefix automatically).
+
+Until the function is deployed and configured, the search path shows a
+notice explaining what's missing and offers the program screener instead;
+nothing else is affected.
+
+`housing.js` unwraps common response envelopes (`{listings: [...]}`,
+`{data: {...}}`, a bare array) and maps common field names
+(`rent`/`price`/`monthly_rent`, `beds`/`bedrooms`, and so on) onto one
+internal shape — if your API's names aren't recognized, add them to
+`FIELD_ALIASES` at the top of `housing.js`.
 
 The same no-false-exclusion principle as the matcher applies: a listing
 missing its county, size, or rent is never dropped for it — unknown rent

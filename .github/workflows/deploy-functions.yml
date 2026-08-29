@@ -1,0 +1,43 @@
+name: Deploy Supabase edge functions
+
+# Deploys the housing-search function, which proxies the private housing data
+# API so its key never ships to the browser (web/config.js points the
+# frontend here instead of at the API).
+#
+# Requires a repo secret named SUPABASE_ACCESS_TOKEN — a personal access
+# token from https://supabase.com/dashboard/account/tokens.
+#
+# The function's own configuration (HOUSING_API_URL, HOUSING_API_KEY, and
+# optionally HOUSING_API_KEY_HEADER) is set as function secrets in the
+# Supabase dashboard (Edge Functions -> Secrets) or with `supabase secrets
+# set`, never committed here.
+#
+# Like the database, the Supabase project is shared by production and
+# staging: both branches deploy the same live function, so whichever pushed
+# last wins — the same trade-off the /staging/ frontend already makes.
+on:
+  push:
+    branches: [master, staging]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # --no-verify-jwt because the frontend authenticates with the project's
+      # sb_publishable_ key, which is not a JWT and cannot pass JWT
+      # verification. The function serves the same public data as the site
+      # itself; the private housing API key stays in its secrets.
+      - name: Deploy housing-search
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy housing-search --project-ref vhhcicawkhokncnhzboe --no-verify-jwt

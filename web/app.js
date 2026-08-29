@@ -934,7 +934,7 @@ async function renderHousingResults() {
           ? 'Housing search not connected yet'
           : "Couldn't load rental listings",
         body: isMissingApi
-          ? 'Add the housing data API URL to web/config.js (HOUSING_API_URL), then reload this page. You can still check rent assistance programs below.'
+          ? 'The housing search has no data source configured — see the rental-search section of web/README.md to set one up. You can still check rent assistance programs below.'
           : `${listingsError.message}. Check your connection and try again — or check rent assistance programs below.`,
         actionLabel: isMissingApi ? 'See rent assistance programs' : 'Try again',
         onAction: isMissingApi

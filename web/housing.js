@@ -132,7 +132,17 @@ export async function fetchListings({ url, headers = {}, state, county }) {
 
   const response = await fetch(target, { headers });
   if (!response.ok) {
-    throw new Error(`Housing API returned ${response.status} ${response.statusText}`);
+    // The housing-search edge function explains its failures in an {error}
+    // body ("not configured yet — set the ... secrets"); showing that beats
+    // a bare status code.
+    let detail = `Housing API returned ${response.status} ${response.statusText}`;
+    try {
+      const body = await response.json();
+      if (body && (body.error || body.message)) detail = String(body.error || body.message);
+    } catch {
+      /* not JSON — keep the status line */
+    }
+    throw new Error(detail);
   }
 
   return extractListings(await response.json())
