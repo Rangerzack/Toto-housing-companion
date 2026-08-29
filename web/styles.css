@@ -100,6 +100,13 @@
   box-sizing: border-box;
 }
 
+/* The hidden attribute must always win: several components (.btn, .choice)
+   set their own display, which would otherwise override the UA's
+   [hidden] { display: none } and leave "hidden" elements visible. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
@@ -334,76 +341,102 @@ main:has(.step--results.is-active) {
   flex-wrap: wrap;
 }
 
-/* --- Intro ---------------------------------------------------------- */
+/* --- Landing (the first question is the home page) ------------------- */
 
-.step--intro {
-  padding-top: 3.5rem;
+.step--landing {
+  padding-top: 3.25rem;
+  text-align: center;
 }
 
-.intro__title {
-  font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.75rem);
-  line-height: 1.1;
+.step--landing .step__title {
+  font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.6rem);
+  line-height: 1.12;
   letter-spacing: -0.03em;
-  margin: 0 0 1rem;
-  text-wrap: balance;
+  margin-bottom: 0.6rem;
 }
 
-.intro__lead {
-  font-size: 1.125rem;
-  color: var(--ink-soft);
-  margin: 0 0 2rem;
-  max-width: 34rem;
-  text-wrap: pretty;
+.step--landing .step__hint {
+  margin-bottom: 2rem;
 }
 
-.intro__points {
-  list-style: none;
-  margin: 0 0 2.25rem;
-  padding: 0;
-  display: grid;
-  gap: 0.85rem;
+.step--landing .choices {
+  max-width: 36rem;
+  margin: 0 auto;
+  text-align: left;
 }
-.intro__points li {
-  display: flex;
+
+/* The icon tile plays the control's part here; the radio dot would make
+   the row read as a form instead of a front door. */
+.step--landing .choice {
   align-items: center;
-  gap: 0.85rem;
-  color: var(--ink-soft);
 }
-.intro__icon {
+.step--landing .choice::before {
+  display: none;
+}
+
+.choice__tile {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: var(--surface-sunken);
-  font-size: 0.9rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 12px;
+  background: var(--primary-tint);
+  color: var(--primary);
   flex-shrink: 0;
 }
+.choice__tile svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
 
-.intro__note {
-  margin-top: 2.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+.choice__chevron {
+  display: inline-flex;
+  margin-left: auto;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.choice__chevron svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.step__actions--landing {
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.landing-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.9rem;
+  margin: 2.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--ink-faint);
+}
+
+.landing-note {
+  margin: 1.9rem auto 0;
+  max-width: 34rem;
   font-size: 0.9375rem;
   color: var(--ink-faint);
 }
 
-/* A quiet pointer for caseworkers and partners. Sits under the note so it
-   never competes with "Get started", which is the only thing an applicant
-   should be looking at on this screen. */
-.intro__data {
-  margin-top: 0.75rem;
+/* A quiet pointer for caseworkers and partners — it never competes with
+   the three doors above. */
+.landing-data {
+  margin: 0.6rem auto 0;
   font-size: 0.9375rem;
   color: var(--ink-faint);
 }
-.intro__data a,
+.landing-data a,
 .site-footer p a {
   color: var(--primary);
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
 }
-.intro__data a:hover,
+.landing-data a:hover,
 .site-footer p a:hover {
   text-decoration: underline;
 }
@@ -438,12 +471,6 @@ main:has(.step--results.is-active) {
 .county-filter::placeholder {
   color: var(--ink-faint);
 }
-/* .choice sets display: flex, which outranks the hidden attribute's UA
-   default — restate it so filtered-out counties actually disappear. */
-.choice[hidden] {
-  display: none;
-}
-
 .choices--grid {
   grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
 }

@@ -18,8 +18,11 @@ import {
 // State
 // ---------------------------------------------------------------------------
 
+// There is no intro screen: the first question IS the home page. The order
+// runs what you need → where you are → about your household, so the very
+// first tap already moves someone toward their answer.
 const STEPS = [
-  'intro', 'state', 'county', 'help', 'situation', 'rent-goal',
+  'help', 'situation', 'rent-goal', 'state', 'county',
   'household', 'bedrooms', 'income', 'circumstances', 'results',
 ];
 
@@ -40,7 +43,7 @@ function isHousingSearch() {
 // so the visible set is computed rather than fixed.
 function questionSteps() {
   return STEPS.filter((s) => {
-    if (s === 'intro' || s === 'results') return false;
+    if (s === 'results') return false;
     if (s === 'situation') return answers.help !== 'utility';
     // Only renters are asked to choose between paying and finding.
     if (s === 'rent-goal') return answers.help === 'finding' && answers.situation === 'renting';
@@ -277,7 +280,8 @@ function showStep(name) {
   const steps = questionSteps();
   const isQuestion = steps.includes(name);
   $('#progress').hidden = !isQuestion;
-  $('#restart-top').hidden = name === 'intro';
+  // The first question is the landing — "start over" means nothing there.
+  $('#restart-top').hidden = name === 'help';
 
   if (isQuestion) {
     const position = steps.indexOf(name) + 1;
@@ -298,7 +302,7 @@ function showStep(name) {
 
 // Walks STEPS in the given direction, skipping any step not currently asked.
 function move(direction) {
-  const skipped = STEPS.filter((s) => !questionSteps().includes(s) && s !== 'intro' && s !== 'results');
+  const skipped = STEPS.filter((s) => !questionSteps().includes(s) && s !== 'results');
   let i = stepIndex + direction;
   while (i > 0 && i < STEPS.length - 1 && skipped.includes(STEPS[i])) i += direction;
   if (i >= 0 && i < STEPS.length) showStep(STEPS[i]);
@@ -333,7 +337,7 @@ function restart() {
   syncHouseholdUi();
   syncCircumstanceVisibility();
   refreshContinueButtons();
-  showStep('intro');
+  showStep('help');
 }
 
 // A step's Continue button stays disabled until that step has an answer.
@@ -503,6 +507,18 @@ function wireHelpChoices() {
       if (answers.help === 'utility') answers.situation = 'utility';
       buildSituationChoices();
       refreshContinueButtons();
+    });
+
+    // A pointer tap on the landing advances on its own; the short delay lets
+    // the selection register visually first. The listener sits on the LABEL:
+    // keyboard selection fires its click on the input (with detail 0, as
+    // does the label-forwarded copy), so those users are never yanked
+    // forward mid-review — they press Continue when ready.
+    input.closest('label').addEventListener('click', (event) => {
+      if (event.detail === 0) return;
+      setTimeout(() => {
+        if (currentStep() === 'help' && answers.help) goNext();
+      }, 180);
     });
   });
 }
@@ -1243,9 +1259,9 @@ function init() {
 
   setHouseholdSize(1);
   refreshContinueButtons();
-  showStep('intro');
+  showStep('help');
 
-  // Warm the cache while the person reads the intro, so results feel instant.
+  // Warm the cache while the person answers, so results feel instant.
   fetchPrograms()
     .then((rows) => {
       programs = rows;

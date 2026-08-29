@@ -83,39 +83,71 @@
         </div>
       </div>
 
-      <!-- Intro ---------------------------------------------------------- -->
-      <section class="step step--intro is-active" data-step="intro" tabindex="-1">
-        <h1 class="intro__title">Find housing help you may qualify for</h1>
-        <p class="intro__lead">
-          Answer a few short questions about your household. We'll show you
-          rent assistance, utility help, homebuying programs — or available
-          rentals — in your area that look like a fit, along with who to
-          contact.
+      <!-- Landing: the first question IS the home page --------------------- -->
+      <section class="step step--landing is-active" data-step="help" tabindex="-1">
+        <h1 class="step__title">What do you need help with?</h1>
+        <p class="step__hint">
+          Pick the one closest to why you're here — you can change your mind
+          anytime.
         </p>
-        <ul class="intro__points">
-          <li>
-            <span class="intro__icon" aria-hidden="true">⏱</span>
-            <span>Takes about two minutes</span>
-          </li>
-          <li>
-            <span class="intro__icon" aria-hidden="true">🔒</span>
-            <span>Nothing you enter is saved or sent anywhere</span>
-          </li>
-          <li>
-            <span class="intro__icon" aria-hidden="true">↩</span>
-            <span>You can skip any question you're unsure about</span>
-          </li>
-        </ul>
-        <div class="step__actions">
-          <button type="button" class="btn btn--primary btn--lg" data-action="next">
-            Get started
-          </button>
+        <div class="choices" role="radiogroup" aria-labelledby="help-label" id="help-choices">
+          <label class="choice">
+            <input type="radio" name="help" value="finding" />
+            <span class="choice__tile" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" /></svg>
+            </span>
+            <span class="choice__body">
+              <span class="choice__title">Finding a place to live</span>
+              <span class="choice__desc">Looking for a rental, hoping to buy, or without stable housing right now</span>
+            </span>
+            <span class="choice__chevron" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="help" value="staying" />
+            <span class="choice__tile" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></svg>
+            </span>
+            <span class="choice__body">
+              <span class="choice__title">Staying in the home I have</span>
+              <span class="choice__desc">Behind on rent or mortgage, facing eviction, or needing repairs</span>
+            </span>
+            <span class="choice__chevron" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="help" value="utility" />
+            <span class="choice__tile" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" /></svg>
+            </span>
+            <span class="choice__body">
+              <span class="choice__title">Paying a utility bill</span>
+              <span class="choice__desc">Heat, electricity, gas, or water — including a shutoff notice</span>
+            </span>
+            <span class="choice__chevron" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+            </span>
+          </label>
         </div>
-        <p class="intro__note">
+        <span id="help-label" class="visually-hidden">Kind of help needed</span>
+        <!-- Pointer taps advance on their own; this button is the path for
+             keyboard and assistive-tech users, who arrow through the options
+             first. -->
+        <div class="step__actions step__actions--landing">
+          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
+        </div>
+        <p class="landing-trust">
+          <span>Takes about two minutes</span>
+          <span>Nothing you enter is saved</span>
+          <span>Skip anything you're unsure about</span>
+        </p>
+        <p class="landing-note">
           This tool gives general information, not a decision about your
           eligibility. Only the programs themselves can tell you if you qualify.
         </p>
-        <p class="intro__data">
+        <p class="landing-data">
           Helping someone else, or need the figures behind the results?
           <a href="data/">See every income and rent limit →</a>
         </p>
@@ -155,40 +187,6 @@
         />
         <div class="choices choices--grid" role="radiogroup" aria-labelledby="county-label" id="county-choices"></div>
         <span id="county-label" class="visually-hidden">County</span>
-        <div class="step__actions">
-          <button type="button" class="btn btn--ghost" data-action="back">Back</button>
-          <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
-        </div>
-      </section>
-
-      <!-- 3. What kind of help --------------------------------------------- -->
-      <section class="step" data-step="help" tabindex="-1">
-        <h2 class="step__title">What do you need help with?</h2>
-        <p class="step__hint">Pick the one closest to why you're here today.</p>
-        <div class="choices" role="radiogroup" aria-labelledby="help-label" id="help-choices">
-          <label class="choice">
-            <input type="radio" name="help" value="finding" />
-            <span class="choice__body">
-              <span class="choice__title">Finding a place to live</span>
-              <span class="choice__desc">Looking for a rental, hoping to buy, or without stable housing right now</span>
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="help" value="staying" />
-            <span class="choice__body">
-              <span class="choice__title">Staying in the home I have</span>
-              <span class="choice__desc">Behind on rent or mortgage, facing eviction, or needing repairs</span>
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="help" value="utility" />
-            <span class="choice__body">
-              <span class="choice__title">Paying a utility bill</span>
-              <span class="choice__desc">Heat, electricity, gas, or water — including a shutoff notice</span>
-            </span>
-          </label>
-        </div>
-        <span id="help-label" class="visually-hidden">Kind of help needed</span>
         <div class="step__actions">
           <button type="button" class="btn btn--ghost" data-action="back">Back</button>
           <button type="button" class="btn btn--primary" data-action="next" disabled>Continue</button>
