@@ -1,16 +1,104 @@
 {
   "artboards": [
-    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "title": "Intro" },
-    { "file": "Question.dc.html", "x": 490, "y": 0, "w": 390, "h": 844, "title": "Question step" },
-    { "file": "Income.dc.html", "x": 980, "y": 0, "w": 390, "h": 844, "title": "Income step" },
-    { "file": "Circumstances.dc.html", "x": 1870, "y": 0, "w": 390, "h": 920, "title": "Circumstances step" },
-    { "file": "ProgramDialog.dc.html", "x": 2360, "y": 0, "w": 1000, "h": 780, "title": "Program detail dialog" },
-    { "file": "Results.dc.html", "x": 0, "y": 990, "w": 390, "h": 1620, "title": "Results — phone" },
-    { "file": "HousingPlan.dc.html", "x": 490, "y": 990, "w": 390, "h": 1330, "title": "Housing plan" },
-    { "file": "ResultsDesktop.dc.html", "x": 980, "y": 990, "w": 1440, "h": 980, "title": "Results — desktop" }
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Intro"
+    },
+    {
+      "file": "LocalArea.dc.html",
+      "x": 490,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Local area — multi-select"
+    },
+    {
+      "file": "Question.dc.html",
+      "x": 980,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "What do you need help with?"
+    },
+    {
+      "file": "RentalPrefs.dc.html",
+      "x": 1470,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Rental preferences"
+    },
+    {
+      "file": "Income.dc.html",
+      "x": 1960,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Income step"
+    },
+    {
+      "file": "Circumstances.dc.html",
+      "x": 2450,
+      "y": 0,
+      "w": 390,
+      "h": 920,
+      "title": "Circumstances step"
+    },
+    {
+      "file": "ProgramDialog.dc.html",
+      "x": 2940,
+      "y": 0,
+      "w": 1000,
+      "h": 780,
+      "title": "Program detail dialog"
+    },
+    {
+      "file": "Results.dc.html",
+      "x": 0,
+      "y": 990,
+      "w": 390,
+      "h": 1620,
+      "title": "Results — phone"
+    },
+    {
+      "file": "HousingPlan.dc.html",
+      "x": 490,
+      "y": 990,
+      "w": 390,
+      "h": 1330,
+      "title": "Housing plan"
+    },
+    {
+      "file": "ResultsDesktop.dc.html",
+      "x": 980,
+      "y": 990,
+      "w": 1440,
+      "h": 980,
+      "title": "Results — desktop"
+    },
+    {
+      "file": "AvailableRentals.dc.html",
+      "x": 2470,
+      "y": 990,
+      "w": 1140,
+      "h": 480,
+      "title": "Results — Available rentals section"
+    }
   ],
   "annotations": [
-    { "id": "how-to-use", "x": 1470, "y": 0, "w": 300, "text": "The live screener as shipped 2026-08-28, rebuilt element-for-element from its real stylesheet (Annum brand: #FF0055 accent, Manrope + IBM Plex Mono, 14px radii).\n\nLatest: question 3 is multi-select (rental / staying / buying / utility, any combination), rent-or-own is asked only for staying, and the circumstances step gained a not-stably-housed checkbox. Results now group by program type (Housing & rent help / Buying a home / Home repair / Utility bills / Other support) and programs built for a confirmed circumstance rank first with pink 'For veterans'-style tags — cards can stack several. Homeless-serving evidence is read across tenure, crisis rule, and program name, and the same treatment applies to every market with no per-market code. Each section shows its best four behind a Show-more button; collapsed cards never truncate and stretch evenly to their grid row. Tapping a card (or its Details button) opens the program detail dialog — see the Program detail dialog artboard: facts in the left column, a sunken action rail (next steps, contact, buttons) on the right, over a dimmed backdrop.\n\nAlso here: tap-to-advance questions, grouped foldable results, editable answer chips, shareable results link, and the housing plan.\n\nRestyle anything here — hand the canvas back and the changes get implemented in the real CSS." }
+    {
+      "id": "how-to-use",
+      "x": 4040,
+      "y": 0,
+      "w": 300,
+      "text": "The live screener as shipped 2026-08-29, rebuilt element-for-element from its real stylesheet (Annum brand: #FF0055 accent, Manrope + IBM Plex Mono, 14px radii).\n\nTop row follows the question flow. State is a hard filter, then 'What's your local area?' lets people check several counties (type-to-narrow when the list is long) — programs and rentals match any of them. The needs question is multi-select with the new labels: Finding a home / Staying in my home / Buying a house / Paying a utility bill. Picking 'Finding a home' adds the rental-preferences step: max rent is a ceiling, but bedrooms and bathrooms are floors — a studio seeker also sees 1-bedrooms in budget, never fewer options. The income step now asks for gross income (explained in plain words) with a Per year / Per month toggle; monthly entries are converted behind the scenes. Circumstances covers every program gate (veteran, age, disability, kids, crisis, not stably housed) and is multi-selectable.\n\nBottom row: results group by program type with population-fit programs ranked first; when someone is looking for a place, an Available rentals section of live photo-forward listing cards (30%-of-income badge, cheapest first) opens the results — see the wide Available-rentals board. Cards open a detail dialog; the housing plan collects picks and prints.\n\nRestyle anything here — hand the canvas back and the changes get implemented in the real CSS."
+    }
   ],
-  "launch": { "view": "canvas" }
+  "launch": {
+    "view": "canvas"
+  }
 }
