@@ -44,6 +44,10 @@ const FIELD_ALIASES = {
   phone: ['phone', 'phone_number', 'phoneNumber', 'contact_phone', 'telephone'],
   email: ['email', 'contact_email', 'contactEmail'],
   type: ['type', 'property_type', 'propertyType', 'housing_type', 'category'],
+  photo: [
+    'photo', 'image', 'photo_url', 'photoUrl', 'image_url', 'imageUrl',
+    'thumbnail', 'thumbnail_url', 'picture', 'photos', 'images',
+  ],
   availability: ['availability', 'available', 'available_date', 'availableDate', 'status'],
   subsidized: [
     'subsidized', 'is_subsidized', 'affordable', 'income_restricted',
@@ -58,6 +62,15 @@ function parseMoney(value) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   const match = String(value).match(/\d[\d,]*(\.\d+)?/);
   return match ? Number(match[0].replace(/,/g, '')) : null;
+}
+
+// APIs carry photos as a URL string or an array of them (sometimes objects
+// with a url/href field); the cards show one, so take the first usable URL.
+function parsePhoto(value) {
+  const first = Array.isArray(value) ? value[0] : value;
+  const url =
+    typeof first === 'string' ? first : first && (first.url || first.href) ? first.url || first.href : null;
+  return typeof url === 'string' && /^https?:\/\//i.test(url) ? url : null;
 }
 
 // "Studio" and "efficiency" are zero-bedroom units, not missing data.
@@ -82,6 +95,7 @@ export function normalizeListing(raw) {
 
   listing.rent = parseMoney(listing.rent);
   listing.bedrooms = parseBedrooms(listing.bedrooms);
+  listing.photo = parsePhoto(listing.photo);
   listing.subsidized =
     listing.subsidized === true ||
     /^(yes|true|y|1)$/i.test(String(listing.subsidized ?? ''));

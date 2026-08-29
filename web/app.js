@@ -813,8 +813,17 @@ function answerChips() {
   return chips;
 }
 
+// The stroke house from the site's own brand mark, drawn faint — the photo
+// placeholder for listings whose API record carries no image.
+const HOUSE_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>';
+
+// Photo-forward listing card: an image (or placeholder) on top with the
+// affordability badge overlaid, the rent beside the name, one quiet meta
+// line, and a contact/action footer.
 function renderListingCard({ listing, affordable }) {
-  const card = el('li', { class: 'result' });
+  const card = el('li', { class: 'result result--listing' });
 
   // Affordability is a flag, never a filter — same principle as the program
   // matcher. Rent above the guideline still shows, marked so the person can
@@ -827,80 +836,78 @@ function renderListingCard({ listing, affordable }) {
         : null;
 
   card.append(
-    el('div', { class: 'result__top' }, [
-      el('div', {}, [
-        el('h3', { class: 'result__name', text: listing.name }),
-        listing.address &&
-          listing.address !== listing.name &&
-          el('p', { class: 'result__admin', text: listing.address }),
-      ]),
+    el('div', { class: 'result__media' }, [
+      listing.photo
+        ? el('img', { src: listing.photo, alt: '', loading: 'lazy' })
+        : el('span', { class: 'result__media-placeholder', html: HOUSE_SVG }),
       badge,
+    ]),
+  );
+
+  const body = el('div', { class: 'result__body' });
+
+  body.append(
+    el('div', { class: 'result__headline' }, [
+      el('h3', { class: 'result__name', text: listing.name }),
+      el('span', {
+        class: `result__rent${listing.rent == null ? ' result__rent--unknown' : ''}`,
+        html:
+          listing.rent != null
+            ? `${money(listing.rent)}<small>/mo</small>`
+            : 'Not listed',
+      }),
     ]),
   );
 
   const place = [listing.city, listing.county && `${listing.county} County`]
     .filter(Boolean)
     .join(', ');
-  const tags = [
+  const addressLine = [
+    listing.address !== listing.name ? listing.address : null,
+    place || null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  if (addressLine) {
+    body.append(el('p', { class: 'result__admin', text: addressLine }));
+  }
+
+  const metaBits = [
     bedroomsLabel(listing.bedrooms),
     listing.bathrooms != null && `${listing.bathrooms} bath`,
     listing.type,
-    place || null,
-    listing.subsidized && 'Income-restricted / subsidized',
+    listing.availability,
+    listing.subsidized && 'Income-restricted',
   ].filter(Boolean);
-  if (tags.length) {
-    card.append(
-      el(
-        'div',
-        { class: 'result__meta' },
-        tags.map((t) => el('span', { class: 'tag', text: t })),
-      ),
-    );
+  if (metaBits.length) {
+    body.append(el('p', { class: 'result__facts', text: metaBits.join(' · ') }));
   }
 
-  card.append(
-    el('div', { class: 'result__benefit' }, [
-      el('span', { text: 'Rent: ' }),
-      el('strong', {
-        text: listing.rent != null ? `${money(listing.rent)}/month` : 'Not listed — ask',
-      }),
-    ]),
-  );
+  const contact =
+    contactLink({
+      value: listing.phone,
+      pattern: PHONE_RE,
+      scheme: 'tel',
+      sanitize: (v) => v.replace(/[^\d+]/g, ''),
+    }) || contactLink({ value: listing.email, pattern: EMAIL_RE, scheme: 'mailto' });
 
-  if (listing.availability) {
-    card.append(
-      el('p', { class: 'result__summary', text: `Availability: ${listing.availability}` }),
-    );
+  const action = listing.url
+    ? el('a', {
+        class: 'btn btn--primary btn--sm',
+        href: listing.url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        text: 'View listing',
+      })
+    : contact && listing.rent == null
+      ? el('span', { class: 'result__foot-note', text: 'Call to ask about rent' })
+      : null;
+
+  if (contact || action) {
+    body.append(el('div', { class: 'result__foot' }, [contact, action]));
   }
 
-  const contactBits = [];
-  const phone = contactLink({
-    value: listing.phone,
-    pattern: PHONE_RE,
-    scheme: 'tel',
-    sanitize: (v) => v.replace(/[^\d+]/g, ''),
-  });
-  if (phone) contactBits.push(phone);
-  const email = contactLink({ value: listing.email, pattern: EMAIL_RE, scheme: 'mailto' });
-  if (email) contactBits.push(email);
-  if (contactBits.length) {
-    card.append(el('div', { class: 'result__contact' }, contactBits));
-  }
-
-  if (listing.url) {
-    card.append(
-      el('div', { class: 'result__actions' }, [
-        el('a', {
-          class: 'btn btn--primary btn--sm',
-          href: listing.url,
-          target: '_blank',
-          rel: 'noopener noreferrer',
-          text: 'View listing',
-        }),
-      ]),
-    );
-  }
-
+  card.append(body);
   return card;
 }
 
