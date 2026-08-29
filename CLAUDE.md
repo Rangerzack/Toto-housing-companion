@@ -48,7 +48,23 @@ tenure. A not-stably-housed checkbox on the circumstances step widens tenure
 matching and implies the crisis box. Results: compact uniform cards (never
 truncate, benefit always visible), 4 per category section behind Show-more,
 details in a native `<dialog>` (facts left, action rail right) — cards never
-expand in place. Share links encode answers in the `#a=` hash.
+expand in place. Share links encode answers in the `#a=` hash (7 or 8
+parts; the 8th is bedrooms, absent on legacy links).
+
+## Rental listings (Range Lab API)
+
+Picking "Finding a rental" adds a bedrooms question and opens the results
+with an **Available rentals** section: live listings from Range Lab's
+Housing Data API, fetched through the `housing-search` Supabase edge
+function (`supabase/functions/housing-search/`) so the private `rl_live_…`
+key never ships to the browser. The function holds `HOUSING_API_URL` and
+`HOUSING_API_KEY` as Supabase secrets and follows `{data, meta.total}`
+pagination to 500 rows; the deploy-functions workflow ships it (needs the
+`SUPABASE_ACCESS_TOKEN` repo secret). `web/housing.js` (no DOM, testable
+alone) normalizes and screens listings; the API has no county field, so
+`CITY_COUNTIES` in `web/config.js` maps cities to counties — unmapped
+cities are shown, never hidden, per the no-hard-exclusion rule. A broken
+listings feed degrades to an inline note; it never blocks program results.
 
 ## Data loading
 

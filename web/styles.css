@@ -102,6 +102,13 @@
   box-sizing: border-box;
 }
 
+/* The hidden attribute must always win: several components (.btn, .choice)
+   set their own display, which would otherwise override the UA's
+   [hidden] { display: none } and leave "hidden" elements visible. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
@@ -1393,4 +1400,179 @@ dialog.pdialog::backdrop { background: rgba(15, 12, 10, 0.55); }
   gap: 0.6rem;
   margin-top: auto;
   padding-top: 0.9rem;
+}
+
+/* --- County filter (shown above long county lists) ------------------- */
+
+.county-filter {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.9rem;
+  padding: 0.8rem 1.1rem;
+  min-height: 3rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+.county-filter:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-ring);
+}
+.county-filter::placeholder {
+  color: var(--ink-faint);
+}
+
+/* --- Rental listing cards (photo-forward) ---------------------------- */
+/* Listings live in their own results section. Unlike program cards they
+   don't open a dialog, so they drop the pointer cursor, and the photo
+   needs the padding pulled off the card shell. */
+
+.result--listing {
+  padding: 0;
+  overflow: hidden;
+  cursor: default;
+}
+
+.result__media {
+  position: relative;
+  height: 160px;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.result__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.result__media-placeholder {
+  width: 44px;
+  height: 44px;
+  color: var(--border-strong);
+}
+.result__media-placeholder svg {
+  width: 100%;
+  height: 100%;
+}
+/* The badge floats over the photo, so it trades its verdict tint for a
+   solid surface — tints go transparent against an arbitrary image. */
+.result__media .badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(31, 28, 25, 0.12);
+}
+
+.result__lbody {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.result__headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.result__headline .result__name {
+  font-size: 1.125rem;
+}
+
+/* Rent in the data face, like every dollar figure on the site. */
+.result__rent {
+  font-family: var(--font-data);
+  font-size: 1.1875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.result__rent small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+.result__rent--unknown {
+  font-size: 0.875rem;
+  color: var(--ink-faint);
+}
+
+.result--listing .result__admin {
+  font-size: 0.875rem;
+}
+
+.result__facts {
+  margin: 0.35rem 0 0.9rem;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.result__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+.result__foot a:not(.btn) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 550;
+  text-decoration: none;
+}
+.result__foot a:not(.btn):hover {
+  text-decoration: underline;
+}
+/* A listing with no phone still puts its one button where every other
+   card's is. */
+.result__foot .btn {
+  margin-left: auto;
+}
+.result__foot-note {
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+}
+
+/* Small inline note inside the rentals section — a broken listings feed
+   must never look like a page-level failure. */
+.listings-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9063rem;
+  color: var(--ink-soft);
+  margin: 0 0 1.5rem;
+}
+
+.results__grouphint {
+  margin: -0.5rem 0 0.9rem;
+  font-size: 0.875rem;
+  color: var(--ink-faint);
+  max-width: 62ch;
+}
+
+@media print {
+  /* Buttons are dead weight on paper; the phone numbers still print. */
+  .result__foot .btn,
+  .results__more {
+    display: none !important;
+  }
 }

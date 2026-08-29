@@ -35,7 +35,8 @@ edit a file and refresh the page.
 | `styles.css` | Design system — light/dark, responsive, print styles           |
 | `app.js`     | Wizard navigation, Supabase fetch, results rendering           |
 | `matcher.js` | Eligibility matching engine (no DOM — testable on its own)     |
-| `config.js`  | Connection settings, county list, AMI reference table          |
+| `housing.js` | Rental-listing search: fetch, normalize, filter (no DOM)       |
+| `config.js`  | Connection settings, county list, housing API + city→county map |
 | `serve.ps1`  | Dependency-free local static server                            |
 
 ## How matching works
@@ -67,6 +68,37 @@ Two details worth knowing:
 - Income limits get a 10% grace band. The AMI table is an estimate and real
   HUD limits vary by county, so someone just over the line still sees the
   program, flagged rather than dropped.
+
+## The rental listings section
+
+When "Finding a rental" is among the needs, the results page opens with an
+**Available rentals** section — actual listings from Range Lab's Housing Data
+API (`GET https://basecamp.rangelab.io/api/v1/properties`), narrowed to the
+chosen county and bedroom count (a bedrooms question appears for this need),
+sorted cheapest first, each flagged against the 30%-of-income guideline when
+an income was given. Listings with photos show them; the house icon is the
+placeholder.
+
+The API's key is private, so the browser never calls it directly — it calls
+the `housing-search` Supabase edge function
+(`supabase/functions/housing-search/`), which holds the endpoint and key as
+function secrets and follows the API's pagination (up to 500 rows). Setup,
+once:
+
+1. Deploy the function: the *Deploy Supabase edge functions* workflow (needs
+   a `SUPABASE_ACCESS_TOKEN` repo secret), or locally
+   `supabase functions deploy housing-search --project-ref vhhcicawkhokncnhzboe --no-verify-jwt`.
+2. Set the function secrets (Supabase dashboard → Edge Functions → Secrets):
+   `HOUSING_API_URL='https://basecamp.rangelab.io/api/v1/properties?state={state}&limit=100'`
+   and `HOUSING_API_KEY` (the `rl_live_…` key). The key travels in an
+   `X-Api-Key` header by default; `HOUSING_API_KEY_HEADER` overrides.
+
+The API filters by city and its records carry no county, so county narrowing
+happens client-side through the `CITY_COUNTIES` map in `config.js` — a city
+missing from the map is shown rather than hidden; extend it as unmapped towns
+appear. `housing.js` unwraps common response envelopes and field-name
+variants via `FIELD_ALIASES`, and a broken listings feed degrades to a small
+inline note — it never takes the program results down with it.
 
 ## Before this goes in front of real people
 
