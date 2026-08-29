@@ -782,6 +782,12 @@ main:has(.step--results.is-active) {
   color: var(--ink-soft);
 }
 
+/* Dollar chips take the data face, like every figure on the site. */
+.chip--data {
+  font-family: var(--font-data);
+  font-size: 0.78rem;
+}
+
 /* Results are scanned rather than read in order, so they lay out as a grid
    that steps up to four across on a wide screen. The question steps stay in
    the narrow reading column; only this step widens (see main:has below). */

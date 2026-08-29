@@ -774,19 +774,25 @@ function renderNotice({ icon, title, body, actionLabel, onAction }) {
   ]);
 }
 
+// Each chip is {text, mono} — dollar figures take the data face, like every
+// other number on the site.
 function answerChips() {
-  const chips = [`${answers.county} County, ${answers.state}`];
+  const chips = [{ text: `${answers.county} County, ${answers.state}` }];
 
   if (isHousingSearch()) {
-    chips.push('Finding a rental');
-    chips.push(
-      answers.bedrooms === 'any' ? 'Any size' : bedroomsLabel(Number(answers.bedrooms)),
-    );
-    chips.push(
-      `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
-    );
+    chips.push({ text: 'Finding a rental' });
+    chips.push({
+      text: answers.bedrooms === 'any' ? 'Any size' : bedroomsLabel(Number(answers.bedrooms)),
+    });
+    chips.push({
+      text: `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
+    });
     const budget = monthlyBudget(answers.income);
-    chips.push(budget ? `~${money(budget)}/mo budget` : 'Income not given');
+    chips.push(
+      budget
+        ? { text: `~${money(budget)}/mo budget`, mono: true }
+        : { text: 'Income not given' },
+    );
     return chips;
   }
 
@@ -795,7 +801,7 @@ function answerChips() {
     staying: 'Staying housed',
     utility: 'Utility bill',
   };
-  chips.push(helpLabels[answers.help]);
+  chips.push({ text: helpLabels[answers.help] });
 
   const situationLabels = {
     renting: 'Renting',
@@ -803,14 +809,21 @@ function answerChips() {
     homeowner: 'Homeowner',
     buying: 'Hoping to buy',
   };
-  if (situationLabels[answers.situation]) chips.push(situationLabels[answers.situation]);
-  chips.push(
-    `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
-  );
-  if (answers.income != null) chips.push(`$${currency.format(answers.income)}/yr`);
-  else chips.push('Income not given');
+  if (situationLabels[answers.situation]) chips.push({ text: situationLabels[answers.situation] });
+  chips.push({
+    text: `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`,
+  });
+  if (answers.income != null) {
+    chips.push({ text: `$${currency.format(answers.income)}/yr`, mono: true });
+  } else {
+    chips.push({ text: 'Income not given' });
+  }
 
   return chips;
+}
+
+function chipEl({ text, mono }) {
+  return el('span', { class: mono ? 'chip chip--data' : 'chip', text });
 }
 
 // The stroke house from the site's own brand mark, drawn faint — the photo
@@ -990,7 +1003,7 @@ async function renderHousingResults() {
       el(
         'div',
         { class: 'results__chips' },
-        answerChips().map((c) => el('span', { class: 'chip', text: c })),
+        answerChips().map(chipEl),
       ),
     ]),
   );
@@ -1120,7 +1133,7 @@ async function renderResults() {
     el(
       'div',
       { class: 'results__chips' },
-      answerChips().map((c) => el('span', { class: 'chip', text: c })),
+      answerChips().map(chipEl),
     ),
   ]);
   host.append(header);
