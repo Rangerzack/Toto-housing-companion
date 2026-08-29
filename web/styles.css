@@ -825,6 +825,10 @@ main:has(.step--results.is-active) {
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s, transform 0.2s;
   cursor: pointer;
+  /* Column layout so the actions row can pin to the bottom edge of
+     row-stretched cards. */
+  display: flex;
+  flex-direction: column;
   /* Cards sit side by side, so a long program name or a bare URL must wrap
      rather than force the column wider than its share of the grid. */
   min-width: 0;
@@ -1234,12 +1238,17 @@ main:has(.step--results.is-active) {
 
 .result--lead { border-top: 3px solid var(--primary); }
 
-/* "Built for you" tags in the card summary — why this program ranked first. */
+/* "Built for you" tags — why this program ranked first. Inside a card's
+   head they take the full width; in the dialog they sit under the title. */
 .result__fit {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-top: 0.45rem;
+}
+.result__head > .result__fit {
+  flex-basis: 100%;
+  margin-top: 0;
 }
 .tag--fit {
   background: color-mix(in srgb, var(--primary) 12%, transparent);
@@ -1378,4 +1387,10 @@ dialog.pdialog::backdrop { background: rgba(15, 12, 10, 0.55); }
 @media print { .results__share { display: none !important; } }
 
 /* The pin button lives in the collapsed card header. */
-.result__headmain .plan-toggle { margin-top: 0.6rem; }
+.result__cardactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 0.9rem;
+}

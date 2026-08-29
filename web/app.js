@@ -923,45 +923,30 @@ function renderResultCard(match, { lead = false } = {}) {
         el('h3', { class: 'result__name', text: program.program_name }),
         program.administrator &&
           el('p', { class: 'result__admin', text: program.administrator }),
-        fit && fit.length
-          ? el(
-              'div',
-              { class: 'result__fit' },
-              fit.map((k) => el('span', { class: 'tag tag--fit', text: FIT_LABELS[k] || k })),
-            )
-          : null,
         checks.length
           ? el('p', {
               class: 'result__caveats',
               text: `${checks.length} thing${checks.length === 1 ? '' : 's'} worth checking`,
             })
           : null,
-        // In the summary so a program can be pinned without opening the
-        // fold; the handler stops the click from toggling the details.
-        el('button', {
-          type: 'button',
-          class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
-          'data-program': program.program_id,
-          text: planToggleLabel(program.program_id),
-          onclick: (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            togglePlan(program.program_id);
-          },
-        }),
       ]),
+      // The badge stands alone up here — a button beside it crushed the
+      // name column in narrow grid columns.
       el('span', { class: 'result__headside' }, [
         el('span', {
           class: `badge badge--${verdict}`,
           text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
         }),
-        el('button', {
-          type: 'button',
-          class: 'btn btn--ghost btn--sm',
-          text: 'Details',
-          onclick: () => openProgramDialog(match),
-        }),
       ]),
+      // Tags get the card's full width — a long one overflows the name
+      // column in a four-column grid.
+      fit && fit.length
+        ? el(
+            'div',
+            { class: 'result__fit' },
+            fit.map((k) => el('span', { class: 'tag tag--fit', text: FIT_LABELS[k] || k })),
+          )
+        : null,
       // The full benefit stays visible on the collapsed card — what a
       // program pays is half of deciding whether to open it. It wraps to
       // its own full-width line under the head row, and hides when the
@@ -972,6 +957,26 @@ function renderResultCard(match, { lead = false } = {}) {
             el('span', { text: program.max_benefit }),
           ])
         : null,
+    ]),
+    // Actions sit in their own row pinned to the card's bottom edge, so
+    // stretched cards in a row share one aligned button line.
+    el('div', { class: 'result__cardactions' }, [
+      el('button', {
+        type: 'button',
+        class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
+        'data-program': program.program_id,
+        text: planToggleLabel(program.program_id),
+        onclick: (event) => {
+          event.stopPropagation();
+          togglePlan(program.program_id);
+        },
+      }),
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost btn--sm',
+        text: 'See details',
+        onclick: () => openProgramDialog(match),
+      }),
     ]),
   );
 
