@@ -33,6 +33,155 @@ export const HOUSING_API_HEADERS = {
 };
 
 // ---------------------------------------------------------------------------
+// City -> county map for rental listings
+// ---------------------------------------------------------------------------
+// The Range Lab properties API filters by city and its records carry no
+// county, but this screener asks people for their county. This map bridges
+// the two: each entry names the count(y/ies) a city sits in, so listings can
+// be narrowed to the chosen county. Cities that span counties (St. Cloud,
+// Osakis) list every county they touch.
+//
+// The map is deliberately incomplete-safe: a city that isn't listed here is
+// SHOWN in every county of its state rather than hidden — missing
+// information never excludes. Add towns as they appear in real listings.
+// Keys are lowercase.
+export const CITY_COUNTIES = {
+  OR: {
+    // Jackson
+    'medford': ['Jackson'], 'ashland': ['Jackson'], 'central point': ['Jackson'],
+    'eagle point': ['Jackson'], 'talent': ['Jackson'], 'phoenix': ['Jackson'],
+    'jacksonville': ['Jackson'], 'white city': ['Jackson'], 'shady cove': ['Jackson'],
+    'gold hill': ['Jackson'], 'rogue river': ['Jackson'], 'butte falls': ['Jackson'],
+    'prospect': ['Jackson'],
+    // Josephine
+    'grants pass': ['Josephine'], 'cave junction': ['Josephine'], 'merlin': ['Josephine'],
+    'selma': ['Josephine'], 'williams': ['Josephine'], 'wolf creek': ['Josephine'],
+    'kerby': ['Josephine'], "o'brien": ['Josephine'], 'murphy': ['Josephine'],
+    // Douglas
+    'roseburg': ['Douglas'], 'sutherlin': ['Douglas'], 'winston': ['Douglas'],
+    'myrtle creek': ['Douglas'], 'canyonville': ['Douglas'], 'riddle': ['Douglas'],
+    'oakland': ['Douglas'], 'drain': ['Douglas'], 'yoncalla': ['Douglas'],
+    'reedsport': ['Douglas'], 'glide': ['Douglas'], 'elkton': ['Douglas'],
+    // Klamath
+    'klamath falls': ['Klamath'], 'altamont': ['Klamath'], 'chiloquin': ['Klamath'],
+    'merrill': ['Klamath'], 'malin': ['Klamath'], 'bonanza': ['Klamath'],
+    'gilchrist': ['Klamath'], 'crescent': ['Klamath'],
+    // Curry
+    'brookings': ['Curry'], 'gold beach': ['Curry'], 'port orford': ['Curry'],
+    'harbor': ['Curry'],
+    // Coos
+    'coos bay': ['Coos'], 'north bend': ['Coos'], 'coquille': ['Coos'],
+    'bandon': ['Coos'], 'myrtle point': ['Coos'], 'lakeside': ['Coos'],
+    'powers': ['Coos'],
+    // Lane
+    'eugene': ['Lane'], 'springfield': ['Lane'], 'cottage grove': ['Lane'],
+    'florence': ['Lane'], 'junction city': ['Lane'], 'creswell': ['Lane'],
+    'veneta': ['Lane'], 'oakridge': ['Lane'], 'lowell': ['Lane'],
+    'coburg': ['Lane'], 'dunes city': ['Lane'], 'westfir': ['Lane'],
+    // Linn
+    'albany': ['Linn'], 'lebanon': ['Linn'], 'sweet home': ['Linn'],
+    'harrisburg': ['Linn'], 'brownsville': ['Linn'], 'scio': ['Linn'],
+    'halsey': ['Linn'], 'tangent': ['Linn'], 'lyons': ['Linn'],
+    'mill city': ['Linn', 'Marion'], 'gates': ['Linn', 'Marion'],
+    // Lincoln
+    'newport': ['Lincoln'], 'lincoln city': ['Lincoln'], 'toledo': ['Lincoln'],
+    'waldport': ['Lincoln'], 'depoe bay': ['Lincoln'], 'yachats': ['Lincoln'],
+    'siletz': ['Lincoln'],
+    // Marion
+    'salem': ['Marion'], 'keizer': ['Marion'], 'woodburn': ['Marion'],
+    'silverton': ['Marion'], 'stayton': ['Marion'], 'aumsville': ['Marion'],
+    'turner': ['Marion'], 'mount angel': ['Marion'], 'hubbard': ['Marion'],
+    'gervais': ['Marion'], 'jefferson': ['Marion'], 'sublimity': ['Marion'],
+    'aurora': ['Marion'], 'scotts mills': ['Marion'], 'detroit': ['Marion'],
+    'idanha': ['Marion', 'Linn'],
+    // Clackamas
+    'oregon city': ['Clackamas'], 'milwaukie': ['Clackamas'], 'west linn': ['Clackamas'],
+    'happy valley': ['Clackamas'], 'canby': ['Clackamas'], 'gladstone': ['Clackamas'],
+    'molalla': ['Clackamas'], 'sandy': ['Clackamas'], 'estacada': ['Clackamas'],
+    'damascus': ['Clackamas'], 'lake oswego': ['Clackamas'], 'wilsonville': ['Clackamas'],
+    // Union
+    'la grande': ['Union'], 'union': ['Union'], 'elgin': ['Union'],
+    'cove': ['Union'], 'imbler': ['Union'], 'north powder': ['Union'],
+    'summerville': ['Union'], 'island city': ['Union'],
+  },
+  MN: {
+    // Stearns (St. Cloud and Sartell spill into neighbors)
+    'st. cloud': ['Stearns', 'Benton', 'Sherburne'],
+    'saint cloud': ['Stearns', 'Benton', 'Sherburne'],
+    'sartell': ['Stearns', 'Benton'],
+    'waite park': ['Stearns'], 'sauk centre': ['Stearns'], 'cold spring': ['Stearns'],
+    'albany': ['Stearns'], 'melrose': ['Stearns'], 'paynesville': ['Stearns'],
+    'st. joseph': ['Stearns'], 'saint joseph': ['Stearns'], 'kimball': ['Stearns'],
+    'richmond': ['Stearns'], 'rockville': ['Stearns'], 'holdingford': ['Stearns'],
+    // Benton
+    'sauk rapids': ['Benton'], 'foley': ['Benton'], 'rice': ['Benton'],
+    'gilman': ['Benton'],
+    // Sherburne
+    'elk river': ['Sherburne'], 'big lake': ['Sherburne'], 'becker': ['Sherburne'],
+    'zimmerman': ['Sherburne'], 'clear lake': ['Sherburne'],
+    // Morrison
+    'little falls': ['Morrison'], 'pierz': ['Morrison'], 'royalton': ['Morrison'],
+    'randall': ['Morrison'], 'swanville': ['Morrison'], 'upsala': ['Morrison'],
+    'motley': ['Morrison', 'Cass'],
+    // Wright
+    'buffalo': ['Wright'], 'monticello': ['Wright'], 'otsego': ['Wright'],
+    'st. michael': ['Wright'], 'saint michael': ['Wright'], 'albertville': ['Wright'],
+    'delano': ['Wright'], 'annandale': ['Wright'], 'maple lake': ['Wright'],
+    'cokato': ['Wright'], 'howard lake': ['Wright'], 'montrose': ['Wright'],
+    'waverly': ['Wright'], 'clearwater': ['Wright'],
+    // Todd
+    'long prairie': ['Todd'], 'browerville': ['Todd'], 'clarissa': ['Todd'],
+    'bertha': ['Todd'], 'eagle bend': ['Todd'], 'grey eagle': ['Todd'],
+    'staples': ['Todd', 'Wadena'],
+    // Mille Lacs
+    'milaca': ['Mille Lacs'], 'isle': ['Mille Lacs'], 'onamia': ['Mille Lacs'],
+    'foreston': ['Mille Lacs'], 'pease': ['Mille Lacs'], 'wahkon': ['Mille Lacs'],
+    'princeton': ['Mille Lacs', 'Sherburne'],
+    // Isanti
+    'cambridge': ['Isanti'], 'isanti': ['Isanti'],
+    'braham': ['Isanti', 'Kanabec'],
+    // Kanabec
+    'mora': ['Kanabec'], 'ogilvie': ['Kanabec'],
+    // Crow Wing
+    'brainerd': ['Crow Wing'], 'baxter': ['Crow Wing'], 'crosby': ['Crow Wing'],
+    'pequot lakes': ['Crow Wing'], 'crosslake': ['Crow Wing'], 'nisswa': ['Crow Wing'],
+    'ironton': ['Crow Wing'], 'deerwood': ['Crow Wing'], 'emily': ['Crow Wing'],
+    'breezy point': ['Crow Wing'],
+    // Chisago
+    'north branch': ['Chisago'], 'wyoming': ['Chisago'], 'chisago city': ['Chisago'],
+    'lindstrom': ['Chisago'], 'center city': ['Chisago'], 'taylors falls': ['Chisago'],
+    'rush city': ['Chisago'], 'stacy': ['Chisago'], 'shafer': ['Chisago'],
+    'harris': ['Chisago'],
+    // Kandiyohi
+    'willmar': ['Kandiyohi'], 'new london': ['Kandiyohi'], 'spicer': ['Kandiyohi'],
+    'atwater': ['Kandiyohi'], 'kandiyohi': ['Kandiyohi'], 'pennock': ['Kandiyohi'],
+    'prinsburg': ['Kandiyohi'], 'lake lillian': ['Kandiyohi'],
+    // Douglas
+    'alexandria': ['Douglas'], 'brandon': ['Douglas'], 'evansville': ['Douglas'],
+    'carlos': ['Douglas'], 'garfield': ['Douglas'], 'miltona': ['Douglas'],
+    'kensington': ['Douglas'], 'forada': ['Douglas'],
+    'osakis': ['Douglas', 'Todd'],
+    // Pope
+    'glenwood': ['Pope'], 'starbuck': ['Pope'], 'villard': ['Pope'],
+    'lowry': ['Pope'], 'cyrus': ['Pope'], 'long beach': ['Pope'],
+    // Cass
+    'walker': ['Cass'], 'pine river': ['Cass'], 'cass lake': ['Cass'],
+    'backus': ['Cass'], 'hackensack': ['Cass'], 'pillager': ['Cass'],
+    'east gull lake': ['Cass'], 'lake shore': ['Cass'], 'longville': ['Cass'],
+    'remer': ['Cass'],
+    // Ramsey
+    'st. paul': ['Ramsey'], 'saint paul': ['Ramsey'], 'roseville': ['Ramsey'],
+    'maplewood': ['Ramsey'], 'shoreview': ['Ramsey'], 'new brighton': ['Ramsey'],
+    'mounds view': ['Ramsey'], 'north st. paul': ['Ramsey'],
+    'north saint paul': ['Ramsey'], 'little canada': ['Ramsey'],
+    'vadnais heights': ['Ramsey'], 'arden hills': ['Ramsey'],
+    'falcon heights': ['Ramsey'], 'lauderdale': ['Ramsey'], 'gem lake': ['Ramsey'],
+    'north oaks': ['Ramsey'],
+    'white bear lake': ['Ramsey', 'Washington'],
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Service areas
 // ---------------------------------------------------------------------------
 // County names are not unique across states: Oregon and Minnesota both have a

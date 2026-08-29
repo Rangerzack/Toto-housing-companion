@@ -40,7 +40,7 @@ const FIELD_ALIASES = {
   ],
   bedrooms: ['bedrooms', 'beds', 'br', 'num_bedrooms', 'bedroom_count'],
   bathrooms: ['bathrooms', 'baths', 'ba', 'num_bathrooms'],
-  url: ['url', 'link', 'listing_url', 'listingUrl', 'details_url', 'website', 'web_url'],
+  url: ['url', 'link', 'listing_url', 'listingUrl', 'detail_url', 'details_url', 'website', 'web_url'],
   phone: ['phone', 'phone_number', 'phoneNumber', 'contact_phone', 'telephone'],
   email: ['email', 'contact_email', 'contactEmail'],
   type: ['type', 'property_type', 'propertyType', 'housing_type', 'category'],
@@ -198,9 +198,14 @@ export function bedroomsLabel(bedrooms) {
  * be scoped), one without a bedroom count stays in whatever size was asked
  * for, and one without a rent figure sorts last rather than disappearing.
  *
+ * `countiesForCity` covers APIs (like Range Lab's) whose records carry a
+ * city but no county: given (city, state) it returns the county name(s)
+ * that city sits in, or null when unknown — and unknown, as always, keeps
+ * the listing in.
+ *
  * @returns {{listing: object, affordable: boolean|null}[]}
  */
-export function screenListings(listings, answers) {
+export function screenListings(listings, answers, countiesForCity) {
   const budget = monthlyBudget(answers.income);
   const wanted =
     answers.bedrooms == null || answers.bedrooms === 'any'
@@ -211,6 +216,13 @@ export function screenListings(listings, answers) {
   for (const listing of listings) {
     if (listing.state && answers.state && !sameState(listing.state, answers.state)) continue;
     if (listing.county && answers.county && !sameCounty(listing.county, answers.county)) continue;
+
+    // No county on the record: resolve it from the city where we can. A city
+    // the map doesn't know stays in the results rather than vanishing.
+    if (!listing.county && listing.city && answers.county && countiesForCity) {
+      const counties = countiesForCity(listing.city, listing.state || answers.state);
+      if (counties && !counties.some((c) => sameCounty(c, answers.county))) continue;
+    }
 
     if (wanted != null && listing.bedrooms != null) {
       // "4+" means at least four; the smaller sizes are exact — someone who

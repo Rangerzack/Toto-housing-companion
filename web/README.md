@@ -102,14 +102,21 @@ endpoint as function secrets and proxies the request. Setting it up once:
 
    ```bash
    supabase secrets set --project-ref vhhcicawkhokncnhzboe \
-     HOUSING_API_URL='https://api.example.org/listings?state={state}&county={county}' \
-     HOUSING_API_KEY='the-private-key'
+     HOUSING_API_URL='https://basecamp.rangelab.io/api/v1/properties?state={state}&limit=100' \
+     HOUSING_API_KEY='rl_live_...'
    ```
 
-   `{state}` and `{county}` are filled in from the person's answers; a URL
-   without placeholders is fetched as-is and filtered client-side. The key is
-   sent in an `X-Api-Key` header by default; set `HOUSING_API_KEY_HEADER` to
-   change that (`Authorization` gets a `Bearer ` prefix automatically).
+   The listings source is Range Lab's Housing Data API
+   (`GET /api/v1/properties`, `x-api-key` auth — the function's default
+   `X-Api-Key` header matches, headers being case-insensitive). `{state}`
+   is filled in from the person's answers. The API filters by city rather
+   than county and its records carry no county, so county narrowing happens
+   client-side through the `CITY_COUNTIES` map in `config.js` — a city
+   missing from that map is shown rather than hidden, so extend the map as
+   unmapped towns show up in real listings. For a different API later,
+   `{county}` is also available as a placeholder, and
+   `HOUSING_API_KEY_HEADER` overrides the auth header name
+   (`Authorization` gets a `Bearer ` prefix automatically).
 
 Until the function is deployed and configured, the search path shows a
 notice explaining what's missing and offers the program screener instead;

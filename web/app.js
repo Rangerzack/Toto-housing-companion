@@ -5,6 +5,7 @@ import {
   STATES,
   HOUSING_API_URL,
   HOUSING_API_HEADERS,
+  CITY_COUNTIES,
 } from './config.js?v=__BUILD__';
 import { screenPrograms } from './matcher.js?v=__BUILD__';
 import {
@@ -864,6 +865,14 @@ function chipEl({ text, mono }) {
   return el('span', { class: mono ? 'chip chip--data' : 'chip', text });
 }
 
+// Range Lab's listings carry a city but no county, and the screener asks for
+// a county — CITY_COUNTIES (config.js) bridges the two. Null for a city the
+// map doesn't know, which keeps the listing visible.
+function countiesForCity(city, stateCode) {
+  const byState = CITY_COUNTIES[String(stateCode || '').toUpperCase()];
+  return (byState && byState[String(city).trim().toLowerCase()]) || null;
+}
+
 // The stroke house from the site's own brand mark, drawn faint — the photo
 // placeholder for listings whose API record carries no image.
 const HOUSE_SVG =
@@ -923,11 +932,17 @@ function renderListingCard({ listing, affordable }) {
     body.append(el('p', { class: 'result__admin', text: addressLine }));
   }
 
+  // The API sends availability as a lowercase status word ("available");
+  // sentence-case it so the facts line reads like English.
+  const availability = listing.availability
+    ? String(listing.availability).charAt(0).toUpperCase() + String(listing.availability).slice(1)
+    : null;
+
   const metaBits = [
     bedroomsLabel(listing.bedrooms),
     listing.bathrooms != null && `${listing.bathrooms} bath`,
     listing.type,
-    listing.availability,
+    availability,
     listing.subsidized && 'Income-restricted',
   ].filter(Boolean);
   if (metaBits.length) {
@@ -1018,7 +1033,7 @@ async function renderHousingResults() {
     return;
   }
 
-  const matches = screenListings(listings, answers);
+  const matches = screenListings(listings, answers, countiesForCity);
   const affordableCount = matches.filter((m) => m.affordable === true).length;
 
   host.append(
