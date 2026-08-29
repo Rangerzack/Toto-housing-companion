@@ -656,7 +656,7 @@ function renderResultCard({ program, verdict, checks }) {
     .map((c) => c.county)
     .filter((c) => c !== 'Unspecified');
 
-  const card = el('li', { class: 'result' });
+  const card = el('li', { class: 'result result--program' });
 
   card.append(
     el('div', { class: 'result__top' }, [
@@ -672,15 +672,11 @@ function renderResultCard({ program, verdict, checks }) {
     ]),
   );
 
-  const tags = [program.category, counties.length ? counties.join(', ') : null].filter(Boolean);
-  if (tags.length) {
-    card.append(
-      el(
-        'div',
-        { class: 'result__meta' },
-        tags.map((t) => el('span', { class: 'tag', text: t })),
-      ),
-    );
+  // One quiet facts line, same language as the listing cards — the boxed
+  // tag rows read as five separate things where two will do.
+  const facts = [program.category, counties.length ? counties.join(', ') : null].filter(Boolean);
+  if (facts.length) {
+    card.append(el('p', { class: 'result__facts', text: facts.join(' · ') }));
   }
 
   if (eligibility.summary) {
@@ -709,6 +705,7 @@ function renderResultCard({ program, verdict, checks }) {
     );
   }
 
+  // Contact and actions share one footer, like the listing cards.
   const contactBits = [];
   const phone = contactLink({
     value: contacts.phone,
@@ -722,10 +719,7 @@ function renderResultCard({ program, verdict, checks }) {
   if (email) contactBits.push(email);
 
   if (contacts.intake_hours) {
-    contactBits.push(el('span', { text: contacts.intake_hours }));
-  }
-  if (contactBits.length) {
-    card.append(el('div', { class: 'result__contact' }, contactBits));
+    contactBits.push(el('span', { class: 'result__foot-note', text: contacts.intake_hours }));
   }
 
   const actions = [];
@@ -737,14 +731,14 @@ function renderResultCard({ program, verdict, checks }) {
         href: formUrl,
         target: '_blank',
         rel: 'noopener noreferrer',
-        text: 'Get the application form',
+        text: 'Get the form',
       }),
     );
   }
   if (program.source_url) {
     actions.push(
       el('a', {
-        class: 'btn btn--ghost btn--sm',
+        class: `btn btn--${formUrl ? 'ghost' : 'primary'} btn--sm`,
         href: program.source_url,
         target: '_blank',
         rel: 'noopener noreferrer',
@@ -752,8 +746,14 @@ function renderResultCard({ program, verdict, checks }) {
       }),
     );
   }
-  if (actions.length) {
-    card.append(el('div', { class: 'result__actions' }, actions));
+
+  if (contactBits.length || actions.length) {
+    card.append(
+      el('div', { class: 'result__foot result__foot--program' }, [
+        contactBits.length && el('div', { class: 'result__foot-contact' }, contactBits),
+        actions.length && el('div', { class: 'result__foot-actions' }, actions),
+      ]),
+    );
   }
 
   return card;

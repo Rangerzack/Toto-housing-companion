@@ -1073,6 +1073,41 @@ main:has(.step--results.is-active) {
   color: var(--ink-faint);
 }
 
+/* Program cards share the listing cards' footer language. Their content
+   above varies a lot (summary, benefit, checks), so the footer takes a
+   fixed gap rather than the listing card's pinned-to-bottom auto margin. */
+/* Benefits are sentences, not figures — let the label flow with the text
+   instead of pinning it into a skinny flex column. */
+.result--program .result__benefit {
+  display: block;
+}
+
+.result__foot--program {
+  flex-wrap: wrap;
+  row-gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.result__foot-contact {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.result__foot-contact .result__foot-note {
+  margin-top: 0.1rem;
+}
+
+.result__foot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.result__foot-actions .btn {
+  margin-left: 0;
+}
+
 /* --- Empty / error / loading ---------------------------------------- */
 
 .notice {
