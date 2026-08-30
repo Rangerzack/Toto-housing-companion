@@ -270,7 +270,9 @@ function showStep(name, { fromHistory = false } = {}) {
   if (isQuestion) {
     const position = steps.indexOf(name) + 1;
     const pct = Math.round((position / steps.length) * 100);
-    $('#progress-label').textContent = `Question ${position} of ${steps.length}`;
+    // No "of N": answering "Finding a home" inserts the preferences step, so
+    // a stated total would visibly grow mid-flow. The bar carries the total.
+    $('#progress-label').textContent = `Question ${position}`;
     $('#progress-pct').textContent = `${pct}%`;
     $('#progress-fill').style.width = `${pct}%`;
     $('#progress-bar').setAttribute('aria-valuenow', String(pct));
@@ -553,6 +555,13 @@ const money = (amount) => `$${currency.format(Math.round(amount))}`;
 // $70,650" is checkable, "80% of AMI" is not.
 function updateIncomeFeedback() {
   const feedback = $('#income-feedback');
+  // Good news must not arrive in the brand red — in a form that hue reads as
+  // an error. Green for under-limit, amber for over, neutral for plain info.
+  const setTone = (tone) => {
+    feedback.classList.toggle('feedback--good', tone === 'good');
+    feedback.classList.toggle('feedback--over', tone === 'over');
+  };
+  setTone(null);
   const size = answers.householdSize;
   const at80 = limitLookup('HUD-MFI', 80, size);
   const at50 = limitLookup('HUD-MFI', 50, size);
@@ -578,10 +587,13 @@ function updateIncomeFeedback() {
   }
 
   if (answers.income <= at50) {
+    setTone('good');
     feedback.textContent = `${annualNote}That's within reach of most programs here, including those limited to ${money(at50)} for a household of ${size}.`;
   } else if (answers.income <= at80) {
+    setTone('good');
     feedback.textContent = `${annualNote}That's under the ${money(at80)} limit most housing programs use for a household of ${size}.`;
   } else {
+    setTone('over');
     feedback.textContent = `${annualNote}That's above the usual ${money(at80)} limit for a household of ${size}, but close numbers are worth checking — programs measure income their own way — and you'll still see what may fit.`;
   }
 }
@@ -1684,7 +1696,7 @@ async function renderResults() {
 
   const possible = matches.length - likely;
   const countText = !matches.length
-    ? 'No clear matches in this county'
+    ? 'No clear program matches in your area'
     : likely && possible
       ? `${likely} strong fit${likely === 1 ? '' : 's'}, ${possible} more worth a call`
       : likely
@@ -1704,13 +1716,16 @@ async function renderResults() {
       'div',
       { class: 'results__chips' },
       answerChips().map(([label, step]) =>
-        el('button', {
-          type: 'button',
-          class: 'chip chip--edit',
-          text: label,
-          title: 'Change this answer',
-          onclick: () => showStep(step),
-        }),
+        el(
+          'button',
+          {
+            type: 'button',
+            class: 'chip chip--edit',
+            title: 'Change this answer',
+            onclick: () => showStep(step),
+          },
+          [label, el('span', { class: 'chip__pen', 'aria-hidden': 'true', text: '✎' })],
+        ),
       ),
     ),
     matches.length &&
@@ -1738,6 +1753,15 @@ async function renderResults() {
   if (listingsPromise) {
     await listingsPromise;
     if (seq !== renderSeq) return;
+    // Fold the rentals into the headline: "2 strong fits" atop six live
+    // listings undersells the page for the person who came to find a place.
+    const places = listingsError ? 0 : screenListings(listings || [], answers, countiesForCity).length;
+    if (places) {
+      const placesText = `${places} place${places === 1 ? '' : 's'} to see`;
+      header.querySelector('.results__count').textContent = matches.length
+        ? `${placesText} · ${countText}`
+        : placesText;
+    }
     host.append(buildListingsSection());
   }
 
