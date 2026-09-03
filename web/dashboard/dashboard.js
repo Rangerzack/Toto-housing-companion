@@ -8,6 +8,7 @@ import {
   unsaveOpportunity,
   recordView,
   profileToAnswers,
+  profileSummary,
 } from '../profile.js?v=__BUILD__';
 import { matchProfileToPrograms, matchProfileToListings } from '../profile-match.js?v=__BUILD__';
 import { fetchProgramCatalogue, fetchLimitRows, lookupLimit } from '../data-api.js?v=__BUILD__';
@@ -81,8 +82,24 @@ async function start() {
 function renderHello() {
   const name = profile?.first_name;
   $('#hello').textContent = name ? `Welcome back, ${name}` : 'Welcome back';
-  $('#hello-sub').textContent =
-    'Programs and places matched against what you told us. Every match says why it’s here.';
+
+  // Say plainly what these results were matched against, so nobody has to
+  // guess which answers produced them — and give them one click to change it.
+  const summary = profileSummary(profile);
+  const sub = $('#hello-sub');
+  sub.replaceChildren();
+  if (summary) {
+    sub.append(
+      el('span', { class: 'dash-basis' }, [
+        el('strong', { text: 'Searching based on your profile: ' }),
+        summary,
+      ]),
+      el('a', { class: 'dash-basis__edit', href: '../profile/', text: 'Update my profile' }),
+    );
+  } else {
+    sub.textContent =
+      'Programs and places matched against what you told us. Every match says why it’s here.';
+  }
 }
 
 function renderCompletion(state) {
@@ -599,7 +616,8 @@ function renderFooterActions() {
   resultsHost.append(
     el('div', { class: 'account-actions' }, [
       el('a', { class: 'btn btn--ghost', href: '../profile/', text: 'Edit your profile' }),
-      el('a', { class: 'btn btn--ghost', href: '../', text: 'Back to the screener' }),
+      // ?new=1, or landing on the screener would just bounce back here.
+      el('a', { class: 'btn btn--ghost', href: '../?new=1', text: 'Start a fresh search' }),
     ]),
   );
 }

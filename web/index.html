@@ -69,6 +69,14 @@
     </header>
 
     <main id="main" class="wrap">
+      <!-- Shown only while a signed-in visitor's saved profile is being
+           fetched, so the questionnaire never flashes up before we know
+           whether we already have their answers. Anonymous visitors never
+           see it: it stays hidden and the wizard renders immediately. -->
+      <div class="boot" id="profile-boot" hidden>
+        <p class="boot__text" role="status">Checking your saved profile…</p>
+      </div>
+
       <!-- Progress ------------------------------------------------------- -->
       <div class="progress" id="progress" hidden>
         <div class="progress__meta">

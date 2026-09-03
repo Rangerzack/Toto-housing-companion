@@ -22,6 +22,16 @@ import {
 // Only to decide which header link to show. The wizard neither requires an
 // account nor reads one; answers still live in this tab alone.
 import { isSignedIn } from './auth.js?v=__BUILD__';
+// The saved profile is the canonical copy of these answers. When someone is
+// signed in, the wizard reads it instead of asking again.
+import {
+  loadProfile,
+  saveProfile,
+  matchReadiness,
+  stepsSatisfiedBy,
+  profileToAnswers,
+  answersToProfile,
+} from './profile.js?v=__BUILD__';
 
 // ---------------------------------------------------------------------------
 // State
@@ -39,6 +49,10 @@ const STEPS = [
 function questionSteps() {
   return STEPS.filter((s) => {
     if (s === 'intro' || s === 'results') return false;
+    // Already answered in the saved profile — don't ask it again. Editing an
+    // answer from the results chips clears it from this set (see answerChips),
+    // so nothing becomes unreachable.
+    if (profileSteps.has(s)) return false;
     // Rent-or-own only matters for "staying in my home" — the other needs
     // imply their situations on their own.
     if (s === 'situation') return answers.help.includes('staying');
@@ -71,6 +85,20 @@ const answers = {
 
 let stepIndex = 0;
 let programs = null; // cached after first fetch
+
+// Set when the wizard was started from a signed-in person's saved profile.
+// `profileSteps` are the questions that profile already answers, which
+// questionSteps() then drops so they are not asked a second time.
+let profileRow = null;
+let profileSteps = new Set();
+
+// Opt-in tracing for diagnosing the profile handoff: add ?debug=1. Only field
+// NAMES, counts and booleans are ever logged — never the values, which are
+// somebody's income and housing situation.
+const DEBUG = new URLSearchParams(location.search).has('debug');
+function debug(...args) {
+  if (DEBUG) console.log('[toto]', ...args);
+}
 let fetchError = null;
 
 // Published income limits for the local-area counties plus the statewide SMI
@@ -231,7 +259,15 @@ function showStep(name, { fromHistory = false } = {}) {
   }
   saveAnswers(name);
 
-  if (name === 'results') renderResults();
+  if (name === 'results') {
+    // The "just N questions to go" banner has served its purpose by the time
+    // they are looking at results, where it only reads as stale.
+    document.querySelector('.profile-banner')?.remove();
+    renderResults();
+    // Anything answered here that the profile was missing is written back, so
+    // it is never asked a third time.
+    persistAnswersToProfile();
+  }
   if (name === 'plan') renderPlan();
   updatePlanUi();
 }
@@ -248,6 +284,13 @@ function goNext() { move(1); }
 function goBack() { move(-1); }
 
 function restart() {
+  // Start over means start over: the profile no longer stands in for any
+  // answer. Without this the wizard would keep skipping questions whose
+  // answers were just cleared, and land on results with nothing to match on.
+  profileRow = null;
+  profileSteps = new Set();
+  document.querySelector('.profile-banner')?.remove();
+
   answers.county = null;
   answers.state = null;
   answers.areaId = null;
@@ -1656,7 +1699,12 @@ async function renderResults() {
             type: 'button',
             class: 'chip chip--edit',
             title: 'Change this answer',
-            onclick: () => showStep(step),
+            onclick: () => {
+              // They want to change it, so it stops counting as answered by
+              // the profile and behaves like any other question again.
+              profileSteps.delete(step);
+              showStep(step);
+            },
           },
           [label, el('span', { class: 'chip__pen', 'aria-hidden': 'true', text: '✎' })],
         ),
@@ -1879,7 +1927,6 @@ function init() {
       /* a corrupt save just means starting fresh */
     }
   }
-  showStep(resumeStep || 'intro');
   renderAccountLink();
 
   // Warm the cache while the person reads the intro, so results feel instant.
@@ -1890,6 +1937,136 @@ function init() {
     .catch((error) => {
       fetchError = error;
     });
+
+  // A shared link or a half-finished session in this tab is an explicit
+  // intent, and beats anything saved on the account.
+  if (resumeStep) {
+    showStep(resumeStep);
+    return;
+  }
+
+  // ?new=1 is the way back to a blank questionnaire for someone who is signed
+  // in — linked from the dashboard as "Start a fresh search".
+  const forceNew = new URLSearchParams(location.search).has('new');
+  if (isSignedIn() && !forceNew) {
+    startFromProfile();
+    return;
+  }
+
+  debug('anonymous visitor, showing the questionnaire');
+  showStep('intro');
+}
+
+/**
+ * The signed-in path: read the saved profile FIRST, then decide what to show.
+ *
+ * This is the whole point of having an account. Someone who has already told
+ * us their household, income and area should not be asked again — so nothing
+ * is rendered until the profile has been fetched (or has definitively
+ * failed), and what renders depends on what came back:
+ *
+ *   complete   -> straight to the dashboard, which matches from the profile
+ *   partial    -> the wizard, prefilled, asking ONLY what is still missing
+ *   empty/none -> the ordinary questionnaire
+ */
+async function startFromProfile() {
+  const boot = $('#profile-boot');
+  boot.hidden = false;
+
+  let profile = null;
+  try {
+    // A hung request must not strand somebody on a loading message; falling
+    // back to the questionnaire always works, it is just less convenient.
+    profile = await Promise.race([
+      loadProfile(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+    ]);
+    debug('profile found:', Boolean(profile));
+  } catch (error) {
+    debug('profile lookup failed:', error.message, '- falling back to questions');
+  }
+  boot.hidden = true;
+
+  const readiness = matchReadiness(profile);
+  debug('readiness:', {
+    hasAnything: readiness.hasAnything,
+    canMatch: readiness.canMatch,
+    complete: readiness.complete,
+    pct: readiness.pct,
+    missingSteps: readiness.missingSteps,
+  });
+
+  if (!profile || !readiness.hasAnything) {
+    debug('nothing saved yet, showing the questionnaire');
+    showStep('intro');
+    return;
+  }
+
+  // One source of truth: the wizard's answers are populated FROM the profile,
+  // through the same adapter the dashboard uses.
+  profileRow = profile;
+  Object.assign(answers, profileToAnswers(profile));
+  hydrateUi();
+
+  if (readiness.complete) {
+    debug('profile is complete, matching from it on the dashboard');
+    location.replace('dashboard/');
+    return;
+  }
+
+  // Partial: ask only the gaps.
+  profileSteps = stepsSatisfiedBy(profile);
+  const remaining = questionSteps();
+  debug('asking only:', remaining);
+  if (!remaining.length) {
+    location.replace('dashboard/');
+    return;
+  }
+  showProfileBanner(readiness, remaining.length);
+  showStep(remaining[0]);
+}
+
+/**
+ * Explains why the wizard opened part-way through, and offers a way past it.
+ *
+ * The escape matters: when the profile already has a state and county the
+ * matcher can work, so somebody who needs help now is never held behind more
+ * questions to get to it.
+ */
+function showProfileBanner(readiness, remainingCount) {
+  const host = $('#main');
+  const banner = el('div', { class: 'profile-banner', role: 'status' }, [
+    el('p', { class: 'profile-banner__text' }, [
+      el('strong', { text: 'Using your saved profile. ' }),
+      remainingCount === 1
+        ? 'Just one question we don’t have an answer for yet.'
+        : `Just ${remainingCount} questions we don’t have answers for yet.`,
+    ]),
+    el('p', { class: 'profile-banner__actions' }, [
+      readiness.canMatch
+        ? el('a', { class: 'btn btn--ghost btn--sm', href: 'dashboard/', text: 'Skip to my results' })
+        : null,
+      el('a', { class: 'btn btn--ghost btn--sm', href: 'profile/', text: 'Update my profile' }),
+    ]),
+  ]);
+  host.prepend(banner);
+}
+
+/**
+ * Writes answers given during this session back to the profile, so the next
+ * visit does not ask them again. Best-effort: a failure here must never
+ * interrupt somebody reading their results.
+ */
+async function persistAnswersToProfile() {
+  if (!profileRow) return;
+  try {
+    const patch = answersToProfile(answers);
+    if (!Object.keys(patch).length) return;
+    await saveProfile(patch);
+    debug('saved back to the profile:', Object.keys(patch));
+  } catch (error) {
+    debug('could not save back to the profile:', error.message);
+  }
 }
 
 init();

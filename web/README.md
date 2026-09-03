@@ -147,6 +147,17 @@ emailed link lands on the site root with no token. Whether new accounts must
 confirm their email is up to the project's **Confirm email** setting; the
 signup page handles both.
 
+**A signed-in visit never re-asks what the profile knows.** `init()` in
+`app.js` hands off to `startFromProfile()` whenever someone is signed in: it
+fetches the profile first (behind a short loading state, so the questionnaire
+cannot flash up and then vanish), then branches on `matchReadiness()` —
+complete profiles redirect to `/dashboard/`, partial ones open the wizard with
+`stepsSatisfiedBy()` marking the answered steps so `questionSteps()` skips
+them, and anything answered on the way is written back to the profile. Escape
+hatches: `?new=1` for a deliberately blank questionnaire (the dashboard's
+"Start a fresh search" uses it), and editing a chip on the results page turns
+that question back into a live one.
+
 **Matching a profile** reuses the screener's engine rather than duplicating it:
 `profileToAnswers()` turns a profile row into the same `answers` object the
 wizard builds, and `profile-match.js` wraps `evaluateProgram()` to return

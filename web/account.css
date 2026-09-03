@@ -443,3 +443,14 @@
     display: none !important;
   }
 }
+
+/* The "what these results are based on" line under the dashboard greeting. */
+.dash-basis {
+  display: block;
+}
+.dash-basis__edit {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: var(--primary);
+  font-weight: 600;
+}

@@ -81,6 +81,14 @@ step), `/profile/`, `/dashboard/`.
   supabase-js, keeping the site dependency-free; it owns session storage and
   token refresh. Because the session is in `localStorage`, nothing on these
   pages may ever use `innerHTML` with user- or server-supplied text.
+- **A saved profile replaces the questionnaire, it does not sit beside it.**
+  `app.js` reads the profile BEFORE rendering anything (`startFromProfile()`),
+  showing `#profile-boot` meanwhile so the wizard never flashes up: complete
+  goes straight to `/dashboard/`, partial opens the wizard prefilled with only
+  the missing steps (`stepsSatisfiedBy()` drops the rest via `questionSteps()`)
+  and writes the new answers back, empty falls through to the ordinary
+  questions. `?new=1` forces a blank questionnaire; a share hash or an
+  in-tab session still wins over the profile. Never re-ask a saved answer.
 - **One profile, one matcher.** `profileToAnswers()` converts a profile row
   into the wizard's `answers` shape so `matcher.js` serves both paths;
   `profile-match.js` only formats the verdict into

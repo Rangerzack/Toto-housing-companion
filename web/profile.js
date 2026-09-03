@@ -587,3 +587,94 @@ export function answersToProfile(answers) {
   }
   return patch;
 }
+
+// ---------------------------------------------------------------------------
+// Is this profile usable for matching, and what is still missing?
+// ---------------------------------------------------------------------------
+
+/**
+ * Which wizard step supplies each piece of the profile.
+ *
+ * This is the map that lets a signed-in person skip questions they have
+ * already answered: a step whose data the profile already carries is not
+ * asked again. Keep it in step with STEPS in app.js.
+ *
+ * `circumstances` is deliberately always satisfied. Those fields are optional
+ * by design (they only ever add programs), so a profile that leaves them blank
+ * is not incomplete — it is answered.
+ */
+export const STEP_SOURCES = {
+  state: (p) => Boolean(p.state),
+  county: (p) => (p.preferred_counties || []).length > 0,
+  help: (p) => (p.support_needs || []).length > 0,
+  situation: (p) => Boolean(p.housing_status),
+  bedrooms: (p) => p.bedrooms_needed != null || p.desired_rent != null,
+  household: (p) => p.household_size != null,
+  income: (p) => p.annual_income != null,
+  circumstances: () => true,
+};
+
+/** The wizard steps this profile can answer on the person's behalf. */
+export function stepsSatisfiedBy(profile) {
+  const row = profile || {};
+  return new Set(
+    Object.entries(STEP_SOURCES)
+      .filter(([, has]) => has(row))
+      .map(([step]) => step),
+  );
+}
+
+/**
+ * Whether a saved profile is ready to be matched, and how far along it is.
+ *
+ * `canMatch` is the honest floor: the matcher hard-filters on state and county
+ * (evaluateProgram excludes anything that doesn't serve the person's area), so
+ * without those two there is nothing meaningful to show. Everything else
+ * degrades gracefully — a missing income becomes "check where you fall"
+ * rather than an exclusion — which is why it lowers `pct` but never blocks
+ * results. Somebody who needs housing help should not be held behind a form
+ * when we already have enough to show them something.
+ *
+ * @returns {{hasAnything: boolean, canMatch: boolean, complete: boolean,
+ *            pct: number, missingSteps: string[]}}
+ */
+export function matchReadiness(profile) {
+  const row = profile || {};
+  const satisfied = stepsSatisfiedBy(row);
+  const state = completion(row);
+
+  const missingSteps = Object.keys(STEP_SOURCES).filter((step) => !satisfied.has(step));
+  const canMatch = satisfied.has('state') && satisfied.has('county');
+
+  return {
+    // Distinguishes "no profile yet" from "a profile that needs more in it".
+    hasAnything: FIELDS.some((f) => {
+      const value = row[f.name];
+      return Array.isArray(value) ? value.length > 0 : value != null && value !== '';
+    }),
+    canMatch,
+    complete: canMatch && state.complete,
+    pct: state.pct,
+    missingSteps,
+  };
+}
+
+/** A one-line summary of what a search is being run against. */
+export function profileSummary(profile) {
+  const row = profile || {};
+  const parts = [];
+  if (row.household_size) {
+    parts.push(`Household of ${row.household_size}`);
+  }
+  if (row.annual_income != null) {
+    parts.push(`Income: $${Math.round(Number(row.annual_income)).toLocaleString('en-US')}/yr`);
+  }
+  const counties = row.preferred_counties || [];
+  if (counties.length) {
+    parts.push(`${counties.join(', ')} ${counties.length > 1 ? 'counties' : 'County'}, ${row.state}`);
+  }
+  if (row.bedrooms_needed != null) {
+    parts.push(row.bedrooms_needed === 0 ? 'Studio or larger' : `${row.bedrooms_needed}+ bedrooms`);
+  }
+  return parts.join(' • ');
+}
