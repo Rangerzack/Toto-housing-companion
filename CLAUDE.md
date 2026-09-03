@@ -66,6 +66,34 @@ alone) normalizes and screens listings; the API has no county field, so
 cities are shown, never hidden, per the no-hard-exclusion rule. A broken
 listings feed degrades to an inline note; it never blocks program results.
 
+## Accounts (optional)
+
+Signing in is never required: the screener works anonymously and saves nothing
+without an account, and the intro's privacy line must keep saying so. Accounts
+add a saved profile, matches computed from it, and saved/recently-viewed items.
+Pages are `/login/`, `/signup/`, `/forgot-password/` (also the set-a-new-password
+step), `/profile/`, `/dashboard/`.
+
+- **Security lives in RLS** (`0016_user_accounts.sql`), not the JavaScript:
+  every policy on `profiles`, `saved_opportunities`, `viewed_opportunities` is
+  scoped to `auth.uid()`. `requireAuth()` is a courtesy redirect, not a gate.
+- **`auth.js` speaks to Supabase Auth over REST** rather than shipping
+  supabase-js, keeping the site dependency-free; it owns session storage and
+  token refresh. Because the session is in `localStorage`, nothing on these
+  pages may ever use `innerHTML` with user- or server-supplied text.
+- **One profile, one matcher.** `profileToAnswers()` converts a profile row
+  into the wizard's `answers` shape so `matcher.js` serves both paths;
+  `profile-match.js` only formats the verdict into
+  `{matchType, score, matchedCriteria, missingCriteria, failedCriteria,
+  explanation}`. Never build a second matching path.
+- **The profile asks only what changes matching.** Age is a band (the only
+  thresholds any program uses are 24/60/62/65), and the sensitive circumstance
+  flags are excluded from the completion score so nobody is pressured into
+  disclosing a disability or a crisis to reach 100%.
+- **Requires one Supabase setting:** the deployed `/forgot-password/` URL must
+  be in Authentication → URL Configuration → Redirect URLs (production and
+  `/staging/`), or reset links arrive tokenless.
+
 ## Data loading
 
 `scripts/load_data.py` runs in the load-data workflow (inputs: csv_path,

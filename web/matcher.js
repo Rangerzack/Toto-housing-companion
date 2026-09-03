@@ -218,6 +218,11 @@ const CIRCUMSTANCE_RULES = [
  */
 export function evaluateProgram(program, answers, lookup, proportional) {
   const checks = [];
+  // The other half of the explanation. `checks` says what still needs
+  // confirming; `matched` says what already lines up, so a result can tell
+  // someone why it is there rather than only what is missing. The screener
+  // ignores this field; the profile dashboard shows it.
+  const matched = [];
   const eligibility = program.eligibility || {};
 
   // --- County (hard) ---------------------------------------------------
@@ -244,10 +249,16 @@ export function evaluateProgram(program, answers, lookup, proportional) {
       ? `${wantedCounties.join(' or ')} counties`
       : `${wantedCounties[0]} County`;
   if (!servesCounty && !countyUnspecified) {
-    return { verdict: 'excluded', checks, reason: `Does not serve ${areaLabel}` };
+    return { verdict: 'excluded', checks, matched, reason: `Does not serve ${areaLabel}` };
   }
   if (!servesCounty && countyUnspecified) {
     checks.push(`Service area isn't clearly documented — confirm they cover ${areaLabel}.`);
+  } else if (wantedCounties.length) {
+    matched.push(
+      inState.includes('Statewide')
+        ? 'Available anywhere in your state'
+        : `Serves ${areaLabel}`,
+    );
   }
 
   // --- Kind of help (hard, where the category is classifiable) ----------
@@ -256,8 +267,12 @@ export function evaluateProgram(program, answers, lookup, proportional) {
     return {
       verdict: 'excluded',
       checks,
+      matched,
       reason: 'Helps with a different kind of need than the ones you picked',
     };
+  }
+  if (needs.length && program.category) {
+    matched.push(`Provides ${String(program.category).toLowerCase()}, which is what you asked for`);
   }
 
   // --- Housing situation (hard, where documented) -----------------------
@@ -291,10 +306,12 @@ export function evaluateProgram(program, answers, lookup, proportional) {
     fit.push('unhoused');
   }
   if (tenure === 'no-match') {
-    return { verdict: 'excluded', checks, reason: 'Serves a different housing situation' };
+    return { verdict: 'excluded', checks, matched, reason: 'Serves a different housing situation' };
   }
   if (tenure === 'unknown') {
     checks.push('Confirm the program serves your housing situation.');
+  } else if (tenure === 'match' && situations.length) {
+    matched.push('Serves people in your housing situation');
   }
 
   // --- Income (hard, against published dollar limits) --------------------
@@ -325,14 +342,30 @@ export function evaluateProgram(program, answers, lookup, proportional) {
         checks.push(`Your income may be above this program's ${amiMax}% limit — the exact figure isn't published for your area, so it's worth asking.`);
       }
     } else if (answers.income > limit.amount * OVER_LIMIT_MARGIN) {
-      return { verdict: 'excluded', checks, reason: 'Household income is above the program limit' };
+      return {
+        verdict: 'excluded',
+        checks,
+        matched,
+        reason: `Household income is above the program limit of ${money(limit.amount)} for a household of ${answers.householdSize}`,
+      };
     } else if (answers.income > limit.amount) {
       // The annual figure typed here is an estimate, and programs measure
       // income their own way — different windows, different members counted.
       // Being modestly over on that basis is not a decision, so it is a
       // prompt, not a cut.
       checks.push(`Your income is a little above the published limit of ${money(limit.amount)}, but programs measure income their own way — some count only your most recent month — so it's still worth applying.`);
+    } else {
+      matched.push(
+        `Your income is within the published limit of ${money(limit.amount)} for a household of ${answers.householdSize}`,
+      );
     }
+  }
+
+  // No published income test at all is itself worth saying: it is one of the
+  // few things that can make a program a strong fit for someone whose income
+  // rules others out.
+  if (!amiMax && answers.income != null) {
+    matched.push('No published income limit');
   }
 
   if (amiMin && answers.income != null) {
@@ -381,12 +414,19 @@ export function evaluateProgram(program, answers, lookup, proportional) {
     // nothing and is not a population.
     if (personHasIt && key !== 'utilityAccount' && (state === 'required' || state === 'qualifying')) {
       fit.push(key);
+      matched.push(`Built for households with ${label}, which you told us applies`);
     }
 
     if (state === 'qualifying') {
       if (personHasIt) qualifyingMet = true;
       else qualifyingUnmet.push(label);
       continue;
+    }
+
+    // A requirement the person has confirmed is a met criterion, and saying so
+    // is the difference between "you appear to qualify" and a bare verdict.
+    if (personHasIt && state === 'required' && key === 'utilityAccount') {
+      matched.push('You have a utility account in your name, which this program requires');
     }
 
     // An unticked box is NOT a "no". The person may not have read that far,
@@ -418,6 +458,7 @@ export function evaluateProgram(program, answers, lookup, proportional) {
   return {
     verdict: checks.length ? 'possible' : 'likely',
     checks,
+    matched,
     fit,
     reason: null,
   };

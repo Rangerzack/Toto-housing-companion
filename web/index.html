@@ -57,9 +57,14 @@
             <small>Oregon &amp; Minnesota</small>
           </span>
         </div>
-        <button type="button" class="btn btn--ghost btn--sm" id="restart-top" hidden>
-          Start over
-        </button>
+        <div class="site-header__account">
+          <!-- Filled in by app.js: "Sign in" when signed out, "Your matches"
+               when signed in. An account is optional everywhere. -->
+          <span id="account-link"></span>
+          <button type="button" class="btn btn--ghost btn--sm" id="restart-top" hidden>
+            Start over
+          </button>
+        </div>
       </div>
     </header>
 
@@ -98,7 +103,7 @@
           </li>
           <li>
             <span class="intro__icon" aria-hidden="true">🔒</span>
-            <span>Nothing you enter is saved or sent anywhere</span>
+            <span>Nothing is saved unless you choose to make an account</span>
           </li>
           <li>
             <span class="intro__icon" aria-hidden="true">↩</span>

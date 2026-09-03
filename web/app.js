@@ -1,6 +1,5 @@
 import {
   SUPABASE_URL,
-  SUPABASE_ANON_KEY,
   FORMS_BUCKET,
   STATES,
   HOUSING_API_URL,
@@ -8,12 +7,21 @@ import {
   CITY_COUNTIES,
 } from './config.js?v=__BUILD__';
 import { screenPrograms } from './matcher.js?v=__BUILD__';
+// Shared with the signed-in dashboard so both read the catalogue identically.
+import {
+  fetchProgramCatalogue,
+  fetchLimitRows,
+  lookupLimit,
+} from './data-api.js?v=__BUILD__';
 import {
   fetchListings,
   screenListings,
   monthlyBudget,
   bedroomsLabel,
 } from './housing.js?v=__BUILD__';
+// Only to decide which header link to show. The wizard neither requires an
+// account nor reads one; answers still live in this tab alone.
+import { isSignedIn } from './auth.js?v=__BUILD__';
 
 // ---------------------------------------------------------------------------
 // State
@@ -105,64 +113,10 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 // Data
 // ---------------------------------------------------------------------------
 
-// PostgREST returns embedded one-to-one rows as an object on some versions and
-// a single-element array on others; normalize both to a plain object.
-const one = (value) => (Array.isArray(value) ? value[0] || {} : value || {});
-
 async function fetchPrograms() {
-  if (SUPABASE_ANON_KEY.startsWith('PASTE_')) {
-    throw new Error('MISSING_KEY');
-  }
-
-  const headers = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-  };
-
-  const select =
-    'select=*,program_counties(county,state_code),eligibility(*),contacts(*),forms(*),verification(*)';
-
-  // program_income_rules is fetched separately rather than embedded: it has no
-  // foreign key to programs (see 0004_income_limits.sql), and PostgREST can
-  // only embed across a declared relationship.
-  const [response, rulesResponse, standardsResponse] = await Promise.all([
-    // is_active filters out records that document something real but are not
-    // assistance anyone can apply for — discontinued funds, referral desks,
-    // "shutoff protection (NOT a payment program)".
-    fetch(`${SUPABASE_URL}/rest/v1/programs?${select}&is_active=eq.true`, { headers }),
-    fetch(`${SUPABASE_URL}/rest/v1/program_income_rules?select=*`, { headers }),
-    fetch(`${SUPABASE_URL}/rest/v1/income_standards?select=standard_id,proportional`, { headers }),
-  ]);
-
-  if (standardsResponse.ok) {
-    proportionalStandards = new Set(
-      (await standardsResponse.json())
-        .filter((s) => s.proportional)
-        .map((s) => s.standard_id),
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(`Supabase returned ${response.status} ${response.statusText}`);
-  }
-
-  const rulesByProgram = new Map();
-  if (rulesResponse.ok) {
-    for (const rule of await rulesResponse.json()) {
-      rulesByProgram.set(rule.program_id, rule);
-    }
-  }
-
-  const rows = await response.json();
-  return rows.map((row) => ({
-    ...row,
-    eligibility: one(row.eligibility),
-    contacts: one(row.contacts),
-    verification: one(row.verification),
-    forms: row.forms || [],
-    program_counties: row.program_counties || [],
-    income_rule: rulesByProgram.get(row.program_id) || null,
-  }));
+  const catalogue = await fetchProgramCatalogue();
+  proportionalStandards = catalogue.proportionalStandards;
+  return catalogue.programs;
 }
 
 /**
@@ -184,40 +138,7 @@ async function fetchLimits(areaIds, statewideAreaId) {
   const key = ids.join(',');
   if (!ids.length || limitsKey === key) return;
 
-  const areas = [...ids, statewideAreaId, 'US-48'].map(encodeURIComponent).join(',');
-  const query =
-    'v_current_income_limits?select=area_id,standard_id,tier_pct,household_size,amount,effective_date' +
-    `&area_id=in.(${areas})`;
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-  });
-  if (!response.ok) throw new Error(`Income limits: ${response.status}`);
-
-  // Newest row per (area, standard, tier, size)…
-  const newest = new Map();
-  const perArea = new Map();
-  for (const row of await response.json()) {
-    const rowKey = `${row.area_id}|${row.standard_id}|${Number(row.tier_pct)}|${row.household_size}`;
-    if (!newest.has(rowKey) || row.effective_date > newest.get(rowKey)) {
-      newest.set(rowKey, row.effective_date);
-      perArea.set(rowKey, {
-        key: `${row.standard_id}|${Number(row.tier_pct)}|${row.household_size}`,
-        amount: Number(row.amount),
-      });
-    }
-  }
-  // …then the highest across areas per (standard, tier, size).
-  const chosen = new Map();
-  for (const { key: limitKey, amount } of perArea.values()) {
-    if (!chosen.has(limitKey) || amount > chosen.get(limitKey)) {
-      chosen.set(limitKey, amount);
-    }
-  }
-
-  limits = chosen;
+  limits = await fetchLimitRows(ids, statewideAreaId);
   limitsKey = key;
 }
 
@@ -231,19 +152,32 @@ async function fetchLimits(areaIds, statewideAreaId) {
  * size 12 (it grows by a different rule), so those hit the exact path first.
  */
 function limitLookup(standardId, tierPct, householdSize) {
-  const key = (size) => `${standardId}|${Number(tierPct)}|${size}`;
+  return lookupLimit(limits, standardId, tierPct, householdSize);
+}
 
-  const exact = limits.get(key(householdSize));
-  if (exact != null) return exact;
+// ---------------------------------------------------------------------------
+// Accounts (entirely optional)
+// ---------------------------------------------------------------------------
 
-  if (householdSize > 8) {
-    const largest = limits.get(key(8));
-    const fourPerson = limits.get(key(4));
-    if (largest != null && fourPerson != null) {
-      return Math.round(largest + fourPerson * 0.08 * (householdSize - 8));
-    }
-  }
-  return null;
+/**
+ * Puts a sign-in or dashboard link in the header.
+ *
+ * The screener itself never requires an account and never reads one: every
+ * answer here still lives only in this tab. This link is the single point of
+ * contact between the two, so if accounts were removed tomorrow the wizard
+ * would be untouched.
+ */
+function renderAccountLink() {
+  const host = $('#account-link');
+  if (!host) return;
+  const signedIn = isSignedIn();
+  host.replaceChildren(
+    el('a', {
+      class: 'btn btn--ghost btn--sm',
+      href: signedIn ? 'dashboard/' : 'login/',
+      text: signedIn ? 'Your matches' : 'Sign in',
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1854,6 +1788,18 @@ async function renderResults() {
       }),
     ]),
   );
+
+  // An offer, never a wall: the results above are complete and printable
+  // without an account. Someone signed in already has all of this.
+  if (!isSignedIn()) {
+    host.append(
+      el('p', { class: 'results__account-offer' }, [
+        'Want these to still be here next time? ',
+        el('a', { href: 'signup/', text: 'Create an account' }),
+        ' and we’ll bring these answers across — or keep using it without one.',
+      ]),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1934,6 +1880,7 @@ function init() {
     }
   }
   showStep(resumeStep || 'intro');
+  renderAccountLink();
 
   // Warm the cache while the person reads the intro, so results feel instant.
   fetchPrograms()

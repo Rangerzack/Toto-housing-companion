@@ -1,0 +1,445 @@
+/* ==========================================================================
+   Accounts — sign in, profile, dashboard
+   Built entirely on the tokens and components in styles.css, which every one
+   of these pages loads first. Nothing here redefines a colour, a radius or a
+   font: if the brand moves, these pages move with it. What IS here is the
+   handful of layouts the screener never needed — a narrow form card, the
+   profile's section accordion, and the dashboard grid.
+   ========================================================================== */
+
+/* --- Shared page chrome ---------------------------------------------- */
+
+/* padding-block, not the shorthand: these elements also carry .wrap, whose
+   `padding: 0 1.25rem` is what keeps content off the screen edge on a phone.
+   A shorthand here would silently reset that to zero. */
+.account-main {
+  padding-block: 2.5rem 4rem;
+}
+
+/* The dashboard is a scannable grid of cards, not a reading column, so it
+   opts into the same wide container the screener's results step uses
+   (styles.css `main:has(.step--results.is-active)`). Without this the card
+   grid is squeezed into 42rem and every name wraps. */
+.wrap--results {
+  max-width: var(--wrap-results);
+}
+
+/* The auth pages are a single short form: a reading-width column, centred,
+   rather than the screener's full wizard width. */
+.account-card {
+  max-width: 26rem;
+  margin: 0 auto;
+}
+.account-card__title {
+  font-size: clamp(1.5rem, 1.2rem + 1.4vw, 1.9rem);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5rem;
+  text-wrap: balance;
+}
+.account-card__lead {
+  color: var(--ink-soft);
+  margin: 0 0 1.75rem;
+  text-wrap: pretty;
+}
+
+/* --- Fields ----------------------------------------------------------- */
+
+.field {
+  margin-bottom: 1.25rem;
+}
+.field__label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+.field__hint {
+  display: block;
+  font-size: 0.9063rem;
+  color: var(--ink-faint);
+  margin: 0.3rem 0 0;
+  font-weight: 400;
+  text-wrap: pretty;
+}
+.field input[type='text'],
+.field input[type='email'],
+.field input[type='tel'],
+.field input[type='password'],
+.field select {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  min-height: 3rem;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+.field select {
+  /* Native arrow only; a custom one would need a background image, and this
+     app ships no images. */
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 49%, var(--ink-faint) 51%),
+    linear-gradient(135deg, var(--ink-faint) 49%, transparent 51%);
+  background-position: calc(100% - 1.15rem) 1.35rem, calc(100% - 0.8rem) 1.35rem;
+  background-size: 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  padding-right: 2.5rem;
+}
+.field input:focus-visible,
+.field select:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-ring);
+}
+/* An invalid field must not rely on colour alone: the message under it says
+   what is wrong in words, and aria-describedby ties them together. */
+.field--invalid input,
+.field--invalid select {
+  border-color: var(--primary);
+}
+.field__error {
+  display: block;
+  margin: 0.4rem 0 0;
+  font-size: 0.9063rem;
+  color: var(--primary);
+  font-weight: 550;
+}
+
+/* --- Form-level messages ---------------------------------------------- */
+
+.form-message {
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+.form-message--error {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+.form-message--good {
+  border-color: color-mix(in srgb, var(--likely) 35%, transparent);
+  background: var(--likely-tint);
+  color: var(--likely);
+}
+.form-message:empty {
+  display: none;
+}
+
+.account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.account-actions .btn {
+  width: 100%;
+}
+.account-alt {
+  margin: 1.5rem 0 0;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+}
+.account-alt a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Explains what an account is for, under the sign-in form. */
+.account-why {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--ink-faint);
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+}
+
+/* --- Completion meter -------------------------------------------------- */
+
+.completion {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+}
+.completion__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+.completion__pct {
+  font-family: var(--font-data);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--primary);
+}
+.completion__label {
+  font-weight: 600;
+}
+.completion__missing {
+  margin: 0.8rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+.completion__missing a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* --- Profile sections --------------------------------------------------- */
+
+.psection {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+/* A real <summary>, so the section is expandable with a keyboard and readable
+   to a screen reader without any JavaScript. Both marker rules are needed:
+   list-style covers Firefox, the pseudo-element covers Safari. */
+.psection__head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1.1rem 1.25rem;
+  background: transparent;
+  border: 0;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  list-style: none;
+}
+.psection__head::-webkit-details-marker {
+  display: none;
+}
+.psection__head:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: -3px;
+}
+.psection__head:hover {
+  background: var(--surface-sunken);
+}
+.psection__title {
+  font-weight: 700;
+  flex: 1;
+}
+.psection__status {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--surface-sunken);
+  color: var(--ink-faint);
+  border: 1px solid var(--border);
+}
+.psection__status--done {
+  background: var(--likely-tint);
+  color: var(--likely);
+  border-color: transparent;
+}
+.psection__chev {
+  color: var(--ink-faint);
+  transition: transform 0.15s ease;
+}
+.psection[open] .psection__chev,
+.psection.is-open .psection__chev {
+  transform: rotate(180deg);
+}
+.psection__body {
+  padding: 0 1.25rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.psection__blurb {
+  color: var(--ink-soft);
+  margin: 1rem 0 1.5rem;
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+}
+.psection__save {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Two-up on a wide screen, stacked on a phone. */
+@media (min-width: 40rem) {
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1.25rem;
+  }
+  .field-grid .field--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- Dashboard ---------------------------------------------------------- */
+
+.dash-hello {
+  font-size: clamp(1.6rem, 1.2rem + 1.8vw, 2.2rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.4rem;
+  text-wrap: balance;
+}
+.dash-sub {
+  color: var(--ink-soft);
+  margin: 0 0 2rem;
+  text-wrap: pretty;
+}
+.dash-section {
+  margin: 0 0 2.75rem;
+}
+.dash-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+.dash-section__title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.dash-section__hint {
+  color: var(--ink-faint);
+  font-size: 0.9375rem;
+  margin: 0 0 1rem;
+  text-wrap: pretty;
+}
+
+/* Match cards reuse .result from styles.css for their shell; these are the
+   parts the screener has no equivalent for. */
+.match-why {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.match-why li {
+  position: relative;
+  padding-left: 1.4rem;
+  font-size: 0.9063rem;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+.match-why li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 700;
+}
+.match-why li.is-met::before {
+  content: '✓';
+  color: var(--likely);
+}
+.match-why li.is-open::before {
+  content: '?';
+  color: var(--possible);
+}
+.match-why li.is-failed::before {
+  content: '×';
+  color: var(--primary);
+}
+
+.match-score {
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.empty-state {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 1.75rem 1.25rem;
+  text-align: center;
+  color: var(--ink-soft);
+  background: var(--surface-sunken);
+  text-wrap: pretty;
+}
+.empty-state p {
+  margin: 0 0 1rem;
+}
+.empty-state p:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Tag inputs (cities, ZIPs) ------------------------------------------ */
+
+.taglist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.taglist:empty {
+  display: none;
+}
+.taglist__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+.taglist__remove {
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  font-family: inherit;
+}
+.taglist__remove:hover {
+  color: var(--primary);
+}
+
+/* --- Small print --------------------------------------------------------- */
+
+.privacy-note {
+  margin-top: 2rem;
+  font-size: 0.9063rem;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+@media print {
+  .site-header__account,
+  .psection__save,
+  .account-actions {
+    display: none !important;
+  }
+}

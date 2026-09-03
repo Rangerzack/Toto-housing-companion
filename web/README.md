@@ -29,15 +29,30 @@ edit a file and refresh the page.
 
 ## Files
 
-| File         | What it does                                                  |
-| ------------ | ------------------------------------------------------------- |
-| `index.html` | Markup for every wizard step and the results view              |
-| `styles.css` | Design system — light/dark, responsive, print styles           |
-| `app.js`     | Wizard navigation, Supabase fetch, results rendering           |
-| `matcher.js` | Eligibility matching engine (no DOM — testable on its own)     |
-| `housing.js` | Rental-listing search: fetch, normalize, filter (no DOM)       |
-| `config.js`  | Connection settings, county list, housing API + city→county map |
-| `serve.ps1`  | Dependency-free local static server                            |
+| File            | What it does                                                     |
+| --------------- | ---------------------------------------------------------------- |
+| `index.html`    | Markup for every wizard step and the results view                 |
+| `styles.css`    | Design system — light/dark, responsive, print styles              |
+| `app.js`        | Wizard navigation, results rendering                              |
+| `matcher.js`    | Eligibility matching engine (no DOM — testable on its own)        |
+| `housing.js`    | Rental-listing search: fetch, normalize, filter (no DOM)          |
+| `data-api.js`   | Reads the program catalogue and income limits (shared, no DOM)    |
+| `config.js`     | Connection settings, county list, housing API + city→county map   |
+| `serve.ps1`     | Dependency-free local static server                               |
+
+Accounts are optional and live in their own files, so the screener works
+untouched with all of them deleted:
+
+| File                | What it does                                                 |
+| ------------------- | ------------------------------------------------------------ |
+| `auth.js`           | Supabase Auth over REST: sign up/in/out, reset, sessions      |
+| `profile.js`        | Profile schema, load/save, completion, profile↔answers adapter |
+| `profile-match.js`  | Structured, explainable match results (no DOM)                |
+| `account-ui.js`     | Shared form controls, generated from the profile schema        |
+| `account.css`       | Layouts the screener didn't need (form card, sections, grid)   |
+| `login/`, `signup/`, `forgot-password/` | The three auth pages                   |
+| `profile/`          | Sectioned profile form with a completion meter                 |
+| `dashboard/`        | Matches, saved items, recently viewed                          |
 
 ## How matching works
 
@@ -99,6 +114,45 @@ missing from the map is shown rather than hidden; extend it as unmapped towns
 appear. `housing.js` unwraps common response envelopes and field-name
 variants via `FIELD_ALIASES`, and a broken listings feed degrades to a small
 inline note — it never takes the program results down with it.
+
+## Accounts
+
+Optional throughout. Nobody has to sign in to use the screener, nothing is
+saved without an account, and every account page links back to the anonymous
+tool. The intro's privacy line says exactly this, and it has to stay true.
+
+**Pages:** `/login/`, `/signup/`, `/forgot-password/` (which also handles the
+"set a new password" step when someone follows the emailed link), `/profile/`,
+`/dashboard/`.
+
+**Where the security actually is.** Row-level security in
+`supabase/migrations/0016_user_accounts.sql`, not the JavaScript. Every policy
+on `profiles`, `saved_opportunities` and `viewed_opportunities` is scoped to
+`auth.uid()`, so a request without a valid JWT reads nothing and a signed-in
+person reads only their own row. The `requireAuth()` redirect on the profile
+and dashboard pages is a courtesy for the person, not the boundary — deleting
+it from the JavaScript gets you an empty page, not someone else's data.
+
+**Auth is spoken directly** to Supabase's REST API in `auth.js` rather than via
+the supabase-js bundle, to keep the site dependency-free. That means this app
+owns session storage and token refresh; passwords go straight to Supabase over
+TLS and never touch our code. The session lives in `localStorage` so signing in
+survives a closed tab, which is why nothing in these pages ever renders
+user-supplied text with `innerHTML`.
+
+**One Supabase setting is required** before password resets work: add the
+deployed `/forgot-password/` URL to **Authentication → URL Configuration →
+Redirect URLs**, for both the production and `/staging/` paths. Without it the
+emailed link lands on the site root with no token. Whether new accounts must
+confirm their email is up to the project's **Confirm email** setting; the
+signup page handles both.
+
+**Matching a profile** reuses the screener's engine rather than duplicating it:
+`profileToAnswers()` turns a profile row into the same `answers` object the
+wizard builds, and `profile-match.js` wraps `evaluateProgram()` to return
+`{matchType, score, matchedCriteria, missingCriteria, failedCriteria,
+explanation}`. If the dashboard and the screener ever disagree about a program,
+that is a bug in the adapter, not a second opinion.
 
 ## Before this goes in front of real people
 

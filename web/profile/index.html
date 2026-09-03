@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your profile — Toto Housing Companion</title>
+    <meta name="description" content="The details Toto uses to work out which housing programs may fit you." />
+    <meta name="robots" content="noindex" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff0055' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10.5 12 3l9 7.5'/%3E%3Cpath d='M5 9.5V21h14V9.5'/%3E%3Cpath d='M9.5 21v-6h5v6'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="../styles.css?v=__BUILD__" />
+    <link rel="stylesheet" href="../account.css?v=__BUILD__" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <div class="testing-banner" role="note">
+      <div class="wrap testing-banner__inner">
+        <span class="testing-banner__tag">Draft</span>
+        <p>
+          This tool is being tested and is not official. Program details and
+          income figures are estimates — always confirm directly with the
+          program before making decisions.
+        </p>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <div class="wrap site-header__inner">
+        <a class="brand" href="../">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V21h14V9.5" />
+              <path d="M9.5 21v-6h5v6" />
+            </svg>
+          </span>
+          <span class="brand__text">
+            <strong>Toto Housing Companion</strong>
+            <small>Your profile</small>
+          </span>
+        </a>
+        <div class="site-header__account" id="account-nav"></div>
+      </div>
+    </header>
+
+    <main id="main" class="wrap account-main" tabindex="-1">
+      <h1 class="account-card__title" id="page-title">Your profile</h1>
+      <p class="account-card__lead">
+        The more of this you fill in, the better the matching gets. Every
+        section saves on its own, so you can stop anywhere and come back.
+      </p>
+
+      <p class="form-message" id="page-message"></p>
+
+      <!-- Completion, filled in by profile-page.js -->
+      <section class="completion" id="completion" aria-live="polite"></section>
+
+      <!-- Sections, generated from SECTIONS in profile.js -->
+      <div id="sections"></div>
+
+      <p class="privacy-note">
+        This is private to your account. It is never shown to other people
+        using this tool, and it is only used to work out which programs and
+        rentals may fit you.
+      </p>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p class="site-footer__crisis">
+          Need help right now? Call <a href="tel:211">211</a> or visit
+          <a href="https://www.211info.org" target="_blank" rel="noopener noreferrer">211info.org</a>
+          for housing and utility referrals.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="./profile-page.js?v=__BUILD__"></script>
+  </body>
+</html>

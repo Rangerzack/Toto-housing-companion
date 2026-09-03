@@ -221,6 +221,16 @@ body {
   min-height: 4rem;
 }
 
+/* Holds the account link next to Start over. Both are optional controls: the
+   screener works signed out, and an account only adds a saved profile. */
+.site-header__account {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -1425,6 +1435,20 @@ dialog.pdialog::backdrop { background: rgba(15, 12, 10, 0.55); }
 .chip--edit:hover .chip__pen {
   color: inherit;
 }
+
+/* Sits under the results actions: an offer to keep these answers, for someone
+   who is not signed in. Never a gate — the results above are already complete. */
+.results__account-offer {
+  margin: 1.5rem 0 0;
+  color: var(--ink-faint);
+  font-size: 0.9375rem;
+  text-wrap: pretty;
+}
+.results__account-offer a {
+  color: var(--primary);
+  font-weight: 600;
+}
+@media print { .results__account-offer { display: none !important; } }
 
 /* The copy-link button sits under the answer chips in the results header. */
 .results__share { margin: -1.25rem 0 2rem; }
