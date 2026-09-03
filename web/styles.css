@@ -1466,8 +1466,10 @@ dialog.pdialog::backdrop { background: rgba(15, 12, 10, 0.55); }
 }
 @media print { .results__account-offer { display: none !important; } }
 
-/* The copy-link button sits under the answer chips in the results header. */
-.results__share { margin: -1.25rem 0 2rem; }
+/* The copy-link button is the last button in the results CTA row, so it takes
+   its spacing from that row's gap — no margin of its own, or it drops out of
+   line with the buttons beside it. */
+.results__share { margin: 0; }
 @media print { .results__share { display: none !important; } }
 
 /* The pin button lives in the collapsed card header. */
