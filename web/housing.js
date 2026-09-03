@@ -84,6 +84,83 @@ function parseBedrooms(value) {
 }
 
 /** Maps one raw API record onto the internal listing shape. */
+// Property types arrive as API enums — "SINGLE__FAMILY", "MULTI_FAMILY",
+// "OTHER". Those are database values, not words anyone says, and they were
+// reaching people on the results page ("Studio · OTHER · Active"). Known
+// values get the word a person would use; anything unrecognised is
+// title-cased; and placeholders that carry no information at all are dropped
+// rather than shown, because "OTHER" tells somebody nothing about a home.
+const TYPE_WORDS = {
+  single_family: 'House',
+  multi_family: 'Apartment',
+  apartment: 'Apartment',
+  condo: 'Condo',
+  condominium: 'Condo',
+  townhouse: 'Townhouse',
+  townhome: 'Townhouse',
+  duplex: 'Duplex',
+  triplex: 'Triplex',
+  fourplex: 'Fourplex',
+  manufactured: 'Manufactured home',
+  mobile_home: 'Manufactured home',
+  manufactured_home: 'Manufactured home',
+  cabin: 'Cabin',
+  cottage: 'Cottage',
+  studio: 'Studio',
+  room: 'Room',
+};
+const EMPTY_TYPES = new Set(['other', 'unknown', 'n_a', 'na', 'none', 'null', 'undefined']);
+
+export function humanizeType(value) {
+  if (value == null || value === '') return null;
+  // Collapses the doubled underscores the feed emits ("SINGLE__FAMILY").
+  const key = String(value).trim().toLowerCase().replace(/[\s-]+/g, '_').replace(/_+/g, '_');
+  if (!key || EMPTY_TYPES.has(key)) return null;
+  if (TYPE_WORDS[key]) return TYPE_WORDS[key];
+  return key
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * Turns an availability value into a sentence.
+ *
+ * The feed mixes status words ("available", "Active") with dates ("2026-08-19",
+ * "aug 19"), and both were being printed verbatim — including the lowercase
+ * month. Anything it cannot read is returned trimmed rather than dropped: an
+ * unrecognised note may still mean something to the person reading it.
+ */
+export function humanizeAvailability(value) {
+  if (value == null || value === '') return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const key = raw.toLowerCase();
+  if (/^(available|active|available now|vacant|ready)$/.test(key)) return 'Available now';
+  if (/^(unavailable|inactive|rented|leased|occupied|pending)$/.test(key)) return null;
+
+  // ISO or slash dates.
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const month = MONTHS[Number(iso[2]) - 1];
+    return month ? `Available ${month} ${Number(iso[3])}` : `Available ${raw}`;
+  }
+  // "aug 19", "August 19", "Aug 19 2026" — fix the casing and prefix it.
+  const named = raw.match(/^([A-Za-z]{3,9})\.?\s+(\d{1,2})/);
+  if (named) {
+    const month = MONTHS.find((m) => named[1].toLowerCase().startsWith(m.toLowerCase()));
+    if (month) return `Available ${month} ${Number(named[2])}`;
+  }
+  if (/^available\b/i.test(raw)) {
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }
+  return raw;
+}
+
 export function normalizeListing(raw) {
   if (!raw || typeof raw !== 'object') return null;
 
@@ -101,6 +178,10 @@ export function normalizeListing(raw) {
     listing.bathrooms = match ? Number(match[0]) : null;
   }
   listing.photo = parsePhoto(listing.photo);
+  // Both of these ship straight to the results page, so they are made
+  // readable here rather than at every render site.
+  listing.type = humanizeType(listing.type);
+  listing.availability = humanizeAvailability(listing.availability);
   listing.subsidized =
     listing.subsidized === true ||
     /^(yes|true|y|1)$/i.test(String(listing.subsidized ?? ''));

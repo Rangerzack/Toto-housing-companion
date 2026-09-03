@@ -40,6 +40,29 @@ deploy time.
   tenure + crisis rule + program name for it because markets document it
   inconsistently. An empty gate column silently costs a program its boost.
 
+## Results page (2026 redesign)
+
+Built from the design canvas the user exported (`design/upgrade/`). The page
+answers five questions in order and the sections ARE those answers: a
+plain-language headline plus a **Your housing needs** summary card (which
+replaced the answer chips; every line jumps back to its question), a **crisis
+strip** shown only when the results contain a crisis-serving programme with a
+real phone number, **Best next steps** (max three rich cards, each carrying
+"Based on N of your answers"), **Rentals within your budget** (rent-first
+cards saying how far under the cap each one is), and **More programs that may
+help** as compact rows rather than a wall of cards. The detail dialog leads
+with the match reason and puts a numbered *What to do next* rail beside the
+facts, with the call button as step one.
+
+Crisis is read from the PROGRAMME (`servesCrisis()`), never from what the
+person ticked — someone fleeing violence at 2am has not necessarily checked a
+box, and a 24/7 line they qualify for must not be hidden because of it.
+
+The palette moved to a warm ground (`--paper #f3efe8`) with white cards and a
+slightly deeper accent (`#c8294f`, which raises white-on-accent from 4.91:1 to
+5.40:1); dark mode is warm near-black with the accent lifted to `#ee5c7b` and
+`--on-primary` flipped to near-black, since white on it reaches only 3.25:1.
+
 ## Screener flow (as shipped)
 
 Q3 is multi-select (`answers.help` array: rental | staying | buying |

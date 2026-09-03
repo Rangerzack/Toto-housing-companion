@@ -5,40 +5,48 @@
    ========================================================================== */
 
 :root {
-  /* Annum Housing palette, taken from annumhousing.com: white ground, black
-     text, #FF0055 accent, and their #FAFAFA / #F2F2F2 neutrals. */
-  --paper: #ffffff;
+  /* The Annum identity on a warmer ground, per the 2026 redesign: the page is
+     a warm neutral and cards are white, so a card reads as a raised surface
+     without needing a heavy border. Measured, not guessed — every pair below
+     clears WCAG AA:
+       ink on card 17.3:1 · ink on paper 15.1:1 · faint on card 7.4:1
+       accent on card 5.4:1 · white on accent 5.4:1
+     The accent moved from #E0004D to #C8294F, which is slightly deeper and
+     raises white-on-accent from 4.91:1 to 5.40:1. */
+  --paper: #f3efe8;
   --surface: #ffffff;
-  --surface-sunken: #fafafa;
-  --border: #e9e9e9;
-  --border-strong: #d2d2d2;
+  --surface-sunken: #ebe6df;
+  --border: #e9e3da;
+  --border-strong: #d9d3cb;
 
-  --ink: #000000;
-  --ink-soft: #333333;
-  --ink-faint: #727272;
+  --ink: #1c1a19;
+  --ink-soft: #3a3633;
+  --ink-faint: #5a5551;
 
-  /* The brand accent is #FF0055. White text on it measures 3.9:1, which is
-     under the 4.5:1 needed for normal text, so anything carrying white text
-     uses the slightly deeper --primary (4.9:1). --brand stays exact for marks
-     and accents that are not doing the work of text. */
-  --brand: #ff0055;
-  --primary: #e0004d;
-  --primary-hover: #c00042;
-  --primary-tint: #fff0f4;
-  --primary-ring: rgba(255, 0, 85, 0.3);
-  /* Text sitting ON the accent. It flips by theme: the accent is deepened for
-     light mode so white works, and lifted for dark mode, where white would
-     only reach 3.2:1 and near-black reaches 6:1. */
+  --brand: #c8294f;
+  --primary: #c8294f;
+  --primary-hover: #a31f40;
+  --primary-tint: #fdecf1;
+  --primary-ring: rgba(200, 41, 79, 0.32);
+  /* Text sitting ON the accent. It flips by theme: white works on the deeper
+     light accent (5.4:1) but only reaches 3.25:1 on the lifted dark one, so
+     dark mode puts near-black on it instead. */
   --on-primary: #ffffff;
 
   /* Kept deliberately off-brand: a match verdict has to read as good/caution
      at a glance, which it cannot do in the accent hue. */
-  --likely: #1a7a4c;
-  --likely-tint: #e9f5ee;
-  /* Darkened from #a3620a: the "Possible match" badge at small sizes
-     measured 4.43:1 on the tint, just under AA's 4.5. */
-  --possible: #8f5608;
-  --possible-tint: #fdf3e3;
+  --likely: #1e6b3a;
+  --likely-tint: #e7f4ec;
+  --possible: #7a4f00;
+  --possible-tint: #fbf0d9;
+  /* Crisis programmes carry the accent hue at a darker weight, so the tag
+     reads as urgent without competing with the primary buttons. */
+  --crisis: #8f1c3a;
+  --crisis-tint: #fdecf1;
+  /* Neutral high-contrast action (the housing-plan buttons), which the
+     redesign uses to separate "save for later" from "act now". */
+  --solid: #1c1a19;
+  --on-solid: #ffffff;
 
   --radius-sm: 6px;
   --radius: 14px;
@@ -64,31 +72,39 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Neutral greys rather than the warm slate used before, so the accent
-       stays the only chromatic thing on the page in either theme. */
-    --paper: #101012;
-    --surface: #191919;
-    --surface-sunken: #232323;
-    --border: #333333;
-    --border-strong: #474747;
+    /* Warm near-black rather than neutral grey, so dark mode is the same
+       family as the light ground instead of a different product. Three steps
+       — page, card, inset — carry depth without extra borders, and the text
+       is off-white rather than pure white to cut glare for late-night use.
+       Measured: text on card 13.9:1 · muted 6.2:1 · accent 4.8:1. */
+    --paper: #1b1918;
+    --surface: #262321;
+    --surface-sunken: #2f2b28;
+    --border: #3a3633;
+    --border-strong: #5a544e;
 
-    --ink: #f5f5f5;
-    --ink-soft: #c4c4c4;
-    --ink-faint: #949494;
+    --ink: #f4f1ec;
+    --ink-soft: #d6d0c8;
+    --ink-faint: #a8a29a;
 
-    /* #FF0055 only reaches 4.5:1 on this ground; lifted so it stays legible
-       as link and label text, not just as a button fill. */
-    --brand: #ff4d80;
-    --primary: #ff4d80;
-    --primary-hover: #ff7099;
-    --primary-tint: #33101c;
-    --primary-ring: rgba(255, 77, 128, 0.36);
-    --on-primary: #101012;
+    /* Lifted so it stays legible as label text on this ground. White on it
+       manages only 3.25:1, so --on-primary flips to near-black (5.38:1). */
+    --brand: #ee5c7b;
+    --primary: #ee5c7b;
+    --primary-hover: #f27a94;
+    --primary-tint: #3f2029;
+    --primary-ring: rgba(238, 92, 123, 0.4);
+    --on-primary: #1b1918;
 
-    --likely: #5cc98a;
-    --likely-tint: #16301f;
-    --possible: #e0a458;
-    --possible-tint: #33260f;
+    --likely: #8fd9a8;
+    --likely-tint: #1f3a2a;
+    --possible: #f0c064;
+    --possible-tint: #3d3118;
+    --crisis: #f5a3b8;
+    --crisis-tint: #3f2029;
+    /* Inverts with the theme so the primary/secondary hierarchy holds. */
+    --solid: #f4f1ec;
+    --on-solid: #1b1918;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -1750,3 +1766,430 @@ dialog.pdialog::backdrop { background: rgba(15, 12, 10, 0.55); }
   margin: 0.75rem 0 0;
 }
 @media print { .profile-banner { display: none !important; } }
+
+/* ==========================================================================
+   Results — 2026 redesign
+   The page answers five questions in order, and these are the components
+   that answer them: what am I working with, is this urgent, what do I do
+   first, what can I afford, what else is there.
+   ========================================================================== */
+
+.results__header {
+  padding: 2.5rem 0 0;
+  max-width: none;
+  margin-inline: 0;
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  align-items: start;
+}
+/* The needs summary sits beside the headline on a wide screen and below it
+   on a phone, where a side rail would squeeze both. */
+@media (min-width: 60rem) {
+  .results__header {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}
+.results__intro { min-width: 0; }
+.results__count {
+  font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+  max-width: 20ch;
+  text-wrap: balance;
+}
+/* The one line someone reads if they read nothing else. */
+.results__strong {
+  margin: 0 0 0.75rem;
+  color: var(--likely);
+  font-weight: 700;
+  font-size: 1.0625rem;
+}
+.results__summary { max-width: 46ch; margin: 0 0 1.25rem; }
+.results__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* --- Your housing needs ------------------------------------------------- */
+
+.needs {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.needs__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+.needs__title { font-size: 1rem; margin: 0; }
+.needs__list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.6rem 1rem;
+  margin: 0;
+}
+.needs__list dt {
+  color: var(--ink-faint);
+  font-size: 0.9375rem;
+}
+.needs__list dd { margin: 0; min-width: 0; }
+.needs__list dd strong { display: block; text-wrap: pretty; }
+.needs__list dd small {
+  display: block;
+  color: var(--ink-faint);
+  font-size: 0.8125rem;
+  margin-top: 0.15rem;
+  text-wrap: pretty;
+}
+.needs__more {
+  margin-top: 1rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.needs__detail {
+  margin: 0.6rem 0 0;
+  font-size: 0.9063rem;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+/* --- Crisis strip -------------------------------------------------------- */
+/* Only rendered when the results actually contain a crisis programme with a
+   phone number, so this is always something a person can act on. */
+.crisis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 2rem 0 0;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--crisis);
+  border-radius: var(--radius);
+}
+.crisis__text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.crisis__text span { color: var(--ink-soft); font-size: 0.9375rem; text-wrap: pretty; }
+.crisis__call { white-space: nowrap; }
+
+/* --- Section headings ---------------------------------------------------- */
+
+.rsection { margin: 2.75rem 0 0; }
+.rsection__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.rsection__title {
+  font-size: 1.375rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.rsection__count { color: var(--ink-faint); font-size: 0.9375rem; }
+.rsection__hint {
+  margin: 0.35rem 0 1.25rem;
+  color: var(--ink-soft);
+  max-width: 70ch;
+  text-wrap: pretty;
+}
+
+/* --- Best next steps ----------------------------------------------------- */
+
+.best-list {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  align-items: stretch;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.best {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  min-width: 0;
+}
+.best__flags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.best__reason {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+.best__name {
+  font-size: 1.125rem;
+  line-height: 1.3;
+  margin: 0.15rem 0 0;
+  text-wrap: pretty;
+}
+.best__where { margin: 0; color: var(--ink-faint); font-size: 0.9375rem; }
+.best__summary { margin: 0.35rem 0 0; color: var(--ink-soft); text-wrap: pretty; }
+.best__gets {
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.9rem;
+  margin-top: 0.35rem;
+}
+.best__gets-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.2rem;
+}
+.best__gets strong { font-weight: 650; text-wrap: pretty; }
+.best__check {
+  margin: 0.25rem 0 0;
+  font-size: 0.9063rem;
+  color: var(--possible);
+  text-wrap: pretty;
+}
+.best__status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.9063rem;
+  color: var(--ink-soft);
+}
+/* Pushed to the bottom so buttons line up across a row of uneven cards. */
+.best__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 0.9rem;
+}
+/* Grows to fill a narrow card but stops before it becomes a banner. */
+.best__actions .btn--primary { flex: 1 1 auto; max-width: 16rem; }
+.results__count { max-width: 24ch; }
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--likely);
+}
+
+.tag--crisis {
+  background: var(--crisis-tint);
+  color: var(--crisis);
+  font-weight: 650;
+}
+
+/* --- Save control -------------------------------------------------------- */
+
+.save-btn { white-space: nowrap; }
+.save-btn--on {
+  background: var(--solid);
+  border-color: var(--solid);
+  color: var(--on-solid);
+}
+.save-btn--on:hover { background: var(--solid); color: var(--on-solid); }
+
+/* --- More programs, as rows ---------------------------------------------- */
+/* A dozen "worth checking" programmes as cards is a wall; as rows it is a
+   list someone can actually work down. */
+.crow-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.crow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+}
+.crow + .crow { border-top: 1px solid var(--border); }
+.crow__main { min-width: 0; flex: 1 1 18rem; }
+.crow__name { font-size: 1rem; margin: 0 0 0.15rem; text-wrap: pretty; }
+.crow__meta {
+  margin: 0;
+  font-size: 0.9063rem;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+.crow__check { color: var(--possible); font-weight: 600; }
+.crow__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* --- Rental cards -------------------------------------------------------- */
+
+.result__avail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.result__budget {
+  margin: 0.5rem 0 0;
+  font-size: 0.9063rem;
+  text-wrap: pretty;
+}
+.result__budget strong { display: block; font-weight: 650; }
+.result__budget small { display: block; color: var(--ink-faint); font-size: 0.8438rem; }
+.result__budget--in strong { color: var(--likely); }
+.result__budget--over strong { color: var(--possible); }
+
+@media print {
+  .results__cta,
+  .needs__more,
+  .crisis__call,
+  .save-btn,
+  .crow__actions { display: none !important; }
+}
+
+.crow__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+.crow__head .crow__name { margin: 0; }
+
+/* --- Program detail dialog ----------------------------------------------- */
+
+.pdialog__flags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.pdialog__reason { color: var(--ink-faint); font-size: 0.9375rem; }
+.pdialog__name {
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.6rem);
+  line-height: 1.25;
+  margin: 0.5rem 0 0.15rem;
+  text-wrap: pretty;
+}
+.pdialog__where { margin: 0 0 1.25rem; color: var(--ink-faint); text-wrap: pretty; }
+
+/* Facts read as prose on the left; the rail on the right is the action. */
+.pdialog__cols { display: grid; gap: 1.5rem; align-items: start; }
+@media (min-width: 48rem) {
+  .pdialog__cols { grid-template-columns: minmax(0, 1fr) 20rem; }
+}
+.pdialog__facts { min-width: 0; }
+.pdialog__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 1.1rem 0 0.3rem;
+}
+.pdialog__facts > .pdialog__label:first-child { margin-top: 0; }
+.pdialog__text { margin: 0; text-wrap: pretty; }
+.pdialog__text--strong { font-weight: 650; }
+.pdialog__checks {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--ink-soft);
+}
+.pdialog__checks li { margin-bottom: 0.3rem; text-wrap: pretty; }
+.pdialog__place { display: grid; gap: 1.25rem; margin-top: 1.25rem; }
+@media (min-width: 34rem) {
+  .pdialog__place { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.pdialog__place .btn { margin-top: 0.6rem; }
+
+.pdialog__rail {
+  background: var(--surface-sunken);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.pdialog__railtitle { margin: 0 0 0.9rem; font-size: 1.0625rem; }
+
+/* Numbered because the order matters — this is a sequence, not a menu. */
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; }
+.steps__item {
+  counter-increment: step;
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+.steps__item::before {
+  content: counter(step);
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  background: var(--border);
+  color: var(--ink-soft);
+}
+/* The first step is the one to do now, so it carries the weight. */
+.steps__item:first-child::before { background: var(--solid); color: var(--on-solid); }
+.steps__body { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; text-wrap: pretty; }
+.pdialog__call { align-self: flex-start; }
+.pdialog__open {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9063rem;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.pdialog__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.pdialog__note { color: var(--ink-faint); font-size: 0.9063rem; }
+.pdialog__footactions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* The neutral high-contrast action: "save this" is a different kind of act
+   from "call them now", and should not compete with it. */
+.btn--solid {
+  background: var(--solid);
+  border-color: var(--solid);
+  color: var(--on-solid);
+}
+.btn--solid:hover:not(:disabled) { background: var(--solid); color: var(--on-solid); opacity: 0.9; }

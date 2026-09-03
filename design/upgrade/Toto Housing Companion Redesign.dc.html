@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>body{margin:0;background:#efece6;font-family:Manrope,system-ui,sans-serif;color:#1c1a19;-webkit-font-smoothing:antialiased}a{color:#c8294f}a:hover{color:#a31f40}.dv-turn{padding:40px 44px 32px;scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 Manrope,sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 Manrope,sans-serif;color:rgba(0,0,0,.6)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow:hidden}.dv-opt:target .dv-oid{background:#c8294f;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 Manrope,sans-serif;color:rgba(0,0,0,.55)}.dv-notes{max-width:760px;font:14px/1.55 Manrope,sans-serif;color:#3a3633;margin:0 0 28px}.dv-notes p{margin:0 0 8px}</style></helmet>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Dark mode — same five screens as turn 1</span></div>
+<div class="dv-notes">
+<p><strong>Dark mode system.</strong> Warm near-black page (#1b1918) with slightly lifted cards (#262321) and a third step (#2f2b28) for inset blocks, so depth reads without extra borders. Text is off-white (#f4f1ec / #d6d0c8), never pure white, to reduce glare for late-night use. The red accent is lifted to #ee5c7b with <em>dark</em> button labels — white-on-red fails contrast at this brightness. Green, amber and crisis tints become dim fills with light text (all ≥ 4.5:1), and the black "plan" buttons invert to light so the primary/secondary hierarchy stays identical to light mode.</p>
+</div>
+<div class="dv-opts">
+
+<!-- ============ 1a DESKTOP RESULTS ============ -->
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Desktop · Housing results (1280)</div>
+<div class="dv-card" style="width:1280px;background:#1b1918;border-color:#3a3633;color:#f4f1ec">
+<sc-if value="{{ showDraft }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;justify-content:center;gap:12px;align-items:center;padding:10px 24px;background:#33291a;color:#e6cf9a;font-size:14px;line-height:1.4"><span style="font:800 11px Manrope;letter-spacing:.06em;background:#e6cf9a;color:#1b1918;padding:4px 8px;border-radius:6px">DRAFT</span><span>This tool is being tested and is not official. Program details and income figures are estimates — always confirm directly with the program.</span></div>
+</sc-if>
+<header style="display:flex;align-items:center;justify-content:space-between;padding:14px 48px;background:#262321;border-bottom:1px solid #3a3633">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:50%;background:#ee5c7b;display:grid;place-items:center;color:#1b1918;font:800 18px Manrope">⌂</div><div><div style="font:700 17px/1.2 Manrope">Toto Housing Companion</div><div style="font-size:13px;color:#a8a29a">Oregon &amp; Minnesota</div></div></div>
+<div style="display:flex;gap:10px">
+<button style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Start over</button>
+<button style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;background:#f4f1ec;color:#1b1918;border:0;font:600 15px Manrope;cursor:pointer" style-hover="background:#262321" style-focus="outline:3px solid #ee5c7b;outline-offset:2px"><span aria-hidden="true">☰</span> My housing plan <span style="background:#1b1918;color:#f4f1ec;border-radius:999px;padding:1px 8px;font-weight:800">{{ planCount }}</span></button>
+</div>
+</header>
+
+<main style="max-width:1184px;margin:0 auto;padding:40px 48px 56px">
+<!-- hero + needs -->
+<div style="display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:start;margin-bottom:40px">
+<div style="padding-top:8px">
+<h1 style="margin:0 0 8px;font:800 40px/1.1 Manrope;letter-spacing:-.02em">We found 119 housing options</h1>
+<p style="margin:0 0 12px;font:700 22px/1.3 Manrope;color:#8fd9a8"><span aria-hidden="true">✓</span> 3 programs may be a strong match for you</p>
+<p style="margin:0 0 20px;font-size:17px;line-height:1.5;color:#d6d0c8;max-width:560px;text-wrap:pretty">Start with the strongest matches below. You can also browse available rentals that fit your budget. Availability changes fast — call before visiting.</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<a href="#2a" style="display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:#ee5c7b;color:#1b1918;font:600 15px Manrope;text-decoration:none" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">See best next steps ↓</a>
+<a href="#2a" style="display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;text-decoration:none" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Browse rentals in budget</a>
+</div>
+</div>
+<!-- Your housing needs -->
+<aside aria-label="Your housing needs" style="background:#262321;border:1px solid #3a3633;border-radius:16px;padding:20px 22px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0;font:700 17px Manrope">Your housing needs</h2><button style="min-height:40px;padding:0 14px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 14px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">✎ Edit answers</button></div>
+<dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:10px 16px;font-size:15px;line-height:1.4">
+<dt style="color:#a8a29a">Where</dt><dd style="margin:0;font-weight:600">Jackson &amp; Josephine Counties, OR</dd>
+<dt style="color:#a8a29a">Household</dt><dd style="margin:0;font-weight:600">2 people</dd>
+<dt style="color:#a8a29a">Looking to</dt><dd style="margin:0;font-weight:600">Rent · Studio or 1 bedroom</dd>
+<dt style="color:#a8a29a">Budget</dt><dd style="margin:0;font-weight:600">Up to about $1,125/month <span style="display:block;font-weight:400;color:#a8a29a;font-size:14px">Recommended, based on 30% of income</span></dd>
+</dl>
+<details style="margin-top:12px;font-size:14px;color:#d6d0c8"><summary style="cursor:pointer;font-weight:600;color:#f4f1ec;min-height:32px;display:flex;align-items:center">Show income details</summary><p style="margin:6px 0 0">Household income about $45,000/yr · Need: finding a home, staying housed.</p></details>
+</aside>
+</div>
+
+<!-- crisis strip -->
+<sc-if value="{{ showCrisis }}" hint-placeholder-val="{{ true }}">
+<div role="region" aria-label="Need help right now" style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 22px;background:#262321;border:1.5px solid #6b3040;border-radius:14px;margin-bottom:36px">
+<div><div style="font:700 17px Manrope;margin-bottom:2px">Need help right now?</div><div style="font-size:15px;color:#d6d0c8">24/7 confidential HelpLine · Community Works, Jackson County</div></div>
+<a href="tel:5417794357" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;background:#ee5c7b;color:#1b1918;font:700 15px Manrope;text-decoration:none;white-space:nowrap" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">☏ Call (541) 779-4357</a>
+</div>
+</sc-if>
+
+<!-- BEST NEXT STEPS -->
+<section aria-labelledby="bns" style="margin-bottom:48px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px"><h2 id="bns" style="margin:0;font:800 26px Manrope;letter-spacing:-.01em">Best next steps</h2><span style="font-size:15px;color:#a8a29a">3 programs</span></div>
+<p style="margin:0 0 20px;font-size:16px;color:#d6d0c8">These programs may make housing attainable — reach out to them first.</p>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+<!-- program 1 -->
+<article style="display:flex;flex-direction:column;background:#262321;border:1px solid #3a3633;border-radius:16px;padding:22px;box-shadow:none" style-hover="box-shadow:0 0 0 1.5px #5a544e">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
+<div><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#1f3a2a;color:#8fd9a8;font:700 14px Manrope"><span aria-hidden="true">✓</span> Likely match</span><sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#a8a29a;margin-top:6px">Based on 4 of your answers</div></sc-if></div>
+<span style="padding:5px 10px;border-radius:8px;background:#3f2029;color:#f5a3b8;font:600 13px Manrope;white-space:nowrap">For crisis situations</span>
+</div>
+<h3 style="margin:0 0 6px;font:800 20px/1.25 Manrope;text-wrap:pretty">Community Works Survivor Housing Services</h3>
+<div style="font-size:15px;color:#a8a29a;margin-bottom:12px">Rent support · Jackson County</div>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#d6d0c8">Housing assistance for survivors of domestic violence, sexual violence, stalking, or trafficking.</p>
+<div style="background:#2f2b28;border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font:700 12px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a;margin-bottom:4px">What you may receive</div><div style="font:600 15px Manrope">Housing or shelter placement</div></div>
+<div style="display:flex;gap:14px;font-size:14px;color:#d6d0c8;margin-bottom:18px"><span><span aria-hidden="true" style="color:#8fd9a8">●</span> Available now</span><span>☏ 24/7 HelpLine</span></div>
+<div style="display:flex;gap:10px;margin-top:auto">
+<button style="flex:1;min-height:44px;padding:0 16px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">See how to get help</button>
+<button aria-label="Save Community Works to my plan" style="min-height:44px;min-width:44px;padding:0 14px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡ Save</button>
+</div>
+</article>
+<!-- program 2 -->
+<article style="display:flex;flex-direction:column;background:#262321;border:1px solid #3a3633;border-radius:16px;padding:22px;box-shadow:none" style-hover="box-shadow:0 0 0 1.5px #5a544e">
+<div style="margin-bottom:12px"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#1f3a2a;color:#8fd9a8;font:700 14px Manrope"><span aria-hidden="true">✓</span> Likely match</span><sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#a8a29a;margin-top:6px">Based on 3 of your answers</div></sc-if></div>
+<h3 style="margin:0 0 6px;font:800 20px/1.25 Manrope;text-wrap:pretty">Maslow Project — Short-Term Housing Assistance (SHAP)</h3>
+<div style="font-size:15px;color:#a8a29a;margin-bottom:12px">Rent support &amp; housing navigation · Jackson County</div>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#d6d0c8">Short-term rent help plus a navigator who helps you find and apply for housing.</p>
+<div style="background:#2f2b28;border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font:700 12px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a;margin-bottom:4px">What you may receive</div><div style="font:600 15px Manrope">Rent or deposit help · Housing navigator</div></div>
+<div style="display:flex;gap:14px;font-size:14px;color:#d6d0c8;margin-bottom:18px"><span><span aria-hidden="true" style="color:#8fd9a8">●</span> Accepting requests</span><span>Walk-in · Mon–Fri</span></div>
+<div style="display:flex;gap:10px;margin-top:auto">
+<button style="flex:1;min-height:44px;padding:0 16px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">See how to get help</button>
+<button aria-label="Save Maslow Project to my plan" style="min-height:44px;padding:0 14px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡ Save</button>
+</div>
+</article>
+<!-- program 3 -->
+<article style="display:flex;flex-direction:column;background:#262321;border:1px solid #3a3633;border-radius:16px;padding:22px;box-shadow:none" style-hover="box-shadow:0 0 0 1.5px #5a544e">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
+<div><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#3d3118;color:#f0c064;font:700 14px Manrope"><span aria-hidden="true">◔</span> Worth checking</span><sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#a8a29a;margin-top:6px">One eligibility requirement needs to be confirmed</div></sc-if></div>
+<span style="padding:5px 10px;border-radius:8px;background:#3f2029;color:#f5a3b8;font:600 13px Manrope;white-space:nowrap">For crisis situations</span>
+</div>
+<h3 style="margin:0 0 6px;font:800 20px/1.25 Manrope;text-wrap:pretty">Rogue Retreat Eviction Prevention &amp; Housing Stability</h3>
+<div style="font-size:15px;color:#a8a29a;margin-bottom:12px">Eviction prevention · Jackson County</div>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#d6d0c8">Helps households at risk of losing their housing stay housed, with case management.</p>
+<div style="background:#2f2b28;border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font:700 12px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a;margin-bottom:4px">What you may receive</div><div style="font:600 15px Manrope">Back-rent or utility payment · Case management</div></div>
+<div style="display:flex;gap:14px;font-size:14px;color:#d6d0c8;margin-bottom:18px"><span><span aria-hidden="true" style="color:#f0c064">◔</span> Confirm: eviction notice required</span></div>
+<div style="display:flex;gap:10px;margin-top:auto">
+<button style="flex:1;min-height:44px;padding:0 16px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">See how to get help</button>
+<button aria-label="Save Rogue Retreat to my plan" style="min-height:44px;padding:0 14px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡ Save</button>
+</div>
+</article>
+</div>
+</section>
+
+<!-- RENTALS -->
+<section aria-labelledby="rent" style="margin-bottom:48px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px"><h2 id="rent" style="margin:0;font:800 26px Manrope;letter-spacing:-.01em">Rentals within your budget</h2><span style="font-size:15px;color:#a8a29a">31 of 119 rentals · lowest rent first</span></div>
+<p style="margin:0 0 20px;font-size:16px;color:#d6d0c8">These fit your recommended maximum of about $1,125/month. Budget fit is an estimate — the landlord sets the final terms.</p>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+<!-- r1 -->
+<article style="display:flex;flex-direction:column;background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden" style-hover="box-shadow:0 0 0 1.5px #5a544e">
+<div style="height:160px;background:repeating-linear-gradient(135deg,#33302c 0 10px,#3c3833 10px 20px);display:grid;place-items:center;color:#a8a29a;font:12px ui-monospace,Menlo,monospace">photo · 4425 W Main St</div>
+<div style="padding:18px 18px 18px;display:flex;flex-direction:column;flex:1">
+<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px"><span style="font:800 26px/1 Manrope">$495</span><span style="font-size:15px;color:#a8a29a">/mo</span></div>
+<div style="font:600 16px Manrope;margin-bottom:2px">Studio · 1 bath · Manufactured home</div>
+<div style="font-size:15px;color:#d6d0c8">4425 W Main St<br>Medford, OR 97501</div>
+<div style="margin:12px 0 14px;display:flex;align-items:flex-start;gap:8px;color:#8fd9a8;font-size:14px;line-height:1.35"><span aria-hidden="true" style="font-weight:800">✓</span><span><strong>Within your budget</strong><br><span style="color:#d6d0c8">$630 below your recommended max</span></span></div>
+<div style="font-size:14px;color:#d6d0c8;margin-bottom:16px"><span aria-hidden="true" style="color:#8fd9a8">●</span> Available now</div>
+<div style="display:flex;gap:8px;margin-top:auto"><button style="flex:1;min-height:44px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">View rental</button><button aria-label="Save 4425 W Main St" style="min-width:44px;min-height:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;cursor:pointer;color:#f4f1ec" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡</button></div>
+</div></article>
+<!-- r2 -->
+<article style="display:flex;flex-direction:column;background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden" style-hover="box-shadow:0 0 0 1.5px #5a544e">
+<div style="height:160px;background:repeating-linear-gradient(135deg,#33302c 0 10px,#3c3833 10px 20px);display:grid;place-items:center;color:#a8a29a;font:12px ui-monospace,Menlo,monospace">photo · 20727 Hwy 62</div>
+<div style="padding:18px;display:flex;flex-direction:column;flex:1">
+<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px"><span style="font:800 26px/1 Manrope">$614</span><span style="font-size:15px;color:#a8a29a">/mo</span></div>
+<div style="font:600 16px Manrope;margin-bottom:2px">Studio · 1 bath · Cabin</div>
+<div style="font-size:15px;color:#d6d0c8">20727 Hwy 62<br>Shady Cove, OR 97539</div>
+<div style="margin:12px 0 14px;display:flex;align-items:flex-start;gap:8px;color:#8fd9a8;font-size:14px;line-height:1.35"><span aria-hidden="true" style="font-weight:800">✓</span><span><strong>Within your budget</strong><br><span style="color:#d6d0c8">$511 below your recommended max</span></span></div>
+<div style="font-size:14px;color:#d6d0c8;margin-bottom:16px"><span aria-hidden="true" style="color:#f0c064">●</span> Available Aug 19</div>
+<div style="display:flex;gap:8px;margin-top:auto"><button style="flex:1;min-height:44px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">View rental</button><button aria-label="Save 20727 Hwy 62" style="min-width:44px;min-height:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;cursor:pointer;color:#f4f1ec" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡</button></div>
+</div></article>
+<!-- r3 -->
+<article style="display:flex;flex-direction:column;background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden" style-hover="box-shadow:0 0 0 1.5px #5a544e">
+<div style="height:160px;background:repeating-linear-gradient(135deg,#33302c 0 10px,#3c3833 10px 20px);display:grid;place-items:center;color:#a8a29a;font:12px ui-monospace,Menlo,monospace">photo · 232 Talent Ave</div>
+<div style="padding:18px;display:flex;flex-direction:column;flex:1">
+<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px"><span style="font:800 26px/1 Manrope">$662</span><span style="font-size:15px;color:#a8a29a">/mo</span></div>
+<div style="font:600 16px Manrope;margin-bottom:2px">2 bed · 1 bath · Apartment</div>
+<div style="font-size:15px;color:#d6d0c8">232 Talent Ave<br>Talent, OR 97540</div>
+<div style="margin:12px 0 14px;display:flex;align-items:flex-start;gap:8px;color:#8fd9a8;font-size:14px;line-height:1.35"><span aria-hidden="true" style="font-weight:800">✓</span><span><strong>Within your budget</strong><br><span style="color:#d6d0c8">$463 below your recommended max</span></span></div>
+<div style="font-size:14px;color:#d6d0c8;margin-bottom:16px"><span aria-hidden="true" style="color:#8fd9a8">●</span> Available now</div>
+<div style="display:flex;gap:8px;margin-top:auto"><button style="flex:1;min-height:44px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">View rental</button><button aria-label="Save 232 Talent Ave" style="min-width:44px;min-height:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;cursor:pointer;color:#f4f1ec" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡</button></div>
+</div></article>
+<!-- r4 saved -->
+<article style="display:flex;flex-direction:column;background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden" style-hover="box-shadow:0 0 0 1.5px #5a544e">
+<div style="height:160px;background:repeating-linear-gradient(135deg,#33302c 0 10px,#3c3833 10px 20px);display:grid;place-items:center;color:#a8a29a;font:12px ui-monospace,Menlo,monospace">photo · 25 Donna Way</div>
+<div style="padding:18px;display:flex;flex-direction:column;flex:1">
+<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px"><span style="font:800 26px/1 Manrope">$675</span><span style="font-size:15px;color:#a8a29a">/mo</span></div>
+<div style="font:600 16px Manrope;margin-bottom:2px">1 bed · 1 bath · House</div>
+<div style="font-size:15px;color:#d6d0c8">25 Donna Way<br>Medford, OR 97502</div>
+<div style="margin:12px 0 14px;display:flex;align-items:flex-start;gap:8px;color:#8fd9a8;font-size:14px;line-height:1.35"><span aria-hidden="true" style="font-weight:800">✓</span><span><strong>Within your budget</strong><br><span style="color:#d6d0c8">$450 below your recommended max</span></span></div>
+<div style="font-size:14px;color:#d6d0c8;margin-bottom:16px"><span aria-hidden="true" style="color:#8fd9a8">●</span> Available now</div>
+<div style="display:flex;gap:8px;margin-top:auto"><button style="flex:1;min-height:44px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">View rental</button><button aria-label="Saved 25 Donna Way — remove from plan" aria-pressed="true" style="min-width:44px;min-height:44px;border-radius:999px;background:#f4f1ec;border:1.5px solid #f4f1ec;font-size:18px;cursor:pointer;color:#1b1918" style-focus="outline:3px solid #ee5c7b;outline-offset:2px">♥</button></div>
+</div></article>
+</div>
+<div style="display:flex;justify-content:center;gap:12px;margin-top:22px">
+<button style="min-height:44px;padding:0 20px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Show 27 more in budget</button>
+<button style="min-height:44px;padding:0 20px;border-radius:999px;background:transparent;border:0;color:#f4f1ec;font:600 15px Manrope;text-decoration:underline;text-underline-offset:3px;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Browse all 119 rentals</button>
+</div>
+</section>
+
+<!-- MORE PROGRAMS -->
+<section aria-labelledby="more">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px"><h2 id="more" style="margin:0;font:800 26px Manrope;letter-spacing:-.01em">More programs that may help</h2><span style="font-size:15px;color:#a8a29a">13 programs</span></div>
+<p style="margin:0 0 18px;font-size:16px;color:#d6d0c8">Each of these needs one or two details confirmed before we can say how well it fits.</p>
+<div style="background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden">
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:20px;align-items:center;padding:18px 22px;border-bottom:1px solid #3a3633" style-hover="background:#1b1918">
+<div><div style="font:700 17px Manrope">Salvation Army Medford Corps — Rent &amp; Utility Assistance</div><div style="font-size:15px;color:#a8a29a;margin-top:2px">Rent &amp; utility help · Jackson County · <span style="color:#f0c064;font-weight:600">◔ Worth checking — income limit needs confirming</span></div></div>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡ Save</button>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#262321;border:1.5px solid #f4f1ec;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="background:#f4f1ec;color:#1b1918" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Details →</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:20px;align-items:center;padding:18px 22px;border-bottom:1px solid #3a3633" style-hover="background:#1b1918">
+<div><div style="font:700 17px Manrope">ACCESS — Emergency Rent Assistance</div><div style="font-size:15px;color:#a8a29a;margin-top:2px">Rent support · Jackson County · <span style="color:#f0c064;font-weight:600">◔ Worth checking — funding opens monthly</span></div></div>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡ Save</button>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#262321;border:1.5px solid #f4f1ec;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="background:#f4f1ec;color:#1b1918" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Details →</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:20px;align-items:center;padding:18px 22px;border-bottom:1px solid #3a3633" style-hover="background:#1b1918">
+<div><div style="font:700 17px Manrope">UCAN — Housing Stabilization (Josephine County)</div><div style="font-size:15px;color:#a8a29a;margin-top:2px">Rent &amp; deposit help · Josephine County · <span style="color:#f0c064;font-weight:600">◔ Worth checking — must live in Josephine County</span></div></div>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡ Save</button>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#262321;border:1.5px solid #f4f1ec;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="background:#f4f1ec;color:#1b1918" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Details →</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:20px;align-items:center;padding:18px 22px" style-hover="background:#1b1918">
+<div><div style="font:700 17px Manrope">St. Vincent de Paul Medford — Emergency Assistance</div><div style="font-size:15px;color:#a8a29a;margin-top:2px">One-time bill help · Jackson County · <span style="color:#f0c064;font-weight:600">◔ Worth checking — call for current availability</span></div></div>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡ Save</button>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#262321;border:1.5px solid #f4f1ec;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="background:#f4f1ec;color:#1b1918" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Details →</button>
+</div>
+</div>
+<div style="display:flex;justify-content:center;margin-top:22px"><button style="min-height:44px;padding:0 20px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Show all 13 programs</button></div>
+</section>
+</main>
+<footer style="display:flex;justify-content:center;gap:24px;padding:20px;border-top:1px solid #3a3633;font-size:14px;color:#a8a29a"><span>Estimates only — confirm with each program.</span><a href="#2a" style="color:#f4f1ec;font-weight:600">Copy link to these results</a></footer>
+</div></div>
+
+<!-- ============ 1b MOBILE RESULTS ============ -->
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Mobile · Housing results (390)</div>
+<div class="dv-card" style="width:390px;background:#1b1918;border-radius:28px;position:relative;color:#f4f1ec">
+<header style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#262321;border-bottom:1px solid #3a3633">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:#ee5c7b;display:grid;place-items:center;color:#1b1918;font:800 16px Manrope">⌂</div><div style="font:700 16px Manrope">Toto Housing Companion</div></div>
+<button aria-label="Start over" style="min-height:44px;min-width:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 14px Manrope;padding:0 12px;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Start over</button>
+</header>
+<main style="padding:24px 16px 96px">
+<h1 style="margin:0 0 8px;font:800 30px/1.1 Manrope;letter-spacing:-.02em">We found 119 housing options</h1>
+<p style="margin:0 0 10px;font:700 18px/1.3 Manrope;color:#8fd9a8"><span aria-hidden="true">✓</span> 3 programs may be a strong match for you</p>
+<p style="margin:0 0 18px;font-size:16px;line-height:1.5;color:#d6d0c8;text-wrap:pretty">Start with the strongest matches below. You can also browse rentals that fit your budget.</p>
+
+<section aria-label="Your housing needs" style="background:#262321;border:1px solid #3a3633;border-radius:16px;padding:16px;margin-bottom:16px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0;font:700 16px Manrope">Your housing needs</h2><button style="min-height:40px;padding:0 12px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 14px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">✎ Edit</button></div>
+<ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.4">
+<li><strong>Jackson &amp; Josephine Counties</strong></li>
+<li>2 people · Renting</li>
+<li><strong>Up to about $1,125/month</strong> <span style="color:#a8a29a">recommended</span></li>
+<li>Studio or 1 bedroom</li>
+</ul>
+</section>
+
+<sc-if value="{{ showCrisis }}" hint-placeholder-val="{{ true }}">
+<div role="region" aria-label="Need help right now" style="padding:14px 16px;background:#262321;border:1.5px solid #6b3040;border-radius:14px;margin-bottom:28px">
+<div style="font:700 16px Manrope">Need help right now?</div><div style="font-size:14px;color:#d6d0c8;margin:2px 0 12px">24/7 confidential HelpLine</div>
+<a href="tel:5417794357" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:999px;background:#ee5c7b;color:#1b1918;font:700 16px Manrope;text-decoration:none" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">☏ Call (541) 779-4357</a>
+</div>
+</sc-if>
+
+<h2 style="margin:0 0 4px;font:800 22px Manrope">Best next steps</h2>
+<p style="margin:0 0 14px;font-size:15px;color:#d6d0c8">3 programs that may make housing attainable.</p>
+<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:32px">
+<article style="background:#262321;border:1px solid #3a3633;border-radius:16px;padding:18px">
+<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#1f3a2a;color:#8fd9a8;font:700 14px Manrope">✓ Likely match</span><span style="padding:5px 10px;border-radius:8px;background:#3f2029;color:#f5a3b8;font:600 12px Manrope">For crisis situations</span></div>
+<sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#a8a29a;margin:-4px 0 8px">Based on 4 of your answers</div></sc-if>
+<h3 style="margin:0 0 4px;font:800 19px/1.25 Manrope">Community Works Survivor Housing Services</h3>
+<div style="font-size:14px;color:#a8a29a;margin-bottom:10px">Rent support · Jackson County</div>
+<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:#d6d0c8">Housing assistance for survivors of domestic violence, sexual violence, stalking, or trafficking.</p>
+<div style="background:#2f2b28;border-radius:12px;padding:10px 12px;margin-bottom:12px"><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">What you may receive</div><div style="font:600 15px Manrope">Housing or shelter placement</div></div>
+<div style="font-size:14px;color:#d6d0c8;margin-bottom:14px"><span style="color:#8fd9a8">●</span> Available now · 24/7 HelpLine</div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">See how to get help</button><button aria-label="Save to my plan" style="min-width:48px;min-height:48px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;color:#f4f1ec;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡</button></div>
+</article>
+<article style="background:#262321;border:1px solid #3a3633;border-radius:16px;padding:18px">
+<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#1f3a2a;color:#8fd9a8;font:700 14px Manrope">✓ Likely match</span>
+<sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#a8a29a;margin:6px 0 8px">Based on 3 of your answers</div></sc-if>
+<h3 style="margin:0 0 4px;font:800 19px/1.25 Manrope">Maslow Project — Short-Term Housing Assistance (SHAP)</h3>
+<div style="font-size:14px;color:#a8a29a;margin-bottom:10px">Rent support &amp; housing navigation · Jackson County</div>
+<div style="background:#2f2b28;border-radius:12px;padding:10px 12px;margin-bottom:12px"><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">What you may receive</div><div style="font:600 15px Manrope">Rent or deposit help · Housing navigator</div></div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">See how to get help</button><button aria-label="Saved — remove from plan" aria-pressed="true" style="min-width:48px;min-height:48px;border-radius:999px;background:#f4f1ec;border:1.5px solid #f4f1ec;font-size:18px;color:#262321;cursor:pointer" style-focus="outline:3px solid #ee5c7b;outline-offset:2px">♥</button></div>
+</article>
+<article style="background:#262321;border:1px solid #3a3633;border-radius:16px;padding:18px">
+<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#3d3118;color:#f0c064;font:700 14px Manrope">◔ Worth checking</span><span style="padding:5px 10px;border-radius:8px;background:#3f2029;color:#f5a3b8;font:600 12px Manrope">For crisis situations</span></div>
+<sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#a8a29a;margin:6px 0 8px">One eligibility requirement needs to be confirmed</div></sc-if>
+<h3 style="margin:0 0 4px;font:800 19px/1.25 Manrope">Rogue Retreat Eviction Prevention &amp; Housing Stability</h3>
+<div style="font-size:14px;color:#a8a29a;margin-bottom:12px">Eviction prevention · Jackson County</div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">See how to get help</button><button aria-label="Save to my plan" style="min-width:48px;min-height:48px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;color:#f4f1ec;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡</button></div>
+</article>
+</div>
+
+<h2 style="margin:0 0 4px;font:800 22px Manrope">Rentals within your budget</h2>
+<p style="margin:0 0 14px;font-size:15px;color:#d6d0c8">31 of 119 fit about $1,125/month. Lowest rent first.</p>
+<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:22px">
+<article style="background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden">
+<div style="height:200px;background:repeating-linear-gradient(135deg,#33302c 0 10px,#3c3833 10px 20px);display:grid;place-items:center;color:#a8a29a;font:12px ui-monospace,Menlo,monospace">photo · 4425 W Main St</div>
+<div style="padding:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:800 28px/1 Manrope">$495<span style="font:500 15px Manrope;color:#a8a29a">/mo</span></span><span style="font-size:14px;color:#d6d0c8"><span style="color:#8fd9a8">●</span> Available now</span></div>
+<div style="font:600 16px Manrope;margin-top:6px">Studio · 1 bath · Manufactured home</div>
+<div style="font-size:15px;color:#d6d0c8">4425 W Main St, Medford, OR</div>
+<div style="margin:10px 0 14px;color:#8fd9a8;font-size:14px"><strong>✓ Within your budget</strong> <span style="color:#d6d0c8">· $630 below your max</span></div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">View rental</button><button aria-label="Save" style="min-width:48px;min-height:48px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;color:#f4f1ec;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡</button></div>
+</div></article>
+<article style="background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden">
+<div style="height:200px;background:repeating-linear-gradient(135deg,#33302c 0 10px,#3c3833 10px 20px);display:grid;place-items:center;color:#a8a29a;font:12px ui-monospace,Menlo,monospace">photo · 25 Donna Way</div>
+<div style="padding:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:800 28px/1 Manrope">$675<span style="font:500 15px Manrope;color:#a8a29a">/mo</span></span><span style="font-size:14px;color:#d6d0c8"><span style="color:#8fd9a8">●</span> Available now</span></div>
+<div style="font:600 16px Manrope;margin-top:6px">1 bed · 1 bath · House</div>
+<div style="font-size:15px;color:#d6d0c8">25 Donna Way, Medford, OR</div>
+<div style="margin:10px 0 14px;color:#8fd9a8;font-size:14px"><strong>✓ Within your budget</strong> <span style="color:#d6d0c8">· $450 below your max</span></div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#ee5c7b;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">View rental</button><button aria-label="Saved — remove from plan" aria-pressed="true" style="min-width:48px;min-height:48px;border-radius:999px;background:#f4f1ec;border:1.5px solid #f4f1ec;font-size:18px;color:#262321;cursor:pointer" style-focus="outline:3px solid #ee5c7b;outline-offset:2px">♥</button></div>
+</div></article>
+</div>
+<button style="width:100%;min-height:48px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 16px Manrope;cursor:pointer;margin-bottom:32px" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Show 29 more in budget</button>
+
+<h2 style="margin:0 0 4px;font:800 22px Manrope">More programs that may help</h2>
+<p style="margin:0 0 14px;font-size:15px;color:#d6d0c8">13 programs — each needs a detail confirmed.</p>
+<div style="background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden">
+<a href="#2b" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px;border-bottom:1px solid #3a3633;text-decoration:none;color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:-3px"><div><div style="font:700 16px Manrope">Salvation Army Medford Corps</div><div style="font-size:14px;color:#f0c064;margin-top:2px">◔ Confirm income limit</div></div><span aria-hidden="true" style="font-size:20px">›</span></a>
+<a href="#2b" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px;border-bottom:1px solid #3a3633;text-decoration:none;color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:-3px"><div><div style="font:700 16px Manrope">ACCESS — Emergency Rent Assistance</div><div style="font-size:14px;color:#f0c064;margin-top:2px">◔ Funding opens monthly</div></div><span aria-hidden="true" style="font-size:20px">›</span></a>
+<a href="#2b" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px;text-decoration:none;color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:-3px"><div><div style="font:700 16px Manrope">UCAN — Housing Stabilization</div><div style="font-size:14px;color:#f0c064;margin-top:2px">◔ Josephine County residents</div></div><span aria-hidden="true" style="font-size:20px">›</span></a>
+</div>
+<button style="width:100%;min-height:48px;border-radius:999px;background:transparent;border:0;color:#f4f1ec;font:600 16px Manrope;text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-top:12px" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Show all 13 programs</button>
+</main>
+<!-- sticky plan bar -->
+<div style="position:sticky;bottom:0;padding:12px 16px 20px;background:linear-gradient(to top,#1b1918 70%,rgba(27,25,24,0))">
+<button style="width:100%;display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:0 20px;border-radius:999px;background:#f4f1ec;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.18)" style-focus="outline:3px solid #ee5c7b;outline-offset:2px"><span>My housing plan ({{ planCount }})</span><span aria-hidden="true">→</span></button>
+</div>
+</div></div>
+
+<!-- ============ 1c DESKTOP PROGRAM DETAIL ============ -->
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Desktop · Program detail (centered modal over results)</div>
+<div class="dv-card" style="width:1280px;height:900px;position:relative;background:#1b1918;overflow:hidden;color:#f4f1ec">
+<div aria-hidden="true" style="position:absolute;inset:0;opacity:.55;filter:blur(1px)">
+<header style="display:flex;align-items:center;justify-content:space-between;padding:14px 48px;background:#262321;border-bottom:1px solid #3a3633"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:50%;background:#ee5c7b"></div><div style="font:700 17px Manrope">Toto Housing Companion</div></div><div style="display:flex;gap:10px"><div style="width:110px;height:44px;border-radius:999px;border:1.5px solid #5a544e"></div><div style="width:190px;height:44px;border-radius:999px;background:#f4f1ec"></div></div></header>
+<div style="padding:40px 48px"><div style="font:800 40px Manrope">We found 119 housing options</div><div style="font:700 22px Manrope;color:#8fd9a8;margin-top:8px">✓ 3 programs may be a strong match for you</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:60px"><div style="height:360px;border-radius:16px;background:#262321;border:1px solid #3a3633"></div><div style="height:360px;border-radius:16px;background:#262321;border:1px solid #3a3633"></div><div style="height:360px;border-radius:16px;background:#262321;border:1px solid #3a3633"></div></div></div>
+</div>
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.62)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-title" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:880px;max-height:840px;background:#262321;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:26px 32px 0">
+<div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#1f3a2a;color:#8fd9a8;font:700 14px Manrope">✓ Likely match</span><sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;color:#a8a29a">Based on 4 of your answers</span></sc-if><span style="padding:5px 10px;border-radius:8px;background:#3f2029;color:#f5a3b8;font:600 13px Manrope">For crisis situations</span></div>
+<h2 id="dlg-title" style="margin:0 0 6px;font:800 28px/1.2 Manrope;letter-spacing:-.01em">Community Works Survivor Housing Services</h2>
+<div style="font-size:16px;color:#a8a29a">Rent support · Jackson County · <span style="color:#d6d0c8">Run by Community Works, a nonprofit</span></div>
+</div>
+<button aria-label="Close" style="flex:none;width:44px;height:44px;border-radius:50%;border:1.5px solid #5a544e;background:#262321;font-size:20px;color:#f4f1ec;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">✕</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 340px;gap:32px;padding:24px 32px 24px;overflow:auto">
+<div style="display:flex;flex-direction:column;gap:22px">
+<section><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Why this may help</h3><p style="margin:0;font-size:17px;line-height:1.5">For survivors of domestic violence, sexual violence, stalking, or trafficking, and homeless youth up to age 24. All services are free and confidential.</p></section>
+<section><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">What you may receive</h3><p style="margin:0;font:600 17px/1.5 Manrope">Housing or shelter placement</p><p style="margin:2px 0 0;font-size:15px;color:#a8a29a">Provided as placement rather than a cash payment.</p></section>
+<section><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">What you need</h3><p style="margin:0;font-size:16px;line-height:1.5">No documents are needed to make the first call. Bring any ID you have if you visit the office.</p></section>
+<section style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Location</h3><p style="margin:0 0 10px;font-size:16px;line-height:1.5">2594 E. Barnett Rd., Suite C<br>Medford, OR 97504</p><a href="#2c" style="display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;text-decoration:none" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Get directions ↗</a></div>
+<div><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Hours</h3><p style="margin:0;font-size:16px;line-height:1.6"><strong>HelpLine:</strong> 24 hours, every day<br><strong>Office:</strong> Mon–Fri, 8 AM to 4 PM<br><strong>Español:</strong> (541) 779-2393 x209</p></div>
+</section>
+</div>
+<aside aria-labelledby="next" style="background:#2f2b28;border-radius:16px;padding:22px;align-self:start">
+<h3 id="next" style="margin:0 0 14px;font:800 19px Manrope">What to do next</h3>
+<ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px">
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#f4f1ec;color:#1b1918;display:grid;place-items:center;font:700 14px Manrope">1</span><div style="flex:1"><div style="font:600 16px Manrope;margin-bottom:8px">Call the 24/7 HelpLine</div><a href="tel:5417794357" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:999px;background:#ee5c7b;color:#1b1918;font:700 16px Manrope;text-decoration:none" style-hover="background:#f27a94" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">☏ Call (541) 779-4357</a></div></li>
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#3a3633;color:#f4f1ec;display:grid;place-items:center;font:700 14px Manrope">2</span><div style="font-size:16px;line-height:1.45;padding-top:3px">Tell them you're looking for housing assistance.</div></li>
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#3a3633;color:#f4f1ec;display:grid;place-items:center;font:700 14px Manrope">3</span><div style="font-size:16px;line-height:1.45;padding-top:3px">They will explain eligibility and available housing options.</div></li>
+</ol>
+<div style="margin-top:18px;padding-top:14px;border-top:1px solid #3a3633;font-size:14px;color:#d6d0c8"><span style="color:#8fd9a8">●</span> Available now · Office line (541) 779-2393</div>
+</aside>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 32px;border-top:1px solid #3a3633;background:#262321">
+<span style="font-size:14px;color:#a8a29a">Details are estimates — confirm with the program.</span>
+<div style="display:flex;gap:10px">
+<button style="min-height:48px;padding:0 20px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 16px Manrope;cursor:pointer" style-hover="border-color:#f4f1ec" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">View full program details</button>
+<button style="min-height:48px;padding:0 22px;border-radius:999px;background:#f4f1ec;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer" style-hover="background:#262321" style-focus="outline:3px solid #ee5c7b;outline-offset:2px">+ Add to my housing plan</button>
+</div>
+</div>
+</div>
+</div></div>
+
+<!-- ============ 1d MOBILE PROGRAM DETAIL ============ -->
+<div class="dv-opt" id="2d"><div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Mobile · Program detail (full-screen sheet)</div>
+<div class="dv-card" style="width:390px;background:#262321;border-radius:28px;position:relative;color:#f4f1ec">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px"><button aria-label="Back to results" style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border-radius:999px;background:#262321;border:0;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">‹ Results</button><button aria-label="Save to my plan" style="min-height:44px;padding:0 14px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 14px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♡ Save</button></div>
+<div style="padding:8px 20px 110px">
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#1f3a2a;color:#8fd9a8;font:700 14px Manrope">✓ Likely match</span><span style="padding:5px 10px;border-radius:8px;background:#3f2029;color:#f5a3b8;font:600 12px Manrope">For crisis situations</span></div>
+<sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:14px;color:#a8a29a;margin:-2px 0 10px">Based on 4 of your answers</div></sc-if>
+<h1 style="margin:0 0 6px;font:800 26px/1.15 Manrope;letter-spacing:-.01em">Community Works Survivor Housing Services</h1>
+<div style="font-size:15px;color:#a8a29a;margin-bottom:20px">Rent support · Jackson County</div>
+
+<div style="background:#2f2b28;border-radius:16px;padding:18px;margin-bottom:24px">
+<h2 style="margin:0 0 12px;font:800 18px Manrope">What to do next</h2>
+<ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px">
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#f4f1ec;color:#1b1918;display:grid;place-items:center;font:700 14px Manrope">1</span><div style="flex:1"><div style="font:600 16px Manrope;margin-bottom:8px">Call the 24/7 HelpLine</div><a href="tel:5417794357" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:999px;background:#ee5c7b;color:#1b1918;font:700 17px Manrope;text-decoration:none" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">☏ Call (541) 779-4357</a><div style="font-size:13px;color:#a8a29a;margin-top:6px;text-align:center">Free and confidential</div></div></li>
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#3a3633;display:grid;place-items:center;font:700 14px Manrope">2</span><div style="font-size:16px;line-height:1.45;padding-top:3px">Tell them you're looking for housing assistance.</div></li>
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#3a3633;display:grid;place-items:center;font:700 14px Manrope">3</span><div style="font-size:16px;line-height:1.45;padding-top:3px">They will explain eligibility and available housing options.</div></li>
+</ol>
+</div>
+
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Why this may help</h2><p style="margin:0;font-size:16px;line-height:1.5">For survivors of domestic violence, sexual violence, stalking, or trafficking, and homeless youth up to age 24.</p></section>
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">What you may receive</h2><p style="margin:0;font:600 17px Manrope">Housing or shelter placement</p><p style="margin:2px 0 0;font-size:14px;color:#a8a29a">Placement rather than a cash payment.</p></section>
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">What you need</h2><p style="margin:0;font-size:16px;line-height:1.5">No documents are needed to make the first call.</p></section>
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Location</h2><p style="margin:0 0 10px;font-size:16px;line-height:1.5">2594 E. Barnett Rd., Suite C<br>Medford, OR 97504</p><a href="#2d" style="display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;text-decoration:none" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Get directions ↗</a></section>
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Hours</h2><p style="margin:0;font-size:16px;line-height:1.6"><strong>HelpLine:</strong> 24 hours, every day<br><strong>Office:</strong> Mon–Fri, 8 AM to 4 PM</p></section>
+<section><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Other ways to reach them</h2><p style="margin:0;font-size:16px;line-height:1.6">Office <a href="tel:5417792393" style="color:#f4f1ec;font-weight:600">(541) 779-2393</a><br>Español <a href="tel:5417792393" style="color:#f4f1ec;font-weight:600">(541) 779-2393 x209</a></p><p style="margin:10px 0 0;font-size:14px;color:#a8a29a">Run by Community Works, a nonprofit agency. Details are estimates — confirm with the program.</p></section>
+</div>
+<div style="position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;padding:12px 16px 20px;background:#262321;border-top:1px solid #3a3633">
+<button style="width:100%;min-height:52px;border-radius:999px;background:#f4f1ec;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #ee5c7b;outline-offset:2px">+ Add to my housing plan</button>
+<button style="width:100%;min-height:44px;border-radius:999px;background:transparent;border:0;color:#f4f1ec;font:600 15px Manrope;text-decoration:underline;text-underline-offset:3px;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">View full program details</button>
+</div>
+</div></div>
+
+<!-- ============ 1e HOUSING PLAN ============ -->
+<div class="dv-opt" id="2e"><div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Mobile · My housing plan (saved state)</div>
+<div class="dv-card" style="width:390px;background:#1b1918;border-radius:28px;position:relative;color:#f4f1ec">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 0"><button style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border-radius:999px;background:transparent;border:0;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">‹ Results</button><button style="min-height:44px;padding:0 14px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 14px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Share plan ↗</button></div>
+<div style="padding:12px 20px 32px">
+<h1 style="margin:0 0 6px;font:800 30px/1.1 Manrope;letter-spacing:-.02em">My housing plan</h1>
+<p style="margin:0 0 20px;font-size:16px;line-height:1.5;color:#d6d0c8">3 saved · 1 of 4 steps done. Your plan is saved on this device — share the link to keep it or send it to a caseworker.</p>
+
+<h2 style="margin:0 0 10px;font:800 18px Manrope">Next steps</h2>
+<div style="background:#262321;border:1px solid #3a3633;border-radius:16px;overflow:hidden;margin-bottom:26px">
+<label style="display:flex;gap:14px;align-items:flex-start;padding:16px;border-bottom:1px solid #3a3633;cursor:pointer;min-height:44px"><input type="checkbox" checked="{{ true }}" style="width:24px;height:24px;margin:0;flex:none;accent-color:#8fd9a8" /><div style="flex:1"><div style="font:600 16px Manrope;text-decoration:line-through;color:#a8a29a">Call Community Works</div><div style="font-size:14px;color:#a8a29a;margin-top:2px">Done today · they're placing a callback</div></div></label>
+<label style="display:flex;gap:14px;align-items:flex-start;padding:16px;border-bottom:1px solid #3a3633;cursor:pointer;min-height:44px"><input type="checkbox" style="width:24px;height:24px;margin:0;flex:none;accent-color:#8fd9a8" /><div style="flex:1"><div style="font:600 16px Manrope">Ask Maslow Project about SHAP assistance</div><div style="font-size:14px;color:#d6d0c8;margin-top:6px;display:flex;gap:10px;flex-wrap:wrap"><a href="tel:5416081900" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:999px;background:#ee5c7b;color:#1b1918;font:700 14px Manrope;text-decoration:none">☏ Call</a><span style="display:inline-flex;align-items:center">Walk-in Mon–Fri 9–5</span></div></div></label>
+<label style="display:flex;gap:14px;align-items:flex-start;padding:16px;border-bottom:1px solid #3a3633;cursor:pointer;min-height:44px"><input type="checkbox" style="width:24px;height:24px;margin:0;flex:none;accent-color:#8fd9a8" /><div style="flex:1"><div style="font:600 16px Manrope">Contact landlord for 25 Donna Way</div><div style="font-size:14px;color:#a8a29a;margin-top:2px">$675/mo · Available now</div></div></label>
+<label style="display:flex;gap:14px;align-items:flex-start;padding:16px;cursor:pointer;min-height:44px"><input type="checkbox" style="width:24px;height:24px;margin:0;flex:none;accent-color:#8fd9a8" /><div style="flex:1"><div style="font:600 16px Manrope">Schedule rental viewing</div><div style="font-size:14px;color:#a8a29a;margin-top:2px">Bring ID and proof of income if you have it</div></div></label>
+</div>
+<button style="width:100%;min-height:44px;border-radius:999px;background:#262321;border:1.5px dashed #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer;margin:-14px 0 28px" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">+ Add your own step</button>
+
+<h2 style="margin:0 0 10px;font:800 18px Manrope">Saved</h2>
+<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:26px">
+<article style="display:flex;justify-content:space-between;gap:12px;align-items:center;background:#262321;border:1px solid #3a3633;border-radius:14px;padding:14px 16px">
+<div><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Program</div><div style="font:700 16px Manrope">Community Works Survivor Housing</div><div style="font-size:14px;color:#8fd9a8;margin-top:2px">✓ Likely match · 24/7 HelpLine</div></div>
+<button aria-label="Remove from plan" style="flex:none;min-width:44px;min-height:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;color:#f4f1ec;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♥</button>
+</article>
+<article style="display:flex;justify-content:space-between;gap:12px;align-items:center;background:#262321;border:1px solid #3a3633;border-radius:14px;padding:14px 16px">
+<div><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Program</div><div style="font:700 16px Manrope">Maslow Project — SHAP</div><div style="font-size:14px;color:#8fd9a8;margin-top:2px">✓ Likely match · Walk-in Mon–Fri</div></div>
+<button aria-label="Remove from plan" style="flex:none;min-width:44px;min-height:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;color:#f4f1ec;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♥</button>
+</article>
+<article style="display:flex;justify-content:space-between;gap:12px;align-items:center;background:#262321;border:1px solid #3a3633;border-radius:14px;padding:14px 16px">
+<div style="display:flex;gap:12px;align-items:center"><div style="width:56px;height:56px;border-radius:10px;flex:none;background:repeating-linear-gradient(135deg,#33302c 0 6px,#3c3833 6px 12px)"></div><div><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#a8a29a">Rental</div><div style="font:700 16px Manrope">$675/mo · 25 Donna Way</div><div style="font-size:14px;color:#d6d0c8;margin-top:2px">1 bed · 1 bath · House · Medford</div></div></div>
+<button aria-label="Remove from plan" style="flex:none;min-width:44px;min-height:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;font-size:18px;color:#f4f1ec;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">♥</button>
+</article>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<button style="width:100%;min-height:48px;border-radius:999px;background:#f4f1ec;color:#1b1918;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #ee5c7b;outline-offset:2px">Text me a link to this plan</button>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Print</button><button style="flex:1;min-height:44px;border-radius:999px;background:#262321;border:1.5px solid #5a544e;color:#f4f1ec;font:600 15px Manrope;cursor:pointer" style-focus="outline:3px solid #f4f1ec;outline-offset:2px">Copy link</button></div>
+</div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "add a theme toggle to the header so users can switch" · "make dark mode follow the system setting" · "compare <a class="dv-oid" href="#2c">2c</a> against <a class="dv-oid" href="#1c">1c</a> at 200% zoom"</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Toto Housing Companion — results, program detail, housing plan</span></div>
+<div class="dv-notes">
+<p><strong>Assumptions.</strong> Kept the existing identity (red accent, rounded cards, Manrope-style type, white cards) on a warmer neutral page. Rental photos are placeholders — drop in the real listing images. Program copy is drawn from the screenshots; the "more programs" list uses plausible Southern Oregon organizations as stand-ins.</p>
+<p><strong>System.</strong> Match status is always icon + word + reason (✓ Likely match · "Based on 4 of your answers"; ◔ Worth checking · "One requirement needs to be confirmed"). Green is reserved for positive matches, amber for confirmations, red for the brand and primary actions only. Every screen answers the five questions in order: budget (needs summary) → programs (Best next steps) → next action (Call now / numbered steps) → contact → save (My housing plan). Body copy is 16px, all controls ≥44px, focus rings are 3px dark outlines.</p>
+</div>
+<div class="dv-opts">
+
+<!-- ============ 1a DESKTOP RESULTS ============ -->
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Desktop · Housing results (1280)</div>
+<div class="dv-card" style="width:1280px;background:#faf8f5">
+<sc-if value="{{ showDraft }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;justify-content:center;gap:12px;align-items:center;padding:10px 24px;background:#fbf3e4;color:#5b4a1e;font-size:14px;line-height:1.4"><span style="font:800 11px Manrope;letter-spacing:.06em;background:#7a5a1a;color:#fff;padding:4px 8px;border-radius:6px">DRAFT</span><span>This tool is being tested and is not official. Program details and income figures are estimates — always confirm directly with the program.</span></div>
+</sc-if>
+<header style="display:flex;align-items:center;justify-content:space-between;padding:14px 48px;background:#fff;border-bottom:1px solid #ece8e2">
+<div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:50%;background:#c8294f;display:grid;place-items:center;color:#fff;font:800 18px Manrope">⌂</div><div><div style="font:700 17px/1.2 Manrope">Toto Housing Companion</div><div style="font-size:13px;color:#5a5551">Oregon &amp; Minnesota</div></div></div>
+<div style="display:flex;gap:10px">
+<button style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Start over</button>
+<button style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;background:#1c1a19;color:#fff;border:0;font:600 15px Manrope;cursor:pointer" style-hover="background:#000" style-focus="outline:3px solid #c8294f;outline-offset:2px"><span aria-hidden="true">☰</span> My housing plan <span style="background:#fff;color:#1c1a19;border-radius:999px;padding:1px 8px;font-weight:800">{{ planCount }}</span></button>
+</div>
+</header>
+
+<main style="max-width:1184px;margin:0 auto;padding:40px 48px 56px">
+<!-- hero + needs -->
+<div style="display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:start;margin-bottom:40px">
+<div style="padding-top:8px">
+<h1 style="margin:0 0 8px;font:800 40px/1.1 Manrope;letter-spacing:-.02em">We found 119 housing options</h1>
+<p style="margin:0 0 12px;font:700 22px/1.3 Manrope;color:#1e6b3a"><span aria-hidden="true">✓</span> 3 programs may be a strong match for you</p>
+<p style="margin:0 0 20px;font-size:17px;line-height:1.5;color:#3a3633;max-width:560px;text-wrap:pretty">Start with the strongest matches below. You can also browse available rentals that fit your budget. Availability changes fast — call before visiting.</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<a href="#1a" style="display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:#c8294f;color:#fff;font:600 15px Manrope;text-decoration:none" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">See best next steps ↓</a>
+<a href="#1a" style="display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;text-decoration:none" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Browse rentals in budget</a>
+</div>
+</div>
+<!-- Your housing needs -->
+<aside aria-label="Your housing needs" style="background:#fff;border:1px solid #ebe6df;border-radius:16px;padding:20px 22px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0;font:700 17px Manrope">Your housing needs</h2><button style="min-height:40px;padding:0 14px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 14px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">✎ Edit answers</button></div>
+<dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:10px 16px;font-size:15px;line-height:1.4">
+<dt style="color:#5a5551">Where</dt><dd style="margin:0;font-weight:600">Jackson &amp; Josephine Counties, OR</dd>
+<dt style="color:#5a5551">Household</dt><dd style="margin:0;font-weight:600">2 people</dd>
+<dt style="color:#5a5551">Looking to</dt><dd style="margin:0;font-weight:600">Rent · Studio or 1 bedroom</dd>
+<dt style="color:#5a5551">Budget</dt><dd style="margin:0;font-weight:600">Up to about $1,125/month <span style="display:block;font-weight:400;color:#5a5551;font-size:14px">Recommended, based on 30% of income</span></dd>
+</dl>
+<details style="margin-top:12px;font-size:14px;color:#3a3633"><summary style="cursor:pointer;font-weight:600;color:#1c1a19;min-height:32px;display:flex;align-items:center">Show income details</summary><p style="margin:6px 0 0">Household income about $45,000/yr · Need: finding a home, staying housed.</p></details>
+</aside>
+</div>
+
+<!-- crisis strip -->
+<sc-if value="{{ showCrisis }}" hint-placeholder-val="{{ true }}">
+<div role="region" aria-label="Need help right now" style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 22px;background:#fff;border:1.5px solid #f2c9d4;border-radius:14px;margin-bottom:36px">
+<div><div style="font:700 17px Manrope;margin-bottom:2px">Need help right now?</div><div style="font-size:15px;color:#3a3633">24/7 confidential HelpLine · Community Works, Jackson County</div></div>
+<a href="tel:5417794357" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;background:#c8294f;color:#fff;font:700 15px Manrope;text-decoration:none;white-space:nowrap" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">☏ Call (541) 779-4357</a>
+</div>
+</sc-if>
+
+<!-- BEST NEXT STEPS -->
+<section aria-labelledby="bns" style="margin-bottom:48px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px"><h2 id="bns" style="margin:0;font:800 26px Manrope;letter-spacing:-.01em">Best next steps</h2><span style="font-size:15px;color:#5a5551">3 programs</span></div>
+<p style="margin:0 0 20px;font-size:16px;color:#3a3633">These programs may make housing attainable — reach out to them first.</p>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+<!-- program 1 -->
+<article style="display:flex;flex-direction:column;background:#fff;border:1px solid #ebe6df;border-radius:16px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.03)" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
+<div><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#e7f4ec;color:#1e6b3a;font:700 14px Manrope"><span aria-hidden="true">✓</span> Likely match</span><sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#5a5551;margin-top:6px">Based on 4 of your answers</div></sc-if></div>
+<span style="padding:5px 10px;border-radius:8px;background:#fdecf1;color:#8f1c3a;font:600 13px Manrope;white-space:nowrap">For crisis situations</span>
+</div>
+<h3 style="margin:0 0 6px;font:800 20px/1.25 Manrope;text-wrap:pretty">Community Works Survivor Housing Services</h3>
+<div style="font-size:15px;color:#5a5551;margin-bottom:12px">Rent support · Jackson County</div>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#3a3633">Housing assistance for survivors of domestic violence, sexual violence, stalking, or trafficking.</p>
+<div style="background:#faf8f5;border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font:700 12px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551;margin-bottom:4px">What you may receive</div><div style="font:600 15px Manrope">Housing or shelter placement</div></div>
+<div style="display:flex;gap:14px;font-size:14px;color:#3a3633;margin-bottom:18px"><span><span aria-hidden="true" style="color:#1e6b3a">●</span> Available now</span><span>☏ 24/7 HelpLine</span></div>
+<div style="display:flex;gap:10px;margin-top:auto">
+<button style="flex:1;min-height:44px;padding:0 16px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">See how to get help</button>
+<button aria-label="Save Community Works to my plan" style="min-height:44px;min-width:44px;padding:0 14px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡ Save</button>
+</div>
+</article>
+<!-- program 2 -->
+<article style="display:flex;flex-direction:column;background:#fff;border:1px solid #ebe6df;border-radius:16px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.03)" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+<div style="margin-bottom:12px"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#e7f4ec;color:#1e6b3a;font:700 14px Manrope"><span aria-hidden="true">✓</span> Likely match</span><sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#5a5551;margin-top:6px">Based on 3 of your answers</div></sc-if></div>
+<h3 style="margin:0 0 6px;font:800 20px/1.25 Manrope;text-wrap:pretty">Maslow Project — Short-Term Housing Assistance (SHAP)</h3>
+<div style="font-size:15px;color:#5a5551;margin-bottom:12px">Rent support &amp; housing navigation · Jackson County</div>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#3a3633">Short-term rent help plus a navigator who helps you find and apply for housing.</p>
+<div style="background:#faf8f5;border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font:700 12px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551;margin-bottom:4px">What you may receive</div><div style="font:600 15px Manrope">Rent or deposit help · Housing navigator</div></div>
+<div style="display:flex;gap:14px;font-size:14px;color:#3a3633;margin-bottom:18px"><span><span aria-hidden="true" style="color:#1e6b3a">●</span> Accepting requests</span><span>Walk-in · Mon–Fri</span></div>
+<div style="display:flex;gap:10px;margin-top:auto">
+<button style="flex:1;min-height:44px;padding:0 16px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">See how to get help</button>
+<button aria-label="Save Maslow Project to my plan" style="min-height:44px;padding:0 14px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡ Save</button>
+</div>
+</article>
+<!-- program 3 -->
+<article style="display:flex;flex-direction:column;background:#fff;border:1px solid #ebe6df;border-radius:16px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.03)" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
+<div><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#fbf0d9;color:#7a4f00;font:700 14px Manrope"><span aria-hidden="true">◔</span> Worth checking</span><sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#5a5551;margin-top:6px">One eligibility requirement needs to be confirmed</div></sc-if></div>
+<span style="padding:5px 10px;border-radius:8px;background:#fdecf1;color:#8f1c3a;font:600 13px Manrope;white-space:nowrap">For crisis situations</span>
+</div>
+<h3 style="margin:0 0 6px;font:800 20px/1.25 Manrope;text-wrap:pretty">Rogue Retreat Eviction Prevention &amp; Housing Stability</h3>
+<div style="font-size:15px;color:#5a5551;margin-bottom:12px">Eviction prevention · Jackson County</div>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#3a3633">Helps households at risk of losing their housing stay housed, with case management.</p>
+<div style="background:#faf8f5;border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font:700 12px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551;margin-bottom:4px">What you may receive</div><div style="font:600 15px Manrope">Back-rent or utility payment · Case management</div></div>
+<div style="display:flex;gap:14px;font-size:14px;color:#3a3633;margin-bottom:18px"><span><span aria-hidden="true" style="color:#7a4f00">◔</span> Confirm: eviction notice required</span></div>
+<div style="display:flex;gap:10px;margin-top:auto">
+<button style="flex:1;min-height:44px;padding:0 16px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">See how to get help</button>
+<button aria-label="Save Rogue Retreat to my plan" style="min-height:44px;padding:0 14px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡ Save</button>
+</div>
+</article>
+</div>
+</section>
+
+<!-- RENTALS -->
+<section aria-labelledby="rent" style="margin-bottom:48px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px"><h2 id="rent" style="margin:0;font:800 26px Manrope;letter-spacing:-.01em">Rentals within your budget</h2><span style="font-size:15px;color:#5a5551">31 of 119 rentals · lowest rent first</span></div>
+<p style="margin:0 0 20px;font-size:16px;color:#3a3633">These fit your recommended maximum of about $1,125/month. Budget fit is an estimate — the landlord sets the final terms.</p>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+<!-- r1 -->
+<article style="display:flex;flex-direction:column;background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+<div style="height:160px;background:repeating-linear-gradient(135deg,#e9e3da 0 10px,#f3efe8 10px 20px);display:grid;place-items:center;color:#5a5551;font:12px ui-monospace,Menlo,monospace">photo · 4425 W Main St</div>
+<div style="padding:18px 18px 18px;display:flex;flex-direction:column;flex:1">
+<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px"><span style="font:800 26px/1 Manrope">$495</span><span style="font-size:15px;color:#5a5551">/mo</span></div>
+<div style="font:600 16px Manrope;margin-bottom:2px">Studio · 1 bath · Manufactured home</div>
+<div style="font-size:15px;color:#3a3633">4425 W Main St<br>Medford, OR 97501</div>
+<div style="margin:12px 0 14px;display:flex;align-items:flex-start;gap:8px;color:#1e6b3a;font-size:14px;line-height:1.35"><span aria-hidden="true" style="font-weight:800">✓</span><span><strong>Within your budget</strong><br><span style="color:#3a3633">$630 below your recommended max</span></span></div>
+<div style="font-size:14px;color:#3a3633;margin-bottom:16px"><span aria-hidden="true" style="color:#1e6b3a">●</span> Available now</div>
+<div style="display:flex;gap:8px;margin-top:auto"><button style="flex:1;min-height:44px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">View rental</button><button aria-label="Save 4425 W Main St" style="min-width:44px;min-height:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;cursor:pointer;color:#1c1a19" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡</button></div>
+</div></article>
+<!-- r2 -->
+<article style="display:flex;flex-direction:column;background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+<div style="height:160px;background:repeating-linear-gradient(135deg,#e9e3da 0 10px,#f3efe8 10px 20px);display:grid;place-items:center;color:#5a5551;font:12px ui-monospace,Menlo,monospace">photo · 20727 Hwy 62</div>
+<div style="padding:18px;display:flex;flex-direction:column;flex:1">
+<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px"><span style="font:800 26px/1 Manrope">$614</span><span style="font-size:15px;color:#5a5551">/mo</span></div>
+<div style="font:600 16px Manrope;margin-bottom:2px">Studio · 1 bath · Cabin</div>
+<div style="font-size:15px;color:#3a3633">20727 Hwy 62<br>Shady Cove, OR 97539</div>
+<div style="margin:12px 0 14px;display:flex;align-items:flex-start;gap:8px;color:#1e6b3a;font-size:14px;line-height:1.35"><span aria-hidden="true" style="font-weight:800">✓</span><span><strong>Within your budget</strong><br><span style="color:#3a3633">$511 below your recommended max</span></span></div>
+<div style="font-size:14px;color:#3a3633;margin-bottom:16px"><span aria-hidden="true" style="color:#7a4f00">●</span> Available Aug 19</div>
+<div style="display:flex;gap:8px;margin-top:auto"><button style="flex:1;min-height:44px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">View rental</button><button aria-label="Save 20727 Hwy 62" style="min-width:44px;min-height:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;cursor:pointer;color:#1c1a19" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡</button></div>
+</div></article>
+<!-- r3 -->
+<article style="display:flex;flex-direction:column;background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+<div style="height:160px;background:repeating-linear-gradient(135deg,#e9e3da 0 10px,#f3efe8 10px 20px);display:grid;place-items:center;color:#5a5551;font:12px ui-monospace,Menlo,monospace">photo · 232 Talent Ave</div>
+<div style="padding:18px;display:flex;flex-direction:column;flex:1">
+<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px"><span style="font:800 26px/1 Manrope">$662</span><span style="font-size:15px;color:#5a5551">/mo</span></div>
+<div style="font:600 16px Manrope;margin-bottom:2px">2 bed · 1 bath · Apartment</div>
+<div style="font-size:15px;color:#3a3633">232 Talent Ave<br>Talent, OR 97540</div>
+<div style="margin:12px 0 14px;display:flex;align-items:flex-start;gap:8px;color:#1e6b3a;font-size:14px;line-height:1.35"><span aria-hidden="true" style="font-weight:800">✓</span><span><strong>Within your budget</strong><br><span style="color:#3a3633">$463 below your recommended max</span></span></div>
+<div style="font-size:14px;color:#3a3633;margin-bottom:16px"><span aria-hidden="true" style="color:#1e6b3a">●</span> Available now</div>
+<div style="display:flex;gap:8px;margin-top:auto"><button style="flex:1;min-height:44px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">View rental</button><button aria-label="Save 232 Talent Ave" style="min-width:44px;min-height:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;cursor:pointer;color:#1c1a19" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡</button></div>
+</div></article>
+<!-- r4 saved -->
+<article style="display:flex;flex-direction:column;background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+<div style="height:160px;background:repeating-linear-gradient(135deg,#e9e3da 0 10px,#f3efe8 10px 20px);display:grid;place-items:center;color:#5a5551;font:12px ui-monospace,Menlo,monospace">photo · 25 Donna Way</div>
+<div style="padding:18px;display:flex;flex-direction:column;flex:1">
+<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px"><span style="font:800 26px/1 Manrope">$675</span><span style="font-size:15px;color:#5a5551">/mo</span></div>
+<div style="font:600 16px Manrope;margin-bottom:2px">1 bed · 1 bath · House</div>
+<div style="font-size:15px;color:#3a3633">25 Donna Way<br>Medford, OR 97502</div>
+<div style="margin:12px 0 14px;display:flex;align-items:flex-start;gap:8px;color:#1e6b3a;font-size:14px;line-height:1.35"><span aria-hidden="true" style="font-weight:800">✓</span><span><strong>Within your budget</strong><br><span style="color:#3a3633">$450 below your recommended max</span></span></div>
+<div style="font-size:14px;color:#3a3633;margin-bottom:16px"><span aria-hidden="true" style="color:#1e6b3a">●</span> Available now</div>
+<div style="display:flex;gap:8px;margin-top:auto"><button style="flex:1;min-height:44px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 15px Manrope;cursor:pointer" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">View rental</button><button aria-label="Saved 25 Donna Way — remove from plan" aria-pressed="true" style="min-width:44px;min-height:44px;border-radius:999px;background:#1c1a19;border:1.5px solid #1c1a19;font-size:18px;cursor:pointer;color:#fff" style-focus="outline:3px solid #c8294f;outline-offset:2px">♥</button></div>
+</div></article>
+</div>
+<div style="display:flex;justify-content:center;gap:12px;margin-top:22px">
+<button style="min-height:44px;padding:0 20px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Show 27 more in budget</button>
+<button style="min-height:44px;padding:0 20px;border-radius:999px;background:transparent;border:0;color:#1c1a19;font:600 15px Manrope;text-decoration:underline;text-underline-offset:3px;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Browse all 119 rentals</button>
+</div>
+</section>
+
+<!-- MORE PROGRAMS -->
+<section aria-labelledby="more">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px"><h2 id="more" style="margin:0;font:800 26px Manrope;letter-spacing:-.01em">More programs that may help</h2><span style="font-size:15px;color:#5a5551">13 programs</span></div>
+<p style="margin:0 0 18px;font-size:16px;color:#3a3633">Each of these needs one or two details confirmed before we can say how well it fits.</p>
+<div style="background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden">
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:20px;align-items:center;padding:18px 22px;border-bottom:1px solid #f0ece6" style-hover="background:#faf8f5">
+<div><div style="font:700 17px Manrope">Salvation Army Medford Corps — Rent &amp; Utility Assistance</div><div style="font-size:15px;color:#5a5551;margin-top:2px">Rent &amp; utility help · Jackson County · <span style="color:#7a4f00;font-weight:600">◔ Worth checking — income limit needs confirming</span></div></div>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡ Save</button>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#fff;border:1.5px solid #1c1a19;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="background:#1c1a19;color:#fff" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Details →</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:20px;align-items:center;padding:18px 22px;border-bottom:1px solid #f0ece6" style-hover="background:#faf8f5">
+<div><div style="font:700 17px Manrope">ACCESS — Emergency Rent Assistance</div><div style="font-size:15px;color:#5a5551;margin-top:2px">Rent support · Jackson County · <span style="color:#7a4f00;font-weight:600">◔ Worth checking — funding opens monthly</span></div></div>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡ Save</button>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#fff;border:1.5px solid #1c1a19;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="background:#1c1a19;color:#fff" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Details →</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:20px;align-items:center;padding:18px 22px;border-bottom:1px solid #f0ece6" style-hover="background:#faf8f5">
+<div><div style="font:700 17px Manrope">UCAN — Housing Stabilization (Josephine County)</div><div style="font-size:15px;color:#5a5551;margin-top:2px">Rent &amp; deposit help · Josephine County · <span style="color:#7a4f00;font-weight:600">◔ Worth checking — must live in Josephine County</span></div></div>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡ Save</button>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#fff;border:1.5px solid #1c1a19;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="background:#1c1a19;color:#fff" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Details →</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr auto auto;gap:20px;align-items:center;padding:18px 22px" style-hover="background:#faf8f5">
+<div><div style="font:700 17px Manrope">St. Vincent de Paul Medford — Emergency Assistance</div><div style="font-size:15px;color:#5a5551;margin-top:2px">One-time bill help · Jackson County · <span style="color:#7a4f00;font-weight:600">◔ Worth checking — call for current availability</span></div></div>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡ Save</button>
+<button style="min-height:44px;padding:0 16px;border-radius:999px;background:#fff;border:1.5px solid #1c1a19;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="background:#1c1a19;color:#fff" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Details →</button>
+</div>
+</div>
+<div style="display:flex;justify-content:center;margin-top:22px"><button style="min-height:44px;padding:0 20px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Show all 13 programs</button></div>
+</section>
+</main>
+<footer style="display:flex;justify-content:center;gap:24px;padding:20px;border-top:1px solid #ece8e2;font-size:14px;color:#5a5551"><span>Estimates only — confirm with each program.</span><a href="#1a" style="color:#1c1a19;font-weight:600">Copy link to these results</a></footer>
+</div></div>
+
+<!-- ============ 1b MOBILE RESULTS ============ -->
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Mobile · Housing results (390)</div>
+<div class="dv-card" style="width:390px;background:#faf8f5;border-radius:28px;position:relative">
+<header style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#fff;border-bottom:1px solid #ece8e2">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:#c8294f;display:grid;place-items:center;color:#fff;font:800 16px Manrope">⌂</div><div style="font:700 16px Manrope">Toto Housing Companion</div></div>
+<button aria-label="Start over" style="min-height:44px;min-width:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 14px Manrope;padding:0 12px;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Start over</button>
+</header>
+<main style="padding:24px 16px 96px">
+<h1 style="margin:0 0 8px;font:800 30px/1.1 Manrope;letter-spacing:-.02em">We found 119 housing options</h1>
+<p style="margin:0 0 10px;font:700 18px/1.3 Manrope;color:#1e6b3a"><span aria-hidden="true">✓</span> 3 programs may be a strong match for you</p>
+<p style="margin:0 0 18px;font-size:16px;line-height:1.5;color:#3a3633;text-wrap:pretty">Start with the strongest matches below. You can also browse rentals that fit your budget.</p>
+
+<section aria-label="Your housing needs" style="background:#fff;border:1px solid #ebe6df;border-radius:16px;padding:16px;margin-bottom:16px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0;font:700 16px Manrope">Your housing needs</h2><button style="min-height:40px;padding:0 12px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 14px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">✎ Edit</button></div>
+<ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.4">
+<li><strong>Jackson &amp; Josephine Counties</strong></li>
+<li>2 people · Renting</li>
+<li><strong>Up to about $1,125/month</strong> <span style="color:#5a5551">recommended</span></li>
+<li>Studio or 1 bedroom</li>
+</ul>
+</section>
+
+<sc-if value="{{ showCrisis }}" hint-placeholder-val="{{ true }}">
+<div role="region" aria-label="Need help right now" style="padding:14px 16px;background:#fff;border:1.5px solid #f2c9d4;border-radius:14px;margin-bottom:28px">
+<div style="font:700 16px Manrope">Need help right now?</div><div style="font-size:14px;color:#3a3633;margin:2px 0 12px">24/7 confidential HelpLine</div>
+<a href="tel:5417794357" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:999px;background:#c8294f;color:#fff;font:700 16px Manrope;text-decoration:none" style-focus="outline:3px solid #1c1a19;outline-offset:2px">☏ Call (541) 779-4357</a>
+</div>
+</sc-if>
+
+<h2 style="margin:0 0 4px;font:800 22px Manrope">Best next steps</h2>
+<p style="margin:0 0 14px;font-size:15px;color:#3a3633">3 programs that may make housing attainable.</p>
+<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:32px">
+<article style="background:#fff;border:1px solid #ebe6df;border-radius:16px;padding:18px">
+<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#e7f4ec;color:#1e6b3a;font:700 14px Manrope">✓ Likely match</span><span style="padding:5px 10px;border-radius:8px;background:#fdecf1;color:#8f1c3a;font:600 12px Manrope">For crisis situations</span></div>
+<sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#5a5551;margin:-4px 0 8px">Based on 4 of your answers</div></sc-if>
+<h3 style="margin:0 0 4px;font:800 19px/1.25 Manrope">Community Works Survivor Housing Services</h3>
+<div style="font-size:14px;color:#5a5551;margin-bottom:10px">Rent support · Jackson County</div>
+<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:#3a3633">Housing assistance for survivors of domestic violence, sexual violence, stalking, or trafficking.</p>
+<div style="background:#faf8f5;border-radius:12px;padding:10px 12px;margin-bottom:12px"><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">What you may receive</div><div style="font:600 15px Manrope">Housing or shelter placement</div></div>
+<div style="font-size:14px;color:#3a3633;margin-bottom:14px"><span style="color:#1e6b3a">●</span> Available now · 24/7 HelpLine</div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">See how to get help</button><button aria-label="Save to my plan" style="min-width:48px;min-height:48px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;color:#1c1a19;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡</button></div>
+</article>
+<article style="background:#fff;border:1px solid #ebe6df;border-radius:16px;padding:18px">
+<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#e7f4ec;color:#1e6b3a;font:700 14px Manrope">✓ Likely match</span>
+<sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#5a5551;margin:6px 0 8px">Based on 3 of your answers</div></sc-if>
+<h3 style="margin:0 0 4px;font:800 19px/1.25 Manrope">Maslow Project — Short-Term Housing Assistance (SHAP)</h3>
+<div style="font-size:14px;color:#5a5551;margin-bottom:10px">Rent support &amp; housing navigation · Jackson County</div>
+<div style="background:#faf8f5;border-radius:12px;padding:10px 12px;margin-bottom:12px"><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">What you may receive</div><div style="font:600 15px Manrope">Rent or deposit help · Housing navigator</div></div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">See how to get help</button><button aria-label="Saved — remove from plan" aria-pressed="true" style="min-width:48px;min-height:48px;border-radius:999px;background:#1c1a19;border:1.5px solid #1c1a19;font-size:18px;color:#fff;cursor:pointer" style-focus="outline:3px solid #c8294f;outline-offset:2px">♥</button></div>
+</article>
+<article style="background:#fff;border:1px solid #ebe6df;border-radius:16px;padding:18px">
+<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#fbf0d9;color:#7a4f00;font:700 14px Manrope">◔ Worth checking</span><span style="padding:5px 10px;border-radius:8px;background:#fdecf1;color:#8f1c3a;font:600 12px Manrope">For crisis situations</span></div>
+<sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#5a5551;margin:6px 0 8px">One eligibility requirement needs to be confirmed</div></sc-if>
+<h3 style="margin:0 0 4px;font:800 19px/1.25 Manrope">Rogue Retreat Eviction Prevention &amp; Housing Stability</h3>
+<div style="font-size:14px;color:#5a5551;margin-bottom:12px">Eviction prevention · Jackson County</div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">See how to get help</button><button aria-label="Save to my plan" style="min-width:48px;min-height:48px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;color:#1c1a19;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡</button></div>
+</article>
+</div>
+
+<h2 style="margin:0 0 4px;font:800 22px Manrope">Rentals within your budget</h2>
+<p style="margin:0 0 14px;font-size:15px;color:#3a3633">31 of 119 fit about $1,125/month. Lowest rent first.</p>
+<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:22px">
+<article style="background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden">
+<div style="height:200px;background:repeating-linear-gradient(135deg,#e9e3da 0 10px,#f3efe8 10px 20px);display:grid;place-items:center;color:#5a5551;font:12px ui-monospace,Menlo,monospace">photo · 4425 W Main St</div>
+<div style="padding:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:800 28px/1 Manrope">$495<span style="font:500 15px Manrope;color:#5a5551">/mo</span></span><span style="font-size:14px;color:#3a3633"><span style="color:#1e6b3a">●</span> Available now</span></div>
+<div style="font:600 16px Manrope;margin-top:6px">Studio · 1 bath · Manufactured home</div>
+<div style="font-size:15px;color:#3a3633">4425 W Main St, Medford, OR</div>
+<div style="margin:10px 0 14px;color:#1e6b3a;font-size:14px"><strong>✓ Within your budget</strong> <span style="color:#3a3633">· $630 below your max</span></div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">View rental</button><button aria-label="Save" style="min-width:48px;min-height:48px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;color:#1c1a19;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡</button></div>
+</div></article>
+<article style="background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden">
+<div style="height:200px;background:repeating-linear-gradient(135deg,#e9e3da 0 10px,#f3efe8 10px 20px);display:grid;place-items:center;color:#5a5551;font:12px ui-monospace,Menlo,monospace">photo · 25 Donna Way</div>
+<div style="padding:16px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:800 28px/1 Manrope">$675<span style="font:500 15px Manrope;color:#5a5551">/mo</span></span><span style="font-size:14px;color:#3a3633"><span style="color:#1e6b3a">●</span> Available now</span></div>
+<div style="font:600 16px Manrope;margin-top:6px">1 bed · 1 bath · House</div>
+<div style="font-size:15px;color:#3a3633">25 Donna Way, Medford, OR</div>
+<div style="margin:10px 0 14px;color:#1e6b3a;font-size:14px"><strong>✓ Within your budget</strong> <span style="color:#3a3633">· $450 below your max</span></div>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:48px;border-radius:999px;background:#c8294f;color:#fff;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">View rental</button><button aria-label="Saved — remove from plan" aria-pressed="true" style="min-width:48px;min-height:48px;border-radius:999px;background:#1c1a19;border:1.5px solid #1c1a19;font-size:18px;color:#fff;cursor:pointer" style-focus="outline:3px solid #c8294f;outline-offset:2px">♥</button></div>
+</div></article>
+</div>
+<button style="width:100%;min-height:48px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 16px Manrope;cursor:pointer;margin-bottom:32px" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Show 29 more in budget</button>
+
+<h2 style="margin:0 0 4px;font:800 22px Manrope">More programs that may help</h2>
+<p style="margin:0 0 14px;font-size:15px;color:#3a3633">13 programs — each needs a detail confirmed.</p>
+<div style="background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden">
+<a href="#1b" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px;border-bottom:1px solid #f0ece6;text-decoration:none;color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:-3px"><div><div style="font:700 16px Manrope">Salvation Army Medford Corps</div><div style="font-size:14px;color:#7a4f00;margin-top:2px">◔ Confirm income limit</div></div><span aria-hidden="true" style="font-size:20px">›</span></a>
+<a href="#1b" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px;border-bottom:1px solid #f0ece6;text-decoration:none;color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:-3px"><div><div style="font:700 16px Manrope">ACCESS — Emergency Rent Assistance</div><div style="font-size:14px;color:#7a4f00;margin-top:2px">◔ Funding opens monthly</div></div><span aria-hidden="true" style="font-size:20px">›</span></a>
+<a href="#1b" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px;text-decoration:none;color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:-3px"><div><div style="font:700 16px Manrope">UCAN — Housing Stabilization</div><div style="font-size:14px;color:#7a4f00;margin-top:2px">◔ Josephine County residents</div></div><span aria-hidden="true" style="font-size:20px">›</span></a>
+</div>
+<button style="width:100%;min-height:48px;border-radius:999px;background:transparent;border:0;color:#1c1a19;font:600 16px Manrope;text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-top:12px" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Show all 13 programs</button>
+</main>
+<!-- sticky plan bar -->
+<div style="position:sticky;bottom:0;padding:12px 16px 20px;background:linear-gradient(to top,#faf8f5 70%,rgba(250,248,245,0))">
+<button style="width:100%;display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:0 20px;border-radius:999px;background:#1c1a19;color:#fff;border:0;font:700 16px Manrope;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.18)" style-focus="outline:3px solid #c8294f;outline-offset:2px"><span>My housing plan ({{ planCount }})</span><span aria-hidden="true">→</span></button>
+</div>
+</div></div>
+
+<!-- ============ 1c DESKTOP PROGRAM DETAIL ============ -->
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Desktop · Program detail (centered modal over results)</div>
+<div class="dv-card" style="width:1280px;height:900px;position:relative;background:#faf8f5;overflow:hidden">
+<div aria-hidden="true" style="position:absolute;inset:0;opacity:.55;filter:blur(1px)">
+<header style="display:flex;align-items:center;justify-content:space-between;padding:14px 48px;background:#fff;border-bottom:1px solid #ece8e2"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:50%;background:#c8294f"></div><div style="font:700 17px Manrope">Toto Housing Companion</div></div><div style="display:flex;gap:10px"><div style="width:110px;height:44px;border-radius:999px;border:1.5px solid #d9d3cb"></div><div style="width:190px;height:44px;border-radius:999px;background:#1c1a19"></div></div></header>
+<div style="padding:40px 48px"><div style="font:800 40px Manrope">We found 119 housing options</div><div style="font:700 22px Manrope;color:#1e6b3a;margin-top:8px">✓ 3 programs may be a strong match for you</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:60px"><div style="height:360px;border-radius:16px;background:#fff;border:1px solid #ebe6df"></div><div style="height:360px;border-radius:16px;background:#fff;border:1px solid #ebe6df"></div><div style="height:360px;border-radius:16px;background:#fff;border:1px solid #ebe6df"></div></div></div>
+</div>
+<div style="position:absolute;inset:0;background:rgba(28,26,25,.45)"></div>
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-title" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:880px;max-height:840px;background:#fff;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:26px 32px 0">
+<div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#e7f4ec;color:#1e6b3a;font:700 14px Manrope">✓ Likely match</span><sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;color:#5a5551">Based on 4 of your answers</span></sc-if><span style="padding:5px 10px;border-radius:8px;background:#fdecf1;color:#8f1c3a;font:600 13px Manrope">For crisis situations</span></div>
+<h2 id="dlg-title" style="margin:0 0 6px;font:800 28px/1.2 Manrope;letter-spacing:-.01em">Community Works Survivor Housing Services</h2>
+<div style="font-size:16px;color:#5a5551">Rent support · Jackson County · <span style="color:#3a3633">Run by Community Works, a nonprofit</span></div>
+</div>
+<button aria-label="Close" style="flex:none;width:44px;height:44px;border-radius:50%;border:1.5px solid #d9d3cb;background:#fff;font-size:20px;color:#1c1a19;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">✕</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 340px;gap:32px;padding:24px 32px 24px;overflow:auto">
+<div style="display:flex;flex-direction:column;gap:22px">
+<section><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Why this may help</h3><p style="margin:0;font-size:17px;line-height:1.5">For survivors of domestic violence, sexual violence, stalking, or trafficking, and homeless youth up to age 24. All services are free and confidential.</p></section>
+<section><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">What you may receive</h3><p style="margin:0;font:600 17px/1.5 Manrope">Housing or shelter placement</p><p style="margin:2px 0 0;font-size:15px;color:#5a5551">Provided as placement rather than a cash payment.</p></section>
+<section><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">What you need</h3><p style="margin:0;font-size:16px;line-height:1.5">No documents are needed to make the first call. Bring any ID you have if you visit the office.</p></section>
+<section style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Location</h3><p style="margin:0 0 10px;font-size:16px;line-height:1.5">2594 E. Barnett Rd., Suite C<br>Medford, OR 97504</p><a href="#1c" style="display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;text-decoration:none" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Get directions ↗</a></div>
+<div><h3 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Hours</h3><p style="margin:0;font-size:16px;line-height:1.6"><strong>HelpLine:</strong> 24 hours, every day<br><strong>Office:</strong> Mon–Fri, 8 AM to 4 PM<br><strong>Español:</strong> (541) 779-2393 x209</p></div>
+</section>
+</div>
+<aside aria-labelledby="next" style="background:#faf8f5;border-radius:16px;padding:22px;align-self:start">
+<h3 id="next" style="margin:0 0 14px;font:800 19px Manrope">What to do next</h3>
+<ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px">
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#1c1a19;color:#fff;display:grid;place-items:center;font:700 14px Manrope">1</span><div style="flex:1"><div style="font:600 16px Manrope;margin-bottom:8px">Call the 24/7 HelpLine</div><a href="tel:5417794357" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:999px;background:#c8294f;color:#fff;font:700 16px Manrope;text-decoration:none" style-hover="background:#a31f40" style-focus="outline:3px solid #1c1a19;outline-offset:2px">☏ Call (541) 779-4357</a></div></li>
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#e4dfd7;color:#1c1a19;display:grid;place-items:center;font:700 14px Manrope">2</span><div style="font-size:16px;line-height:1.45;padding-top:3px">Tell them you're looking for housing assistance.</div></li>
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#e4dfd7;color:#1c1a19;display:grid;place-items:center;font:700 14px Manrope">3</span><div style="font-size:16px;line-height:1.45;padding-top:3px">They will explain eligibility and available housing options.</div></li>
+</ol>
+<div style="margin-top:18px;padding-top:14px;border-top:1px solid #e4dfd7;font-size:14px;color:#3a3633"><span style="color:#1e6b3a">●</span> Available now · Office line (541) 779-2393</div>
+</aside>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 32px;border-top:1px solid #ece8e2;background:#fff">
+<span style="font-size:14px;color:#5a5551">Details are estimates — confirm with the program.</span>
+<div style="display:flex;gap:10px">
+<button style="min-height:48px;padding:0 20px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 16px Manrope;cursor:pointer" style-hover="border-color:#1c1a19" style-focus="outline:3px solid #1c1a19;outline-offset:2px">View full program details</button>
+<button style="min-height:48px;padding:0 22px;border-radius:999px;background:#1c1a19;color:#fff;border:0;font:700 16px Manrope;cursor:pointer" style-hover="background:#000" style-focus="outline:3px solid #c8294f;outline-offset:2px">+ Add to my housing plan</button>
+</div>
+</div>
+</div>
+</div></div>
+
+<!-- ============ 1d MOBILE PROGRAM DETAIL ============ -->
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Mobile · Program detail (full-screen sheet)</div>
+<div class="dv-card" style="width:390px;background:#fff;border-radius:28px;position:relative">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px"><button aria-label="Back to results" style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border-radius:999px;background:#fff;border:0;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">‹ Results</button><button aria-label="Save to my plan" style="min-height:44px;padding:0 14px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 14px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♡ Save</button></div>
+<div style="padding:8px 20px 110px">
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#e7f4ec;color:#1e6b3a;font:700 14px Manrope">✓ Likely match</span><span style="padding:5px 10px;border-radius:8px;background:#fdecf1;color:#8f1c3a;font:600 12px Manrope">For crisis situations</span></div>
+<sc-if value="{{ showReasons }}" hint-placeholder-val="{{ true }}"><div style="font-size:14px;color:#5a5551;margin:-2px 0 10px">Based on 4 of your answers</div></sc-if>
+<h1 style="margin:0 0 6px;font:800 26px/1.15 Manrope;letter-spacing:-.01em">Community Works Survivor Housing Services</h1>
+<div style="font-size:15px;color:#5a5551;margin-bottom:20px">Rent support · Jackson County</div>
+
+<div style="background:#faf8f5;border-radius:16px;padding:18px;margin-bottom:24px">
+<h2 style="margin:0 0 12px;font:800 18px Manrope">What to do next</h2>
+<ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px">
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#1c1a19;color:#fff;display:grid;place-items:center;font:700 14px Manrope">1</span><div style="flex:1"><div style="font:600 16px Manrope;margin-bottom:8px">Call the 24/7 HelpLine</div><a href="tel:5417794357" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:999px;background:#c8294f;color:#fff;font:700 17px Manrope;text-decoration:none" style-focus="outline:3px solid #1c1a19;outline-offset:2px">☏ Call (541) 779-4357</a><div style="font-size:13px;color:#5a5551;margin-top:6px;text-align:center">Free and confidential</div></div></li>
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#e4dfd7;display:grid;place-items:center;font:700 14px Manrope">2</span><div style="font-size:16px;line-height:1.45;padding-top:3px">Tell them you're looking for housing assistance.</div></li>
+<li style="display:flex;gap:12px"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:#e4dfd7;display:grid;place-items:center;font:700 14px Manrope">3</span><div style="font-size:16px;line-height:1.45;padding-top:3px">They will explain eligibility and available housing options.</div></li>
+</ol>
+</div>
+
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Why this may help</h2><p style="margin:0;font-size:16px;line-height:1.5">For survivors of domestic violence, sexual violence, stalking, or trafficking, and homeless youth up to age 24.</p></section>
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">What you may receive</h2><p style="margin:0;font:600 17px Manrope">Housing or shelter placement</p><p style="margin:2px 0 0;font-size:14px;color:#5a5551">Placement rather than a cash payment.</p></section>
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">What you need</h2><p style="margin:0;font-size:16px;line-height:1.5">No documents are needed to make the first call.</p></section>
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Location</h2><p style="margin:0 0 10px;font-size:16px;line-height:1.5">2594 E. Barnett Rd., Suite C<br>Medford, OR 97504</p><a href="#1d" style="display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;text-decoration:none" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Get directions ↗</a></section>
+<section style="margin-bottom:20px"><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Hours</h2><p style="margin:0;font-size:16px;line-height:1.6"><strong>HelpLine:</strong> 24 hours, every day<br><strong>Office:</strong> Mon–Fri, 8 AM to 4 PM</p></section>
+<section><h2 style="margin:0 0 6px;font:700 13px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Other ways to reach them</h2><p style="margin:0;font-size:16px;line-height:1.6">Office <a href="tel:5417792393" style="color:#1c1a19;font-weight:600">(541) 779-2393</a><br>Español <a href="tel:5417792393" style="color:#1c1a19;font-weight:600">(541) 779-2393 x209</a></p><p style="margin:10px 0 0;font-size:14px;color:#5a5551">Run by Community Works, a nonprofit agency. Details are estimates — confirm with the program.</p></section>
+</div>
+<div style="position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;padding:12px 16px 20px;background:#fff;border-top:1px solid #ece8e2">
+<button style="width:100%;min-height:52px;border-radius:999px;background:#1c1a19;color:#fff;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #c8294f;outline-offset:2px">+ Add to my housing plan</button>
+<button style="width:100%;min-height:44px;border-radius:999px;background:transparent;border:0;color:#1c1a19;font:600 15px Manrope;text-decoration:underline;text-underline-offset:3px;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">View full program details</button>
+</div>
+</div></div>
+
+<!-- ============ 1e HOUSING PLAN ============ -->
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Mobile · My housing plan (saved state)</div>
+<div class="dv-card" style="width:390px;background:#faf8f5;border-radius:28px;position:relative">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 0"><button style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border-radius:999px;background:transparent;border:0;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">‹ Results</button><button style="min-height:44px;padding:0 14px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 14px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Share plan ↗</button></div>
+<div style="padding:12px 20px 32px">
+<h1 style="margin:0 0 6px;font:800 30px/1.1 Manrope;letter-spacing:-.02em">My housing plan</h1>
+<p style="margin:0 0 20px;font-size:16px;line-height:1.5;color:#3a3633">3 saved · 1 of 4 steps done. Your plan is saved on this device — share the link to keep it or send it to a caseworker.</p>
+
+<h2 style="margin:0 0 10px;font:800 18px Manrope">Next steps</h2>
+<div style="background:#fff;border:1px solid #ebe6df;border-radius:16px;overflow:hidden;margin-bottom:26px">
+<label style="display:flex;gap:14px;align-items:flex-start;padding:16px;border-bottom:1px solid #f0ece6;cursor:pointer;min-height:44px"><input type="checkbox" checked="{{ true }}" style="width:24px;height:24px;margin:0;flex:none;accent-color:#1e6b3a" /><div style="flex:1"><div style="font:600 16px Manrope;text-decoration:line-through;color:#5a5551">Call Community Works</div><div style="font-size:14px;color:#5a5551;margin-top:2px">Done today · they're placing a callback</div></div></label>
+<label style="display:flex;gap:14px;align-items:flex-start;padding:16px;border-bottom:1px solid #f0ece6;cursor:pointer;min-height:44px"><input type="checkbox" style="width:24px;height:24px;margin:0;flex:none;accent-color:#1e6b3a" /><div style="flex:1"><div style="font:600 16px Manrope">Ask Maslow Project about SHAP assistance</div><div style="font-size:14px;color:#3a3633;margin-top:6px;display:flex;gap:10px;flex-wrap:wrap"><a href="tel:5416081900" style="display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:999px;background:#c8294f;color:#fff;font:700 14px Manrope;text-decoration:none">☏ Call</a><span style="display:inline-flex;align-items:center">Walk-in Mon–Fri 9–5</span></div></div></label>
+<label style="display:flex;gap:14px;align-items:flex-start;padding:16px;border-bottom:1px solid #f0ece6;cursor:pointer;min-height:44px"><input type="checkbox" style="width:24px;height:24px;margin:0;flex:none;accent-color:#1e6b3a" /><div style="flex:1"><div style="font:600 16px Manrope">Contact landlord for 25 Donna Way</div><div style="font-size:14px;color:#5a5551;margin-top:2px">$675/mo · Available now</div></div></label>
+<label style="display:flex;gap:14px;align-items:flex-start;padding:16px;cursor:pointer;min-height:44px"><input type="checkbox" style="width:24px;height:24px;margin:0;flex:none;accent-color:#1e6b3a" /><div style="flex:1"><div style="font:600 16px Manrope">Schedule rental viewing</div><div style="font-size:14px;color:#5a5551;margin-top:2px">Bring ID and proof of income if you have it</div></div></label>
+</div>
+<button style="width:100%;min-height:44px;border-radius:999px;background:#fff;border:1.5px dashed #c9c2b8;color:#1c1a19;font:600 15px Manrope;cursor:pointer;margin:-14px 0 28px" style-focus="outline:3px solid #1c1a19;outline-offset:2px">+ Add your own step</button>
+
+<h2 style="margin:0 0 10px;font:800 18px Manrope">Saved</h2>
+<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:26px">
+<article style="display:flex;justify-content:space-between;gap:12px;align-items:center;background:#fff;border:1px solid #ebe6df;border-radius:14px;padding:14px 16px">
+<div><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Program</div><div style="font:700 16px Manrope">Community Works Survivor Housing</div><div style="font-size:14px;color:#1e6b3a;margin-top:2px">✓ Likely match · 24/7 HelpLine</div></div>
+<button aria-label="Remove from plan" style="flex:none;min-width:44px;min-height:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;color:#1c1a19;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♥</button>
+</article>
+<article style="display:flex;justify-content:space-between;gap:12px;align-items:center;background:#fff;border:1px solid #ebe6df;border-radius:14px;padding:14px 16px">
+<div><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Program</div><div style="font:700 16px Manrope">Maslow Project — SHAP</div><div style="font-size:14px;color:#1e6b3a;margin-top:2px">✓ Likely match · Walk-in Mon–Fri</div></div>
+<button aria-label="Remove from plan" style="flex:none;min-width:44px;min-height:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;color:#1c1a19;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♥</button>
+</article>
+<article style="display:flex;justify-content:space-between;gap:12px;align-items:center;background:#fff;border:1px solid #ebe6df;border-radius:14px;padding:14px 16px">
+<div style="display:flex;gap:12px;align-items:center"><div style="width:56px;height:56px;border-radius:10px;flex:none;background:repeating-linear-gradient(135deg,#e9e3da 0 6px,#f3efe8 6px 12px)"></div><div><div style="font:700 11px Manrope;letter-spacing:.06em;text-transform:uppercase;color:#5a5551">Rental</div><div style="font:700 16px Manrope">$675/mo · 25 Donna Way</div><div style="font-size:14px;color:#3a3633;margin-top:2px">1 bed · 1 bath · House · Medford</div></div></div>
+<button aria-label="Remove from plan" style="flex:none;min-width:44px;min-height:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;font-size:18px;color:#1c1a19;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">♥</button>
+</article>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<button style="width:100%;min-height:48px;border-radius:999px;background:#1c1a19;color:#fff;border:0;font:700 16px Manrope;cursor:pointer" style-focus="outline:3px solid #c8294f;outline-offset:2px">Text me a link to this plan</button>
+<div style="display:flex;gap:8px"><button style="flex:1;min-height:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Print</button><button style="flex:1;min-height:44px;border-radius:999px;background:#fff;border:1.5px solid #d9d3cb;color:#1c1a19;font:600 15px Manrope;cursor:pointer" style-focus="outline:3px solid #1c1a19;outline-offset:2px">Copy link</button></div>
+</div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "make the saves in <a class="dv-oid" href="#1a">1a</a> live so the plan count updates" · "show <a class="dv-oid" href="#1c">1c</a> as a right-side sheet instead of a centered modal" · "add a desktop version of <a class="dv-oid" href="#1e">1e</a> for caseworkers with a printable referral view"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showDraftBanner&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Results page&quot;},&quot;crisisStrip&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Results page&quot;},&quot;matchReasons&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Program cards&quot;},&quot;planCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:3,&quot;min&quot;:0,&quot;max&quot;:20,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Housing plan&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showDraft: this.props.showDraftBanner ?? true,
+      showCrisis: this.props.crisisStrip ?? true,
+      showReasons: this.props.matchReasons ?? true,
+      planCount: this.props.planCount ?? 3,
+    };
+  }
+}
+</script>
+</body>
+</html>

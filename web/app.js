@@ -835,6 +835,7 @@ function togglePlan(id) {
 const planToggleLabel = (id) => (inPlan(id) ? '✓ In your plan' : '+ Add to plan');
 
 function updatePlanUi() {
+  $$('.save-btn').forEach(paintSaveButton);
   $$('.plan-toggle').forEach((btn) => {
     const chosen = inPlan(btn.dataset.program);
     btn.textContent = planToggleLabel(btn.dataset.program);
@@ -1032,69 +1033,78 @@ const HOUSE_SVG =
 // line, and a contact/action footer.
 function renderListingCard({ listing, affordable }) {
   const card = el('li', { class: 'result result--listing' });
-
-  // Affordability is a flag, never a filter — same principle as the program
-  // matcher. Rent above the guideline still shows, marked so the person can
-  // decide for themselves.
-  const badge =
-    affordable === true
-      ? el('span', { class: 'badge badge--likely', text: '✓ Fits your budget' })
-      : affordable === false
-        ? el('span', { class: 'badge badge--possible', text: 'Above 30% guideline' })
-        : null;
+  const budget = monthlyBudget(answers.income);
+  const cap = answers.maxRent != null ? Number(answers.maxRent) : budget;
 
   card.append(
     el('div', { class: 'result__media' }, [
       listing.photo
         ? el('img', { src: listing.photo, alt: '', loading: 'lazy' })
         : el('span', { class: 'result__media-placeholder', html: HOUSE_SVG }),
-      badge,
     ]),
   );
 
   const body = el('div', { class: 'result__lbody' });
 
+  // Rent leads: it is the first thing anyone looks for, and the reason the
+  // list is sorted the way it is.
   body.append(
     el('div', { class: 'result__headline' }, [
-      el('h3', { class: 'result__name', text: listing.name }),
       el('span', {
         class: `result__rent${listing.rent == null ? ' result__rent--unknown' : ''}`,
-        html:
-          listing.rent != null
-            ? `${money(listing.rent)}<small>/mo</small>`
-            : 'Not listed',
+        html: listing.rent != null ? `${money(listing.rent)}<small>/mo</small>` : 'Rent not listed',
       }),
+      listing.availability
+        ? el('span', { class: 'result__avail' }, [
+            el('span', { class: 'dot dot--open', 'aria-hidden': 'true' }),
+            listing.availability,
+          ])
+        : null,
     ]),
   );
 
-  const place = [listing.city, listing.county && `${listing.county} County`]
-    .filter(Boolean)
-    .join(', ');
-  const addressLine = [
-    listing.address !== listing.name ? listing.address : null,
-    place || null,
-  ]
-    .filter(Boolean)
-    .join(', ');
-  if (addressLine) {
-    body.append(el('p', { class: 'result__admin', text: addressLine }));
-  }
-
-  // The API sends availability as a lowercase status word ("available");
-  // sentence-case it so the facts line reads like English.
-  const availability = listing.availability
-    ? String(listing.availability).charAt(0).toUpperCase() + String(listing.availability).slice(1)
-    : null;
-
-  const metaBits = [
+  const facts = [
     bedroomsLabel(listing.bedrooms),
     listing.bathrooms != null && `${listing.bathrooms} bath`,
     listing.type,
-    availability,
     listing.subsidized && 'Income-restricted',
   ].filter(Boolean);
-  if (metaBits.length) {
-    body.append(el('p', { class: 'result__facts', text: metaBits.join(' · ') }));
+  if (facts.length) {
+    body.append(el('p', { class: 'result__facts', text: facts.join(' · ') }));
+  }
+
+  // The feed often uses the street address AS the name, so the two must not
+  // cancel each other out — dropping the "duplicate" left cards showing only
+  // a city. Street always shows; a genuinely different name (a named
+  // community) gets its own line above it.
+  const street = listing.address || listing.name;
+  const named = listing.name && listing.name !== street ? listing.name : null;
+  if (named) body.append(el('p', { class: 'result__name', text: named }));
+  const place = [street, listing.city].filter(Boolean).join(', ');
+  if (place) body.append(el('p', { class: 'result__admin', text: place }));
+
+  // Saying HOW FAR under the cap is more use than saying it fits: it is the
+  // difference between "this is possible" and "this leaves room for bills".
+  if (affordable === true && listing.rent != null && cap > 0) {
+    const under = Math.round(cap - listing.rent);
+    body.append(
+      el('p', { class: 'result__budget result__budget--in' }, [
+        el('strong', { text: '✓ Within your budget' }),
+        under > 0
+          ? el('small', {
+              text: `${money(under)} below your ${answers.maxRent != null ? 'maximum' : 'recommended max'}`,
+            })
+          : null,
+      ]),
+    );
+  } else if (affordable === false && listing.rent != null && budget > 0) {
+    const over = Math.round(listing.rent - budget);
+    body.append(
+      el('p', { class: 'result__budget result__budget--over' }, [
+        el('strong', { text: '◔ Above the 30% guideline' }),
+        el('small', { text: `${money(over)} over — rent help may close the gap` }),
+      ]),
+    );
   }
 
   const contact =
@@ -1107,11 +1117,11 @@ function renderListingCard({ listing, affordable }) {
 
   const action = listing.url
     ? el('a', {
-        class: 'btn btn--primary btn--sm',
+        class: 'btn btn--primary',
         href: listing.url,
         target: '_blank',
         rel: 'noopener noreferrer',
-        text: 'View listing',
+        text: 'View rental',
       })
     : contact && listing.rent == null
       ? el('span', { class: 'result__foot-note', text: 'Call to ask about rent' })
@@ -1129,12 +1139,12 @@ function renderListingCard({ listing, affordable }) {
 // inline and small — a broken listings feed must never take the program
 // results down with it.
 function buildListingsSection() {
-  const frag = document.createDocumentFragment();
+  const frag = el('section', { class: 'rsection', id: 'rentals' });
 
   if (listingsError) {
     const isMissingApi = listingsError.message === 'MISSING_HOUSING_API';
     frag.append(
-      el('p', { class: 'results__group', text: 'Available rentals' }),
+      el('h3', { class: 'rsection__title', text: 'Rentals within your budget' }),
       el('div', { class: 'listings-note' }, [
         el('span', {
           text: isMissingApi
@@ -1157,11 +1167,17 @@ function buildListingsSection() {
   }
 
   const matches = screenListings(listings || [], answers, countiesForCity);
+  const total = (listings || []).length;
   frag.append(
-    el('p', {
-      class: 'results__group',
-      text: `Available rentals (${matches.length})`,
-    }),
+    el('div', { class: 'rsection__head' }, [
+      el('h3', { class: 'rsection__title', text: 'Rentals within your budget' }),
+      el('span', {
+        class: 'rsection__count',
+        text: total > matches.length
+          ? `${matches.length} of ${total} rentals · lowest rent first`
+          : `${matches.length} rental${matches.length === 1 ? '' : 's'} · lowest rent first`,
+      }),
+    ]),
   );
 
   if (!matches.length) {
@@ -1179,15 +1195,16 @@ function buildListingsSection() {
     return frag;
   }
 
-  const affordableCount = matches.filter((m) => m.affordable === true).length;
   const budget = monthlyBudget(answers.income);
+  const cap = answers.maxRent != null ? Number(answers.maxRent) : budget;
   frag.append(
     el('p', {
-      class: 'results__grouphint',
+      class: 'rsection__hint',
       text:
-        (affordableCount && budget > 0
-          ? `${affordableCount} fit${affordableCount === 1 ? 's' : ''} the 30%-of-income guideline (about ${money(budget)}/mo for your household). `
-          : '') + 'Cheapest first. Availability changes fast — call before visiting.',
+        (cap > 0
+          ? `These fit ${answers.maxRent != null ? 'the maximum you set' : 'your recommended maximum'} of about ${money(cap)}/month. `
+          : '') +
+        'Budget fit is an estimate — the landlord sets the final terms.',
     }),
   );
 
@@ -1373,143 +1390,155 @@ function renderResultCard(match, { lead = false } = {}) {
 
 // The full program detail shown inside the dialog: facts in a readable
 // main column, everything actionable in an aside rail.
-function buildProgramDetail({ program, checks }) {
-  const eligibility = program.eligibility || {};
-  const contacts = program.contacts || {};
-  const counties = (program.program_counties || [])
-    .map((c) => c.county)
-    .filter((c) => c !== 'Unspecified');
-
-  const card = el('div', { class: 'result__body' });
-  const main = el('div', { class: 'result__main' });
-  const aside = el('div', { class: 'result__aside' });
-  card.append(main, aside);
-
-  const tags = [program.category, counties.length ? counties.join(', ') : null].filter(Boolean);
-  if (tags.length) {
-    main.append(
-      el(
-        'div',
-        { class: 'result__meta' },
-        tags.map((t) => el('span', { class: 'tag', text: t })),
-      ),
-    );
-  }
-
-  if (eligibility.summary) {
-    main.append(el('p', { class: 'result__summary', text: eligibility.summary }));
-  }
-
-  if (program.max_benefit) {
-    main.append(
-      el('div', { class: 'result__benefit' }, [
-        el('span', { text: 'What you may get: ' }),
-        el('strong', { text: program.max_benefit }),
-      ]),
-    );
-  }
-
-  if (checks.length) {
-    main.append(
-      el('div', { class: 'checks' }, [
-        el('p', { class: 'checks__title', text: 'Worth checking' }),
-        el(
-          'ul',
-          {},
-          checks.map((c) => el('li', { text: c })),
-        ),
-      ]),
-    );
-  }
-
-  // What happens after a match: the program's own intake process, folded
-  // away so the card stays scannable. Everything here is already in the
-  // fetched embeds — no extra request.
-  const nextSteps = [];
-  const openness = [program.application_status, program.application_window]
-    .filter(Boolean)
-    .join(' — ');
-  if (openness) nextSteps.push(['Is it open?', openness]);
-  if (program.application_method) nextSteps.push(['How to apply', program.application_method]);
-  if (program.required_documents) nextSteps.push(['What to bring', program.required_documents]);
-  if (contacts.address) nextSteps.push(['Where', contacts.address]);
-  if (nextSteps.length) {
-    aside.append(
-      el('details', { class: 'result__next', open: true }, [
-        el('summary', { text: 'What happens next' }),
-        el(
-          'dl',
-          {},
-          nextSteps.flatMap(([term, value]) => [
-            el('dt', { text: term }),
-            el('dd', { text: value }),
-          ]),
-        ),
-      ]),
-    );
-  }
-
-  const contactBits = [];
-  const phone = contactLink({
-    value: contacts.phone,
-    pattern: PHONE_RE,
-    scheme: 'tel',
-    sanitize: (v) => v.replace(/[^\d+]/g, ''),
-  });
-  if (phone) contactBits.push(phone);
-
-  const email = contactLink({ value: contacts.email, pattern: EMAIL_RE, scheme: 'mailto' });
-  if (email) contactBits.push(email);
-
-  if (contacts.intake_hours) {
-    contactBits.push(el('span', { text: contacts.intake_hours }));
-  }
-  if (contactBits.length) {
-    aside.append(el('div', { class: 'result__contact' }, contactBits));
-  }
-
-  const actions = [];
-  const formUrl = formUrlFor(program);
-  if (formUrl) {
-    actions.push(
-      el('a', {
-        class: 'btn btn--primary btn--sm',
-        href: formUrl,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        text: 'Get the application form',
-      }),
-    );
-  }
-  if (program.source_url) {
-    actions.push(
-      el('a', {
-        class: 'btn btn--ghost btn--sm',
-        href: program.source_url,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        text: 'Program details',
-      }),
-    );
-  }
-  if (actions.length) aside.append(el('div', { class: 'result__actions' }, actions));
-
-  if (aside.childElementCount) card.classList.add('has-aside');
-  else aside.remove();
-
-  return card;
-}
-
 const programDialog = document.getElementById('program-dialog');
 
 function openProgramDialog(match) {
-  const { program, verdict, fit } = match;
-  const pieces = [
-    el('div', { class: 'pdialog__top' }, [
-      el('span', {
-        class: `badge badge--${verdict}`,
-        text: verdict === 'likely' ? '✓ Likely match' : 'Possible match',
+  const { program, verdict } = match;
+  const eligibility = program.eligibility || {};
+  const contacts = program.contacts || {};
+  const phone = contacts.phone && PHONE_RE.test(contacts.phone) ? contacts.phone : null;
+  const firstNumber = phone ? phone.split(';')[0].trim() : null;
+
+  // --- What to do next -------------------------------------------------
+  // The rail is a numbered sequence, not a fold: someone who has decided to
+  // act needs to know what the first move is, and the call button IS step one
+  // wherever there is a number to call.
+  const steps = [];
+  if (firstNumber) {
+    steps.push([
+      contacts.intake_hours ? `Call ${contacts.intake_hours.toLowerCase().includes('helpline') ? 'the HelpLine' : 'them'}` : 'Call them',
+      el('a', {
+        class: 'btn btn--primary pdialog__call',
+        href: `tel:${firstNumber.replace(/[^\d+]/g, '')}`,
+        text: `☎ Call ${firstNumber}`,
       }),
+    ]);
+  }
+  if (program.application_method) {
+    steps.push([program.application_method, null]);
+  } else if (!firstNumber && program.source_url) {
+    steps.push(['Apply through the program’s own website', null]);
+  }
+  if (program.required_documents) {
+    steps.push([`Bring what they ask for: ${program.required_documents}`, null]);
+  }
+  steps.push(['They will confirm whether you qualify and what they can offer.', null]);
+
+  const rail = el('div', { class: 'pdialog__rail' }, [
+    el('h4', { class: 'pdialog__railtitle', text: 'What to do next' }),
+    el(
+      'ol',
+      { class: 'steps' },
+      steps.map(([text, node]) =>
+        el('li', { class: 'steps__item' }, [
+          el('span', { class: 'steps__body' }, [el('span', { text }), node]),
+        ]),
+      ),
+    ),
+    program.application_status || contacts.intake_hours
+      ? el('p', { class: 'pdialog__open' }, [
+          el('span', { class: 'dot dot--open', 'aria-hidden': 'true' }),
+          [program.application_status, contacts.intake_hours].filter(Boolean).join(' · '),
+        ])
+      : null,
+  ]);
+
+  // --- The facts -------------------------------------------------------
+  const facts = el('div', { class: 'pdialog__facts' });
+  if (eligibility.summary) {
+    facts.append(
+      el('h4', { class: 'pdialog__label', text: 'Why this may help' }),
+      el('p', { class: 'pdialog__text', text: eligibility.summary }),
+    );
+  }
+  const benefit = program.benefit_summary || program.max_benefit;
+  if (benefit) {
+    facts.append(
+      el('h4', { class: 'pdialog__label', text: 'What you may receive' }),
+      el('p', { class: 'pdialog__text pdialog__text--strong', text: benefit }),
+    );
+  }
+  if (program.required_documents) {
+    facts.append(
+      el('h4', { class: 'pdialog__label', text: 'What you need' }),
+      el('p', { class: 'pdialog__text', text: program.required_documents }),
+    );
+  }
+  if (match.checks?.length) {
+    facts.append(
+      el('h4', { class: 'pdialog__label', text: 'Worth checking' }),
+      el('ul', { class: 'pdialog__checks' }, match.checks.map((c) => el('li', { text: c }))),
+    );
+  }
+  // Location and hours sit side by side: they are the two things somebody
+  // copies down before they set off.
+  const place = [];
+  if (contacts.address) {
+    place.push(
+      el('div', {}, [
+        el('h4', { class: 'pdialog__label', text: 'Location' }),
+        el('p', { class: 'pdialog__text', text: contacts.address }),
+        el('a', {
+          class: 'btn btn--ghost btn--sm',
+          href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contacts.address)}`,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          text: 'Get directions ↗',
+        }),
+      ]),
+    );
+  }
+  if (contacts.intake_hours || phone) {
+    place.push(
+      el('div', {}, [
+        el('h4', { class: 'pdialog__label', text: 'Hours & contact' }),
+        contacts.intake_hours ? el('p', { class: 'pdialog__text', text: contacts.intake_hours }) : null,
+        phone ? el('p', { class: 'pdialog__text', text: phone }) : null,
+        contacts.email ? el('p', { class: 'pdialog__text', text: contacts.email }) : null,
+      ]),
+    );
+  }
+  if (place.length) facts.append(el('div', { class: 'pdialog__place' }, place));
+
+  // --- Footer ----------------------------------------------------------
+  const formUrl = formUrlFor(program);
+  const footer = el('div', { class: 'pdialog__foot' }, [
+    el('span', { class: 'pdialog__note', text: 'Details are estimates — confirm with the program.' }),
+    el('div', { class: 'pdialog__footactions' }, [
+      formUrl
+        ? el('a', {
+            class: 'btn btn--ghost',
+            href: formUrl,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            text: 'Get the application form',
+          })
+        : program.source_url
+          ? el('a', {
+              class: 'btn btn--ghost',
+              href: program.source_url,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              text: 'View full program details',
+            })
+          : null,
+      el('button', {
+        type: 'button',
+        class: `btn plan-toggle btn--solid${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
+        'data-program': program.program_id,
+        text: planToggleLabel(program.program_id),
+        onclick: () => togglePlan(program.program_id),
+      }),
+    ]),
+  ]);
+
+  programDialog.replaceChildren(
+    el('div', { class: 'pdialog__top' }, [
+      el('div', { class: 'pdialog__flags' }, [
+        matchBadge(match),
+        el('span', { class: 'pdialog__reason', text: matchReason(match) }),
+        crisisTag(match),
+      ]),
       el('button', {
         type: 'button',
         class: 'pdialog__close',
@@ -1518,32 +1547,19 @@ function openProgramDialog(match) {
         onclick: () => programDialog.close(),
       }),
     ]),
-    el('h3', { class: 'result__name', id: 'pdialog-title', text: program.program_name }),
-    program.administrator && el('p', { class: 'result__admin', text: program.administrator }),
-    fit && fit.length
-      ? el(
-          'div',
-          { class: 'result__fit' },
-          fit.map((k) => el('span', { class: 'tag tag--fit', text: FIT_LABELS[k] || k })),
-        )
-      : null,
-    el('button', {
-      type: 'button',
-      class: `btn btn--ghost btn--sm plan-toggle${inPlan(program.program_id) ? ' plan-toggle--on' : ''}`,
-      'data-program': program.program_id,
-      text: planToggleLabel(program.program_id),
-      onclick: () => togglePlan(program.program_id),
+    el('h3', { class: 'pdialog__name', id: 'pdialog-title', text: program.program_name }),
+    el('p', {
+      class: 'pdialog__where',
+      text: [programWhere(program), program.administrator && `Run by ${program.administrator}`]
+        .filter(Boolean)
+        .join(' · '),
     }),
-    buildProgramDetail(match),
-  ].filter(Boolean);
-  programDialog.replaceChildren(...pieces);
+    el('div', { class: 'pdialog__cols' }, [facts, rail]),
+    footer,
+  );
   programDialog.showModal();
+  programDialog.querySelector('.pdialog__close')?.focus();
 }
-
-// Tapping the dimmed backdrop closes the dialog; Esc works natively.
-programDialog?.addEventListener('click', (event) => {
-  if (event.target === programDialog) programDialog.close();
-});
 
 function renderNotice({ icon, title, body, actionLabel, onAction }) {
   return el('div', { class: 'notice' }, [
@@ -1610,6 +1626,308 @@ function answerChips() {
 // stale results over current ones.
 let renderSeq = 0;
 
+// ---------------------------------------------------------------------------
+// Results — the 2026 redesign
+// ---------------------------------------------------------------------------
+// The page answers five questions in order, and the sections below are those
+// answers: what am I working with (needs summary) -> is this an emergency
+// (crisis strip) -> what should I do first (best next steps) -> what can I
+// afford (rentals in budget) -> what else is there (more programs).
+
+/** "Based on 3 of your answers" / "One requirement needs to be confirmed". */
+function matchReason(match) {
+  if (match.verdict === 'likely') {
+    const n = (match.matched || []).length;
+    if (!n) return 'Nothing in your answers rules this out';
+    return `Based on ${n} of your answer${n === 1 ? '' : 's'}`;
+  }
+  const n = (match.checks || []).length;
+  return n === 1
+    ? 'One eligibility requirement needs to be confirmed'
+    : `${n} requirements need to be confirmed`;
+}
+
+function matchBadge(match) {
+  return match.verdict === 'likely'
+    ? el('span', { class: 'badge badge--likely', text: '✓ Likely match' })
+    : el('span', { class: 'badge badge--possible', text: '◔ Worth checking' });
+}
+
+// Whether a programme is BUILT for a crisis. Read from the programme, not
+// from what the person ticked: someone fleeing violence at 2am has not
+// necessarily checked a box, and a 24/7 line they qualify for should not be
+// hidden because of it. Same three-column evidence the matcher uses for
+// homeless-serving, because markets document this inconsistently.
+const CRISIS_EVIDENCE =
+  /homeless|unstably housed|transitional|shelter|crisis|domestic violence|survivor|traffick|eviction|displac|hotline|help ?line/i;
+
+function servesCrisis(program) {
+  const e = program.eligibility || {};
+  return CRISIS_EVIDENCE.test(
+    [e.crisis_required, e.eligible_tenure, e.summary, program.program_name, program.category]
+      .filter(Boolean)
+      .join(' '),
+  );
+}
+
+/** Programs built for a crisis carry a tag, in the accent at a darker weight. */
+function crisisTag(match) {
+  return servesCrisis(match.program)
+    ? el('span', { class: 'tag tag--crisis', text: 'For crisis situations' })
+    : null;
+}
+
+/** Category · county, the one line that says what a program is and where. */
+function programWhere(program) {
+  const counties = (program.program_counties || [])
+    .filter((c) => !c.state_code || c.state_code === answers.state)
+    .map((c) => c.county)
+    .filter((c) => c !== 'Unspecified');
+  const area = counties.includes('Statewide')
+    ? 'Statewide'
+    : counties.length === 1
+      ? `${counties[0]} County`
+      : counties.length
+        ? `${counties.length} counties`
+        : null;
+  return [program.category, area].filter(Boolean).join(' · ');
+}
+
+/**
+ * "Your housing needs" — the answers this page was built from, as a readable
+ * summary rather than a row of chips. Every line is editable in one click,
+ * which is what the chips were for.
+ */
+function buildNeedsCard() {
+  const rows = [];
+  const jump = (step) => () => {
+    profileSteps.delete(step);
+    showStep(step);
+  };
+
+  const area = answers.counties.length
+    ? `${answers.counties.join(' & ')} Count${answers.counties.length === 1 ? 'y' : 'ies'}, ${answers.state}`
+    : null;
+  if (area) rows.push(['Where', area, null]);
+
+  if (answers.householdSize) {
+    rows.push(['Household', `${answers.householdSize} ${answers.householdSize === 1 ? 'person' : 'people'}`, null]);
+  }
+
+  const wants = [];
+  if (answers.help.includes('rental')) wants.push('Rent');
+  if (answers.help.includes('buying')) wants.push('Buy');
+  if (answers.help.includes('staying')) wants.push('Stay housed');
+  if (answers.help.includes('utility')) wants.push('Utility help');
+  const size = answers.bedrooms != null && answers.bedrooms !== 'any'
+    ? bedroomsLabel(Number(answers.bedrooms))
+    : null;
+  if (wants.length) {
+    rows.push(['Looking to', [wants.join(' · '), size && `${size} or more`].filter(Boolean).join(' · '), null]);
+  }
+
+  // The budget line prefers what the person set over what we recommend, and
+  // says which it is showing — a recommendation presented as a decision would
+  // be putting words in their mouth.
+  const budget = monthlyBudget(answers.income);
+  if (answers.maxRent != null) {
+    rows.push(['Budget', `Up to ${money(answers.maxRent)}/month`, 'The most you told us you can pay']);
+  } else if (budget > 0) {
+    rows.push(['Budget', `Up to about ${money(budget)}/month`, 'Recommended, based on 30% of income']);
+  }
+
+  return el('aside', { class: 'needs' }, [
+    el('div', { class: 'needs__top' }, [
+      el('h3', { class: 'needs__title', text: 'Your housing needs' }),
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost btn--sm',
+        text: '✎ Edit answers',
+        onclick: jump(answers.help.includes('rental') ? 'bedrooms' : 'county'),
+      }),
+    ]),
+    el(
+      'dl',
+      { class: 'needs__list' },
+      rows.flatMap(([label, value, note]) => [
+        el('dt', { text: label }),
+        el('dd', {}, [el('strong', { text: value }), note ? el('small', { text: note }) : null]),
+      ]),
+    ),
+    answers.income != null
+      ? el('button', {
+          type: 'button',
+          class: 'needs__more',
+          text: 'Show income details',
+          onclick: (event) => {
+            const detail = event.target.nextElementSibling;
+            const open = detail.hidden;
+            detail.hidden = !open;
+            event.target.textContent = open ? 'Hide income details' : 'Show income details';
+          },
+        })
+      : null,
+    answers.income != null
+      ? el('p', { class: 'needs__detail', hidden: true, text:
+          `Household income of ${money(answers.income)} a year before taxes. Programs set their own limits and measure income their own way, so treat this as a starting point.` })
+      : null,
+  ]);
+}
+
+/**
+ * The crisis strip.
+ *
+ * Only shown when the results actually contain a crisis programme with a
+ * phone number — a "need help right now?" banner that leads nowhere is worse
+ * than none. A 24/7 line is preferred over an office line for obvious
+ * reasons.
+ */
+function buildCrisisStrip(matches) {
+  const candidates = matches.filter(
+    (m) => servesCrisis(m.program) && m.program.contacts?.phone && PHONE_RE.test(m.program.contacts.phone),
+  );
+  if (!candidates.length) return null;
+  const best =
+    candidates.find((m) => /24\s*\/?\s*7|24 hour|hotline|helpline/i.test(
+      `${m.program.contacts.intake_hours || ''} ${m.program.program_name}`,
+    )) || candidates[0];
+
+  const phone = best.program.contacts.phone;
+  const digits = String(phone).replace(/[^\d+]/g, '');
+  const hours = best.program.contacts.intake_hours;
+
+  return el('div', { class: 'crisis' }, [
+    el('div', { class: 'crisis__text' }, [
+      el('strong', { text: 'Need help right now?' }),
+      el('span', {
+        text: [hours, best.program.administrator || best.program.program_name]
+          .filter(Boolean)
+          .join(' · '),
+      }),
+    ]),
+    el('a', { class: 'btn btn--primary crisis__call', href: `tel:${digits}`, text: `☎ Call ${phone.split(';')[0].trim()}` }),
+  ]);
+}
+
+/** A "Best next steps" card: the full pitch for a programme worth acting on. */
+function renderBestCard(match) {
+  const { program } = match;
+  const benefit = program.benefit_summary || program.max_benefit;
+  const eligibility = program.eligibility || {};
+
+  return el('li', { class: 'best' }, [
+    el('div', { class: 'best__flags' }, [matchBadge(match), crisisTag(match)]),
+    el('p', { class: 'best__reason', text: matchReason(match) }),
+    el('h3', { class: 'best__name', text: program.program_name }),
+    el('p', { class: 'best__where', text: programWhere(program) }),
+    eligibility.summary
+      ? el('p', { class: 'best__summary', text: eligibility.summary })
+      : null,
+    benefit
+      ? el('div', { class: 'best__gets' }, [
+          el('span', { class: 'best__gets-label', text: 'What you may receive' }),
+          el('strong', { text: benefit }),
+        ])
+      : null,
+    match.verdict === 'possible' && match.checks.length
+      ? el('p', { class: 'best__check', text: `◔ ${match.checks[0]}` })
+      : null,
+    program.contacts?.intake_hours
+      ? el('p', { class: 'best__status' }, [
+          el('span', { class: 'dot dot--open', 'aria-hidden': 'true' }),
+          program.contacts.intake_hours,
+        ])
+      : null,
+    el('div', { class: 'best__actions' }, [
+      el('button', {
+        type: 'button',
+        class: 'btn btn--primary',
+        text: 'See how to get help',
+        onclick: () => openProgramDialog(match),
+      }),
+      planToggleButton(program.program_id),
+    ]),
+  ]);
+}
+
+/**
+ * The save control on programme cards.
+ *
+ * It carries data-program and is repainted by updatePlanUi() like every other
+ * save control, so the same programme shown in a card and in the dialog can
+ * never display two different states.
+ */
+function planToggleButton(id) {
+  const button = el('button', {
+    type: 'button',
+    class: 'btn btn--ghost btn--sm save-btn',
+    'data-program': id,
+    onclick: (event) => {
+      event.stopPropagation();
+      togglePlan(id);
+    },
+  });
+  paintSaveButton(button);
+  return button;
+}
+
+function paintSaveButton(button) {
+  const on = inPlan(button.dataset.program);
+  button.classList.toggle('save-btn--on', on);
+  button.setAttribute('aria-pressed', on ? 'true' : 'false');
+  button.setAttribute('aria-label', on ? 'Saved to your plan — remove it' : 'Save to your plan');
+  button.replaceChildren(
+    el('span', { 'aria-hidden': 'true', text: on ? '♥' : '♡' }),
+    el('span', { text: on ? ' Saved' : ' Save' }),
+  );
+}
+
+/** A compact row for the long tail of programmes that need a detail confirmed. */
+function renderCompactRow(match) {
+  const { program } = match;
+  return el('li', { class: 'crow' }, [
+    el('div', { class: 'crow__main' }, [
+      el('div', { class: 'crow__head' }, [
+        el('h3', { class: 'crow__name', text: program.program_name }),
+        // Carried on rows as well as cards: a programme built for a crisis is
+        // worth spotting wherever it appears in the list.
+        crisisTag(match),
+      ]),
+      el('p', { class: 'crow__meta' }, [
+        programWhere(program),
+        el('span', { class: 'crow__check' }, [
+          ' · ',
+          el('span', { text: match.verdict === 'likely' ? '✓ Likely match' : `◔ ${shortCheck(match)}` }),
+        ]),
+      ]),
+    ]),
+    el('div', { class: 'crow__actions' }, [
+      planToggleButton(program.program_id),
+      el('button', {
+        type: 'button',
+        class: 'btn btn--ghost btn--sm',
+        text: 'Details →',
+        onclick: () => openProgramDialog(match),
+      }),
+    ]),
+  ]);
+}
+
+/** The shortest honest phrasing of what a programme still needs confirmed. */
+function shortCheck(match) {
+  const first = (match.checks || [])[0] || '';
+  if (/income/i.test(first)) return 'Income limit needs confirming';
+  if (/veteran/i.test(first)) return 'Veteran status needs confirming';
+  if (/age/i.test(first)) return 'Age requirement needs confirming';
+  if (/disab/i.test(first)) return 'Disability requirement needs confirming';
+  if (/children|pregnan/i.test(first)) return 'Household requirement needs confirming';
+  if (/eviction|shutoff|crisis|displace/i.test(first)) return 'Crisis requirement needs confirming';
+  if (/utility account/i.test(first)) return 'Utility account needs confirming';
+  if (/housing situation|tenure/i.test(first)) return 'Housing situation needs confirming';
+  if (/service area|county/i.test(first)) return 'Service area needs confirming';
+  return 'One detail needs confirming';
+}
+
 async function renderResults() {
   const seq = ++renderSeq;
   const host = $('#results-state');
@@ -1669,85 +1987,100 @@ async function renderResults() {
   }
 
   const matches = screenPrograms(programs, answers, limitLookup, proportionalStandards);
-  const likely = matches.filter((m) => m.verdict === 'likely').length;
+  const strong = matches.filter((m) => m.verdict === 'likely');
+  const worthChecking = matches.filter((m) => m.verdict !== 'likely');
 
-  const possible = matches.length - likely;
-  const countText = !matches.length
-    ? 'No clear program matches in your area'
-    : likely && possible
-      ? `${likely} strong fit${likely === 1 ? '' : 's'}, ${possible} more worth a call`
-      : likely
-        ? `${likely} strong fit${likely === 1 ? '' : 's'} for your situation`
-        : `${matches.length} program${matches.length === 1 ? '' : 's'} worth a call`;
+  // The headline is filled in properly once the rentals resolve; this is what
+  // it says when there are none to count.
+  const headline = el('h2', { class: 'results__count', text:
+    matches.length
+      ? `${matches.length} program${matches.length === 1 ? '' : 's'} may be able to help`
+      : 'No clear program matches in your area' });
+
+  const strongLine = el('p', { class: 'results__strong', hidden: !strong.length, text:
+    `✓ ${strong.length} program${strong.length === 1 ? '' : 's'} may be a strong match for you` });
+
+  const jumpTo = (selector, label) =>
+    el('button', {
+      type: 'button',
+      class: 'btn btn--primary',
+      text: label,
+      onclick: () => {
+        const target = host.querySelector(selector);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+    });
 
   const header = el('div', { class: 'results__header' }, [
-    el('h2', { class: 'results__count', text: countText }),
-    matches.length &&
-      el('p', {
-        class: 'results__summary',
-        text: likely
-          ? 'Tap any program to see its details and next steps — the best matches are listed first.'
-          : 'These are worth a call — each has a requirement we couldn\'t confirm from your answers.',
-      }),
-    el(
-      'div',
-      { class: 'results__chips' },
-      answerChips().map(([label, step]) =>
-        el(
-          'button',
-          {
-            type: 'button',
-            class: 'chip chip--edit',
-            title: 'Change this answer',
-            onclick: () => {
-              // They want to change it, so it stops counting as answered by
-              // the profile and behaves like any other question again.
-              profileSteps.delete(step);
-              showStep(step);
-            },
+    el('div', { class: 'results__intro' }, [
+      headline,
+      strongLine,
+      matches.length
+        ? el('p', {
+            class: 'results__summary',
+            text: strong.length
+              ? 'Start with the strongest matches below. Availability changes fast — call before visiting.'
+              : 'Each of these has a requirement we could not confirm from your answers, so they are worth a call.',
+          })
+        : null,
+      el('div', { class: 'results__cta' }, [
+        matches.length ? jumpTo('#best-steps', 'See best next steps ↓') : null,
+        el('button', {
+          type: 'button',
+          class: 'btn btn--ghost results__share',
+          text: 'Copy link to these results',
+          onclick: async (event) => {
+            try {
+              await navigator.clipboard.writeText(location.href);
+              event.target.textContent = 'Link copied ✓';
+              setTimeout(() => {
+                event.target.textContent = 'Copy link to these results';
+              }, 2000);
+            } catch {
+              /* clipboard denied: the URL in the address bar is the same link */
+            }
           },
-          [label, el('span', { class: 'chip__pen', 'aria-hidden': 'true', text: '✎' })],
-        ),
-      ),
-    ),
-    matches.length &&
-      el('button', {
-        type: 'button',
-        class: 'btn btn--ghost btn--sm results__share',
-        text: 'Copy link to these results',
-        onclick: async (event) => {
-          try {
-            await navigator.clipboard.writeText(location.href);
-            event.target.textContent = 'Link copied ✓';
-            setTimeout(() => {
-              event.target.textContent = 'Copy link to these results';
-            }, 2000);
-          } catch {
-            /* clipboard denied: the URL in the address bar is the same link */
-          }
-        },
-      }),
+        }),
+      ]),
+    ]),
+    buildNeedsCard(),
   ]);
   host.append(header);
 
+  const crisis = buildCrisisStrip(matches);
+  if (crisis) host.append(crisis);
+
   // Actual rentals lead the page for anyone finding a rental — the concrete
   // thing they asked for, above the programs that help pay for it.
+  // The rentals section is built after the programmes so "best next steps"
+  // sits first in the DOM, then moved above them: what someone can act on
+  // today leads the page, but the jump link still has a target to find.
+  let rentalsSection = null;
+  let places = 0;
   if (listingsPromise) {
     await listingsPromise;
     if (seq !== renderSeq) return;
-    // Fold the rentals into the headline: "2 strong fits" atop six live
-    // listings undersells the page for the person who came to find a place.
-    const places = listingsError ? 0 : screenListings(listings || [], answers, countiesForCity).length;
+    places = listingsError ? 0 : screenListings(listings || [], answers, countiesForCity).length;
     if (places) {
-      const placesText = `${places} place${places === 1 ? '' : 's'} to see`;
-      header.querySelector('.results__count').textContent = matches.length
-        ? `${placesText} · ${countText}`
-        : placesText;
+      // The headline counts what is actually on the page: "2 programs" above
+      // sixty rentals undersells it for someone looking for a place.
+      headline.textContent = `We found ${places} housing option${places === 1 ? '' : 's'}`;
+      const cta = header.querySelector('.results__cta');
+      const browse = el('button', {
+        type: 'button',
+        class: 'btn btn--ghost',
+        text: 'Browse rentals in budget',
+        onclick: () => host.querySelector('#rentals')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      });
+      // After the primary, not before it: "see best next steps" is the action
+      // this page is recommending.
+      cta.firstElementChild ? cta.firstElementChild.after(browse) : cta.prepend(browse);
     }
-    host.append(buildListingsSection());
+    rentalsSection = buildListingsSection();
   }
 
   if (!matches.length) {
+    if (rentalsSection) host.append(rentalsSection);
     host.append(
       renderNotice({
         icon: '🔍',
@@ -1759,53 +2092,61 @@ async function renderResults() {
       }),
     );
   } else {
-    // Results render as one labelled section per program type — rent help
-    // never interleaves with homebuying or utility help. Sections the
-    // person asked about come first, and inside each the matcher's order
-    // holds (targeted-fit programs, then strong fits). The top program of
-    // the first section opens; everything else is a row that opens on tap.
-    const sections = sectionDisplayOrder()
-      .map((s) => ({ ...s, items: matches.filter((m) => sectionOf(m.program.category) === s.id) }))
-      .filter((s) => s.items.length);
-    // Each section shows its best four; the rest sit behind a Show-more
-    // button so a long list stays a guide rather than a directory.
-    const VISIBLE_PER_SECTION = 4;
-    const sectionBlock = (items, leadFirst) => {
-      const frag = document.createDocumentFragment();
-      const list = el(
-        'ul',
-        { class: 'results__list' },
-        items.slice(0, VISIBLE_PER_SECTION).map((m, i) =>
-          renderResultCard(m, { lead: leadFirst && i === 0 }),
-        ),
-      );
-      frag.append(list);
-      const rest = items.slice(VISIBLE_PER_SECTION);
-      if (rest.length) {
+    // Best next steps: the programmes worth acting on today, in full. Capped
+    // at three — a list of "start here" that runs to a dozen is not a
+    // starting point. Anything beyond it joins the list below.
+    const BEST = 3;
+    const best = (strong.length ? strong : worthChecking).slice(0, BEST);
+    const rest = [...strong.slice(best.length), ...worthChecking].filter(
+      (m) => !best.includes(m),
+    );
+
+    const bestSection = el('section', { class: 'rsection', id: 'best-steps' }, [
+      el('div', { class: 'rsection__head' }, [
+        el('h3', { class: 'rsection__title', text: 'Best next steps' }),
+        el('span', { class: 'rsection__count', text: `${best.length} program${best.length === 1 ? '' : 's'}` }),
+      ]),
+      el('p', {
+        class: 'rsection__hint',
+        text: strong.length
+          ? 'These programs may make housing attainable — reach out to them first.'
+          : 'Start with these, and ask about the detail each one still needs.',
+      }),
+      el('ul', { class: 'best-list' }, best.map(renderBestCard)),
+    ]);
+    host.append(bestSection);
+
+    // Rentals sit between the two programme groups: act-today help first,
+    // then somewhere to live, then the longer list to work through.
+    if (rentalsSection) host.append(rentalsSection);
+
+    if (rest.length) {
+      const list = el('ul', { class: 'crow-list' }, rest.slice(0, 4).map(renderCompactRow));
+      const more = rest.slice(4);
+      const section = el('section', { class: 'rsection' }, [
+        el('div', { class: 'rsection__head' }, [
+          el('h3', { class: 'rsection__title', text: 'More programs that may help' }),
+          el('span', { class: 'rsection__count', text: `${rest.length} program${rest.length === 1 ? '' : 's'}` }),
+        ]),
+        el('p', {
+          class: 'rsection__hint',
+          text: 'Each of these needs a detail or two confirmed before we can say how well it fits.',
+        }),
+        list,
+      ]);
+      if (more.length) {
         const btn = el('button', {
           type: 'button',
           class: 'btn btn--ghost btn--sm results__more',
-          text: `Show ${rest.length} more`,
+          text: `Show all ${rest.length} programs`,
           onclick: () => {
-            rest.forEach((m) => list.append(renderResultCard(m, {})));
+            more.forEach((m) => list.append(renderCompactRow(m)));
             btn.remove();
           },
         });
-        frag.append(btn);
+        section.append(btn);
       }
-      return frag;
-    };
-    // A lone program section skips its label — unless the rentals section is
-    // above it, where unlabeled program cards would read as more rentals.
-    if (sections.length === 1 && !listingsPromise) {
-      host.append(sectionBlock(sections[0].items, true));
-    } else {
-      sections.forEach((s, si) => {
-        host.append(
-          el('p', { class: 'results__group', text: `${s.label} (${s.items.length})` }),
-          sectionBlock(s.items, si === 0),
-        );
-      });
+      host.append(section);
     }
   }
 
