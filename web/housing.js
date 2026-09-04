@@ -14,7 +14,8 @@
 // APIs commonly use onto one internal shape:
 //
 //   { id, name, address, city, county, state, zip, rent, bedrooms,
-//     bathrooms, url, phone, email, type, availability, subsidized }
+//     bathrooms, url, phone, email, type, availability, subsidized,
+//     lat, lon }
 //
 // If your API uses names not covered below, add them to FIELD_ALIASES —
 // that one table is the only thing to edit when wiring a new source.
@@ -49,6 +50,11 @@ const FIELD_ALIASES = {
     'thumbnail', 'thumbnail_url', 'picture', 'photos', 'images',
   ],
   availability: ['availability', 'available', 'available_date', 'availableDate', 'status'],
+  // The feed carries no coordinates today, so the property map falls back to
+  // the centre of the town (web/geo.js). These aliases mean that the day it
+  // starts sending them, every pin becomes street-accurate on its own.
+  lat: ['lat', 'latitude', 'y'],
+  lon: ['lon', 'lng', 'long', 'longitude', 'x'],
   subsidized: [
     'subsidized', 'is_subsidized', 'affordable', 'income_restricted',
     'incomeRestricted', 'lihtc', 'section8',
@@ -71,6 +77,14 @@ function parsePhoto(value) {
   const url =
     typeof first === 'string' ? first : first && (first.url || first.href) ? first.url || first.href : null;
   return typeof url === 'string' && /^https?:\/\//i.test(url) ? url : null;
+}
+
+// A coordinate is only worth keeping if it is a real number in range; 0/0 is
+// the null island every geocoder emits when it has failed.
+function toCoord(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) && Math.abs(n) <= 180 ? n : null;
 }
 
 // "Studio" and "efficiency" are zero-bedroom units, not missing data.
@@ -178,6 +192,9 @@ export function normalizeListing(raw) {
     listing.bathrooms = match ? Number(match[0]) : null;
   }
   listing.photo = parsePhoto(listing.photo);
+  // Kept as numbers or null; geo.js decides whether they are usable.
+  listing.lat = toCoord(listing.lat);
+  listing.lon = toCoord(listing.lon);
   // Both of these ship straight to the results page, so they are made
   // readable here rather than at every render site.
   listing.type = humanizeType(listing.type);

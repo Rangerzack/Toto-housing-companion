@@ -32,6 +32,9 @@ import {
   profileToAnswers,
   answersToProfile,
 } from './profile.js?v=__BUILD__';
+// The landing page. It renders into the intro step and hands answers back
+// through startWizard(), so it never touches the wizard's own state.
+import { initLanding } from './landing.js?v=__BUILD__';
 
 // ---------------------------------------------------------------------------
 // State
@@ -141,8 +144,25 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 // Data
 // ---------------------------------------------------------------------------
 
+// One in-flight catalogue fetch, shared. The landing page's quick check, its
+// property dialog and the wizard's own results all want the same rows; without
+// this they would each start their own request on first paint.
+let cataloguePromise = null;
+
+function getCatalogue() {
+  if (!cataloguePromise) {
+    cataloguePromise = fetchProgramCatalogue().catch((error) => {
+      // A failed fetch must not be cached as the answer forever — the next
+      // caller should be able to try again.
+      cataloguePromise = null;
+      throw error;
+    });
+  }
+  return cataloguePromise;
+}
+
 async function fetchPrograms() {
-  const catalogue = await fetchProgramCatalogue();
+  const catalogue = await getCatalogue();
   proportionalStandards = catalogue.proportionalStandards;
   return catalogue.programs;
 }
@@ -229,6 +249,12 @@ function showStep(name, { fromHistory = false } = {}) {
   $('#progress').hidden = !isQuestion;
   $('#restart-top').hidden = name === 'intro';
 
+  // The section nav belongs to the landing page. Halfway through a form,
+  // three links to somewhere else is noise, so it only exists on the intro.
+  const nav = $('#site-nav');
+  if (nav) nav.hidden = name !== 'intro';
+  if (name === 'intro') bootLanding();
+
   if (isQuestion) {
     const position = steps.indexOf(name) + 1;
     const pct = Math.round((position / steps.length) * 100);
@@ -282,6 +308,46 @@ function move(direction) {
 
 function goNext() { move(1); }
 function goBack() { move(-1); }
+
+// The landing page binds listeners and renders the nav, so it is set up once
+// and only once, the first time the intro is shown.
+let landingReady = false;
+function bootLanding() {
+  if (landingReady) return;
+  landingReady = true;
+  initLanding({ getCatalogue, startWizard });
+}
+
+/**
+ * Starts the questionnaire already knowing some answers.
+ *
+ * This is the landing page's only way into the wizard — the quick check hands
+ * over the four things it asked, "Check my fit" hands over a property's rent
+ * and county. `satisfied` names the steps those answers settle, which
+ * questionSteps() then drops, so nobody is asked the same thing twice. It is
+ * the same mechanism the saved profile uses, and Start over clears it the
+ * same way.
+ *
+ * Editing an answer from the results chips removes that step from the set
+ * (see answerChips), so nothing here can make a question unreachable.
+ */
+function startWizard(prefill, { satisfied = [], openProgram = null } = {}) {
+  if (prefill) {
+    Object.assign(answers, prefill);
+    profileSteps = new Set(satisfied);
+    hydrateUi();
+  }
+  pendingProgramId = openProgram;
+
+  // The first question they have NOT already answered. If that is none of
+  // them, they have earned the results.
+  const remaining = questionSteps();
+  showStep(remaining[0] || 'results');
+}
+
+// Set when someone asked to open a specific program on arrival ("See details"
+// in the quick check). Consumed by renderResults once the cards exist.
+let pendingProgramId = null;
 
 function restart() {
   // Start over means start over: the profile no longer stands in for any
@@ -1933,6 +1999,12 @@ async function renderResults() {
   const host = $('#results-state');
   host.replaceChildren();
 
+  // "See details" in the landing page's quick check names a program to open
+  // once the results exist. Read once, so a later re-render (editing a chip)
+  // does not pop the dialog open again.
+  const openOnArrival = pendingProgramId;
+  pendingProgramId = null;
+
   // Rentals load in parallel with the program data; the section renders
   // once both are in.
   const listingsPromise = answers.help.includes('rental') ? loadListings() : null;
@@ -2188,6 +2260,14 @@ async function renderResults() {
         ' and we’ll bring these answers across — or keep using it without one.',
       ]),
     );
+  }
+
+  // Somebody who pressed "See details" on the landing page asked for one
+  // specific program. Open it now that its card exists — but only if it is
+  // actually among the matches, so a stale id can never open an empty dialog.
+  if (openOnArrival) {
+    const wanted = matches.find((m) => m.program.program_id === openOnArrival);
+    if (wanted) openProgramDialog(wanted);
   }
 }
 

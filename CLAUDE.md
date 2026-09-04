@@ -40,6 +40,41 @@ deploy time.
   tenure + crisis rule + program name for it because markets document it
   inconsistently. An empty gate column silently costs a program its boost.
 
+## Landing page
+
+The first screen is the **intro step of `web/index.html`**, grown into a full
+landing page — not a separate document. That is deliberate: a share link
+(`#a=…`) still opens straight on the results, `startFromProfile()` still runs
+first for a signed-in visitor, and "Find programs for me" is the same
+`data-action="next"` button the intro always had, so the wizard, its history
+entries and its saved session are untouched. Everything below the hero is
+lazy: the quick check mounts on idle, the map waits for an IntersectionObserver.
+
+- **`landing.js`** orchestrates and owns the two ways in. `startWizard(answers,
+  {satisfied})` in `app.js` is the only door: `satisfied` names the steps the
+  handoff already answers, which `questionSteps()` then drops, reusing the
+  saved-profile skip machinery rather than adding a second one.
+- **`quick-check.js`** is a preview, never a second matcher. It builds the
+  wizard's own `answers` shape and calls the same `screenPrograms()` with the
+  same published limits. "Strong fit / Likely match / Worth a call" are read
+  off the matcher's verdict and its `fit` array — never a score we invented.
+  Each situation carries TWO shapes: `match` (broad, because `help` is a hard
+  category gate and narrowing it on a guess hides programs) and `ask` (narrow,
+  what the questionnaire is pre-ticked with). "Renting now" must never
+  pre-tick "Staying in my home", which the wizard describes as facing eviction.
+- **`property-map.js`** draws the map itself in inline SVG. No Leaflet, no
+  Mapbox, no tiles: no API key, no third-party request on the first page
+  somebody in a crisis loads, and — because the feed carries no coordinates —
+  no basemap implying a street-level precision the data does not have. Pins
+  are towns, they are real `<button>`s a keyboard can reach, and the page says
+  out loud that a pin is the town and not the address. `drawBasemap()` is the
+  single seam where a real tile layer would go.
+- **`geo.js`** holds the town coordinates. `scripts/check_geo.mjs` (and the
+  check-geo workflow) fails if a town is missing, outside its state, or more
+  than 32 miles from its nearest county-mate — the rule is neighbourliness,
+  not distance-to-centroid, because Klamath County is 100 miles long. A town
+  with no coordinate is LISTED WITHOUT A PIN, never hidden.
+
 ## Results page (2026 redesign)
 
 Built from the design canvas the user exported (`design/upgrade/`). The page

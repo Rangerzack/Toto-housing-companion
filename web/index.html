@@ -57,6 +57,11 @@
             <small>Oregon &amp; Minnesota</small>
           </span>
         </div>
+        <!-- Filled in by landing.js, and only useful on the landing page:
+             mid-questionnaire it is removed, because a nav bar offering three
+             other destinations is the last thing somebody halfway through a
+             form needs. -->
+        <nav class="sitenav" id="site-nav" aria-label="Sections of this page"></nav>
         <div class="site-header__account">
           <!-- Filled in by app.js: "Sign in" when signed out, "Your matches"
                when signed in. An account is optional everywhere. -->
@@ -96,41 +101,106 @@
         </div>
       </div>
 
-      <!-- Intro ---------------------------------------------------------- -->
+      <!-- Landing page ---------------------------------------------------
+           This is the intro STEP of the wizard, not a separate document. A
+           shared results link still opens on the results, a signed-in visitor
+           still goes to their dashboard before any of this paints, and
+           "Find programs for me" is the same data-action="next" button the
+           intro always had. See web/landing.js. -->
       <section class="step step--intro is-active" data-step="intro" tabindex="-1">
-        <h1 class="intro__title">Find housing help you may qualify for</h1>
-        <p class="intro__lead">
-          Answer a few quick questions about your household. We'll show you rent
-          assistance, utility help, and homebuying programs in your area
-          that look like a fit — along with who to contact.
-        </p>
-        <ul class="intro__points">
-          <li>
-            <span class="intro__icon" aria-hidden="true">⏱</span>
-            <span>Takes about two minutes</span>
-          </li>
-          <li>
-            <span class="intro__icon" aria-hidden="true">🔒</span>
-            <span>Nothing is saved unless you choose to make an account</span>
-          </li>
-          <li>
-            <span class="intro__icon" aria-hidden="true">↩</span>
-            <span>You can skip any question you're unsure about</span>
-          </li>
-        </ul>
-        <div class="step__actions">
-          <button type="button" class="btn btn--primary btn--lg" data-action="next">
-            Get started
-          </button>
+        <div class="hero" id="top">
+          <h1 class="hero__title">Find housing help you may qualify for</h1>
+          <p class="hero__lead">
+            Rent assistance, help staying in your home, utility bills and
+            first-home programs across Southern Oregon and Central Minnesota —
+            matched to your household, with the phone number to call next.
+          </p>
+          <div class="hero__cta">
+            <button type="button" class="btn btn--primary btn--lg" data-action="next">
+              Find programs for me
+            </button>
+            <a class="btn btn--ghost btn--lg" href="#properties" id="hero-browse">
+              Browse properties
+            </a>
+          </div>
+          <ul class="hero__points">
+            <li>
+              <span class="hero__icon" aria-hidden="true">⏱</span>
+              <span>About two minutes</span>
+            </li>
+            <li>
+              <span class="hero__icon" aria-hidden="true">🔒</span>
+              <span>Nothing is saved unless you choose to make an account</span>
+            </li>
+            <li>
+              <span class="hero__icon" aria-hidden="true">↩</span>
+              <span>Skip any question you're unsure about</span>
+            </li>
+          </ul>
         </div>
-        <p class="intro__note">
-          This tool gives general information, not a decision about your
-          eligibility. Only the programs themselves can tell you if you qualify.
-        </p>
-        <p class="intro__data">
-          Helping someone else, or need the figures behind the results?
-          <a href="data/">See every income and rent limit →</a>
-        </p>
+
+        <!-- Quick check: a preview of the matching, not an application ----- -->
+        <section class="quickcheck" aria-labelledby="quickcheck-title">
+          <div class="quickcheck__intro">
+            <h2 class="section__title" id="quickcheck-title">Not ready for the full questions?</h2>
+            <p class="section__lead">
+              Four answers is enough for a first look. Nothing is saved, and
+              you can stop here or carry the answers straight into the full
+              search.
+            </p>
+          </div>
+          <div id="quickcheck-host" class="quickcheck__body"></div>
+        </section>
+
+        <!-- Property explorer --------------------------------------------- -->
+        <section class="explorer" id="properties" aria-labelledby="explorer-title">
+          <h2 class="section__title" id="explorer-title">Rentals on the map</h2>
+          <p class="section__lead" id="explorer-note" hidden></p>
+          <div id="explorer-host"></div>
+        </section>
+
+        <!-- How the matching works ---------------------------------------- -->
+        <section class="trust" id="how-it-works" aria-labelledby="how-title">
+          <h2 class="section__title" id="how-title">How the matching works</h2>
+          <ol class="trust__steps">
+            <li>
+              <h3>We read each program's own rules</h3>
+              <p>
+                Every program is researched from its own published material —
+                who it serves, what it pays, the income limit it actually
+                uses. One program, one source; we never judge a program by
+                another program's figures.
+              </p>
+            </li>
+            <li>
+              <h3>We compare them to your answers</h3>
+              <p>
+                Your county, household size, income and situation are checked
+                against those rules. You see which requirements you meet and
+                which ones we could not confirm — not a score.
+              </p>
+            </li>
+            <li>
+              <h3>Anything unconfirmed stays on the list</h3>
+              <p>
+                A missing figure or an unanswered question never rules a
+                program out. It is shown with the open question named, because
+                the program is the only one who can settle it.
+              </p>
+            </li>
+          </ol>
+          <p class="trust__stat" id="trust-stat"></p>
+          <p class="trust__disclaimer">
+            <strong>This tool is being tested and is not official.</strong>
+            It gives general information, not a decision about your
+            eligibility. Program details and income figures are estimates —
+            only the programs themselves can tell you if you qualify.
+          </p>
+          <p class="intro__data">
+            Helping someone else, or need the figures behind the results?
+            <a href="data/">See every income and rent limit &rarr;</a>
+          </p>
+        </section>
       </section>
 
       <!-- 1. State ------------------------------------------------------- -->
@@ -434,16 +504,43 @@
 
     <footer class="site-footer">
       <div class="wrap">
-        <p>
-          Program details come from public research and can change without
-          notice. Always confirm current requirements with the program directly.
-          <a href="data/">View the income and rent limits this tool uses.</a>
-        </p>
+        <!-- The crisis line comes first and stays first. Someone who needs a
+             person on the phone tonight should not have to read a data
+             disclaimer to find the number. -->
         <p class="site-footer__crisis">
           Need help right now? Call <a href="tel:211">211</a> or visit
           <a href="https://www.211info.org" target="_blank" rel="noopener noreferrer">211info.org</a>
-          for Oregon housing and utility referrals.
+          for housing and utility referrals.
         </p>
+        <div class="site-footer__cols">
+          <div class="site-footer__col">
+            <h2 class="site-footer__head">About this tool</h2>
+            <p>
+              Toto Housing Companion is a research project covering Southern
+              Oregon and Central Minnesota. It is being tested and is not an
+              official government service.
+            </p>
+          </div>
+          <div class="site-footer__col">
+            <h2 class="site-footer__head">The data</h2>
+            <p>
+              Program details come from public research and can change without
+              notice. Always confirm current requirements with the program
+              directly.
+            </p>
+            <p><a href="data/">View the income and rent limits this tool uses</a></p>
+          </div>
+          <div class="site-footer__col">
+            <h2 class="site-footer__head">The project</h2>
+            <p>
+              <a href="https://github.com/Rangerzack/Toto-housing-companion" target="_blank" rel="noopener noreferrer">Source code on GitHub</a>
+            </p>
+            <p>
+              <a href="https://github.com/Rangerzack/Toto-housing-companion/issues" target="_blank" rel="noopener noreferrer">Report a problem or a wrong figure</a>
+            </p>
+            <p><a href="sop/">How the research is done</a></p>
+          </div>
+        </div>
       </div>
     </footer>
 

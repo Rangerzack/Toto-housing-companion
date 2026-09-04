@@ -1,0 +1,35 @@
+name: Check map coordinates
+
+# The property map places a pin from a table of town coordinates in
+# web/geo.js. A wrong one puts a home in the wrong county and looks
+# authoritative while doing it, so the table is checked on every change to it
+# — or to the county list it has to agree with.
+on:
+  push:
+    paths:
+      - 'web/geo.js'
+      - 'web/config.js'
+      - 'scripts/check_geo.mjs'
+      - '.github/workflows/check-geo.yml'
+  pull_request:
+    paths:
+      - 'web/geo.js'
+      - 'web/config.js'
+      - 'scripts/check_geo.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # No install step: the check imports the site's own ES modules and has
+      # no dependencies, the same way the site itself has none.
+      - name: Check every town is placed inside its county
+        run: node scripts/check_geo.mjs
