@@ -28,6 +28,8 @@
 import { el } from './account-ui.js?v=__BUILD__';
 import { bedroomsLabel } from './housing.js?v=__BUILD__';
 import { listingPoint, boundsFor, makeProjection, countyCentres, milesBetween } from './geo.js?v=__BUILD__';
+import { BASEMAP } from './config.js?v=__BUILD__';
+import { planFittedView, projectorFor, drawTiles } from './tile-layer.js?v=__BUILD__';
 
 // ---------------------------------------------------------------------------
 // Pure logic — no DOM below this line until renderExplorer()
@@ -432,6 +434,9 @@ export function renderExplorer({ host, listings, countiesForCity, onCheckFit, pr
   const count = el('p', { class: 'explorer__count', role: 'status' });
   const townNote = el('p', { class: 'explorer__town', hidden: true });
   const mapHost = el('div', { class: 'pmap', role: 'group', 'aria-label': 'Map of towns with rentals' });
+  // Shown only once real tiles are on screen. Every provider requires credit,
+  // and crediting a basemap that failed to load would be a lie.
+  const attribution = el('p', { class: 'pmap__credit', hidden: true, text: BASEMAP?.attribution || '' });
   const listHost = el('ul', { class: 'plist' });
   const dialog = el('dialog', { class: 'pdialog', id: 'property-dialog', 'aria-labelledby': 'property-dialog-title' });
 
@@ -443,6 +448,7 @@ export function renderExplorer({ host, listings, countiesForCity, onCheckFit, pr
     el('div', { class: 'explorer__body' }, [
       el('div', { class: 'explorer__mapcol' }, [
         mapHost,
+        attribution,
         el('p', {
           class: 'pmap__note',
           text: 'Pins mark the town a rental is in, not its street address. Open a pin to see the addresses.',
@@ -461,23 +467,38 @@ export function renderExplorer({ host, listings, countiesForCity, onCheckFit, pr
   const pinLayer = el('div', { class: 'pmap__pins' });
   let box = null;
   let project = null;
+  // Bumped on every redraw, so a slow tile load for the region somebody has
+  // already switched away from cannot repaint the map underneath them.
+  let mapSeq = 0;
 
+  /**
+   * Draws the frame for the current region.
+   *
+   * Two ways to draw it. When a tile provider is configured (BASEMAP in
+   * config.js) the pins go over real map imagery, positioned by the Web
+   * Mercator maths the tiles themselves use. When one is not — or when the
+   * tiles fail to arrive — it falls back to the SVG locator, which needs no
+   * network at all. The pins are redrawn either way, because THE TWO
+   * PROJECTIONS ARE NOT THE SAME and a pin placed by the wrong one is in the
+   * wrong town.
+   */
   function drawMap() {
+    // A redraw in flight for the previous region must not paint over this one.
+    const seq = ++mapSeq;
+
     const inRegion = filters.region
       ? listings.filter((l) => String(l.state || '').toUpperCase() === filters.region)
       : listings;
     const bounds = boundsFor(inRegion.map(listingPoint).filter(Boolean));
 
     mapHost.replaceChildren();
+    attribution.hidden = true;
     if (!bounds) {
       project = null;
       mapHost.hidden = true;
       return;
     }
     mapHost.hidden = false;
-
-    box = viewBoxFor(bounds);
-    project = makeProjection(bounds, { width: box.width, height: box.height, padding: 34 });
 
     // Label only the counties this region's listings are actually in. Naming
     // every county we know about would print a wall of words over a map with
@@ -486,13 +507,48 @@ export function renderExplorer({ host, listings, countiesForCity, onCheckFit, pr
     for (const listing of inRegion) {
       for (const county of listing.__counties || []) present.add(county);
     }
+    const inBounds = (c) => c.lat >= bounds.minLat && c.lat <= bounds.maxLat
+                         && c.lon >= bounds.minLon && c.lon <= bounds.maxLon;
     const centres = countyCentres(filters.region, countiesForCity || (() => null))
       .filter((c) => present.has(c.county))
-      .filter((c) => c.lat >= bounds.minLat && c.lat <= bounds.maxLat
-                  && c.lon >= bounds.minLon && c.lon <= bounds.maxLon);
+      .filter(inBounds);
 
-    mapHost.style.aspectRatio = `${box.width} / ${box.height}`;
-    mapHost.append(drawBasemap({ bounds, box, project, counties: centres }), pinLayer);
+    const drawLocator = () => {
+      box = viewBoxFor(bounds);
+      project = makeProjection(bounds, { width: box.width, height: box.height, padding: 34 });
+      mapHost.style.aspectRatio = `${box.width} / ${box.height}`;
+      mapHost.replaceChildren(drawBasemap({ bounds, box, project, counties: centres }), pinLayer);
+      mapHost.classList.remove('pmap--tiled');
+      renderPins(filterListings(listings, filters));
+    };
+
+    if (BASEMAP?.url) {
+      const view = planFittedView(bounds, { maxZoom: BASEMAP.maxZoom ?? 13 });
+      box = { width: view.width, height: view.height };
+      project = projectorFor(view);
+      mapHost.style.aspectRatio = `${view.width} / ${view.height}`;
+      mapHost.classList.add('pmap--tiled');
+      mapHost.append(pinLayer);
+
+      const tiles = drawTiles({ host: mapHost, view, basemap: BASEMAP });
+      // Behind the pins, whatever order the DOM ended up in.
+      mapHost.prepend(tiles.layer);
+      renderPins(filterListings(listings, filters));
+
+      tiles.settled.then((result) => {
+        if (seq !== mapSeq) return;
+        if (result.ok) {
+          attribution.hidden = false;
+          return;
+        }
+        // Not enough tiles arrived to be a map. Fall back rather than leave
+        // somebody looking at a grid of broken images.
+        tiles.remove();
+        drawLocator();
+      });
+    } else {
+      drawLocator();
+    }
 
     for (const button of regionBar.querySelectorAll('.pregion')) {
       const on = button.dataset.region === filters.region;
@@ -531,7 +587,11 @@ export function renderExplorer({ host, listings, countiesForCity, onCheckFit, pr
       const selected = filters.city === String(pin.city || '').toLowerCase();
       const button = el('button', {
         type: 'button',
-        class: `pmap__pin${selected ? ' is-selected' : ''}`,
+        // Town pins carry a halo: over a street map, a hard dot reads as a
+        // building, and for all but the rare listing that ships its own
+        // coordinates we only know the town. The halo is the honest shape for
+        // "somewhere in here" — see geo.js.
+        class: `pmap__pin pmap__pin--${pin.precision}${selected ? ' is-selected' : ''}`,
         style: `left:${px}%;top:${py}%;--pin-size:${size.toFixed(1)}px`,
         'aria-pressed': selected ? 'true' : 'false',
         'aria-label': `${pin.label}: ${pin.listings.length} rental${pin.listings.length === 1 ? '' : 's'}`,

@@ -33,6 +33,61 @@ export const HOUSING_API_HEADERS = {
 };
 
 // ---------------------------------------------------------------------------
+// Basemap for the property map
+// ---------------------------------------------------------------------------
+// The property explorer draws its own tile layer (web/tile-layer.js) — no
+// Leaflet, no MapLibre, no API of its own. All it needs is a raster tile URL
+// with {z}/{x}/{y} in it.
+//
+// LEAVE THIS null AND NOTHING BREAKS. The map falls back to the dependency-
+// free SVG locator it has always used: real positions, real distances, no
+// third-party request. Setting it adds street context under the same pins.
+//
+// It ships null on purpose. Every tile provider that was keyless and reliable
+// has since changed:
+//
+//   OpenFreeMap        Free, no key, no limits — but VECTOR tiles only, which
+//                      need MapLibre GL to render. Not usable from here
+//                      without taking on that library.
+//   CARTO basemaps     Raster, but now requires a key and is being retired;
+//                      unkeyed requests come back stamped "API KEY REQUIRED".
+//   tile.openstreetmap.org
+//                      Raster and keyless, but the OSMF Tile Usage Policy
+//                      asks projects not to point an app or a public site at
+//                      it. Not ours to take.
+//   OSM US Tileservice Raster, keyless "Starter Tier", non-commercial — which
+//                      fits this project. Confirm the current tile URL at
+//                      https://tiles.openstreetmap.us and paste it below.
+//   Geoapify / MapTiler / Stadia
+//                      Reliable raster free tiers, each needing a free key.
+//                      A tile key is domain-restricted rather than secret, so
+//                      it belongs here beside the publishable Supabase key —
+//                      but it is one more thing to keep alive.
+//
+// To turn a basemap on, set `url` (and `attribution`, which every one of them
+// requires). Examples, once you have a key:
+//
+//   Geoapify  https://maps.geoapify.com/v1/tile/osm-bright-grey/{z}/{x}/{y}.png?apiKey=KEY
+//   MapTiler  https://api.maptiler.com/maps/dataviz/{z}/{x}/{y}.png?key=KEY
+//   Stadia    https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}.png?api_key=KEY
+//
+// If the tiles fail to load — wrong URL, dead key, a network that blocks the
+// provider — the map reverts to the SVG locator on its own. A basemap is
+// decoration; the pins and the list are the content.
+export const BASEMAP = {
+  url: null,
+  // Some servers still shard across a.,b.,c. subdomains; put the letters here
+  // and use {s} in the URL. Most modern providers do not need this.
+  subdomains: '',
+  // Shown in the corner of the map. Every provider above requires credit, and
+  // it is not optional in their terms.
+  attribution: '© OpenStreetMap contributors',
+  // Beyond this the pins are further apart than the precision behind them —
+  // see the note in geo.js about town centres.
+  maxZoom: 13,
+};
+
+// ---------------------------------------------------------------------------
 // City -> county map for rental listings
 // ---------------------------------------------------------------------------
 // The Range Lab properties API filters by city and its records carry no

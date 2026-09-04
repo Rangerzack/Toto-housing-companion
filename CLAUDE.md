@@ -62,13 +62,26 @@ lazy: the quick check mounts on idle, the map waits for an IntersectionObserver.
   category gate and narrowing it on a guess hides programs) and `ask` (narrow,
   what the questionnaire is pre-ticked with). "Renting now" must never
   pre-tick "Staying in my home", which the wizard describes as facing eviction.
-- **`property-map.js`** draws the map itself in inline SVG. No Leaflet, no
-  Mapbox, no tiles: no API key, no third-party request on the first page
-  somebody in a crisis loads, and — because the feed carries no coordinates —
-  no basemap implying a street-level precision the data does not have. Pins
-  are towns, they are real `<button>`s a keyboard can reach, and the page says
-  out loud that a pin is the town and not the address. `drawBasemap()` is the
-  single seam where a real tile layer would go.
+- **`property-map.js`** draws the map. Pins are towns, they are real
+  `<button>`s a keyboard can reach, and the page says out loud that a pin is
+  the town and not the address.
+- **`tile-layer.js`** is the optional real basemap: our own slippy-tile grid,
+  no Leaflet and no MapLibre, because all this map needs is a fixed view of
+  one region. It deliberately does NOT pan or zoom; if that is ever wanted,
+  that is the moment to take on MapLibre and OpenFreeMap's vector tiles rather
+  than growing this. **Tiles are Web Mercator and `geo.js` is
+  equirectangular** — when tiles are on, pins MUST be placed by
+  `projectorFor()`, or they land in the wrong towns.
+- **`BASEMAP` in `config.js` ships as `url: null`**, so what deploys is the
+  dependency-free SVG locator: no API key, no third-party request on the first
+  page somebody in a crisis loads. Setting a URL adds street context under the
+  same pins; if the tiles fail, the map reverts to the locator on its own and
+  the attribution stays hidden, because crediting a basemap that never loaded
+  would be a lie. The provider comment in `config.js` records why each free
+  option was or was not usable — that list goes stale, so re-check it rather
+  than trusting it. Town-level pins carry a halo: over a crisp street map a
+  hard dot reads as a building, and the feed gives us the town, not the
+  address.
 - **`geo.js`** holds the town coordinates. `scripts/check_geo.mjs` (and the
   check-geo workflow) fails if a town is missing, outside its state, or more
   than 32 miles from its nearest county-mate — the rule is neighbourliness,

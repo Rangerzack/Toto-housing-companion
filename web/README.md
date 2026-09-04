@@ -42,6 +42,7 @@ edit a file and refresh the page.
 | `quick-check.js`| The four-question preview; calls the same matcher as everything else |
 | `property-map.js`| The property explorer: filters, the SVG locator map, detail dialog |
 | `geo.js`        | Town coordinates and the map projection (checked by scripts/check_geo.mjs) |
+| `tile-layer.js` | Optional raster basemap: Web Mercator, tile grid, no map library |
 | `serve.ps1`     | Dependency-free local static server                               |
 
 Accounts are optional and live in their own files, so the screener works

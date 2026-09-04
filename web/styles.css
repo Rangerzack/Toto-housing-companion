@@ -2677,3 +2677,53 @@ main:has(.step--intro.is-active) {
 }
 .pregion.is-on .pregion__count { background: rgba(255, 255, 255, 0.18); color: var(--on-solid); }
 @media print { .pregions { display: none !important; } }
+
+/* --- Tile basemap --------------------------------------------------------- */
+/* Only present when BASEMAP is configured in config.js; otherwise the map is
+   the dependency-free SVG locator above and none of this applies. */
+
+.pmap__tiles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.pmap__tile {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  /* A tile that 404s must not leave a broken-image glyph on the map. */
+  color: transparent;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.pmap--tiled { background: var(--surface-sunken); }
+/* Map imagery is printed for daylight. Rather than ship a second tile set,
+   dark mode calms it down so white roads stop glaring out of a dark page. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pmap__tiles { filter: brightness(0.72) saturate(0.75); }
+}
+:root[data-theme="dark"] .pmap__tiles { filter: brightness(0.72) saturate(0.75); }
+
+.pmap__credit {
+  margin: 0.4rem 0 0;
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+}
+
+/* Town-level pins get a halo, exact ones stay a hard dot. Over a street map a
+   hard dot reads as a building, and the feed gives us the town, not the
+   address. */
+.pmap__pin--city::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  background: var(--primary);
+  opacity: 0.16;
+  pointer-events: none;
+}
+.pmap__pin--city.is-selected::after { background: var(--solid); opacity: 0.2; }
+
+@media print {
+  .pmap__tiles, .pmap__credit { display: none !important; }
+}
